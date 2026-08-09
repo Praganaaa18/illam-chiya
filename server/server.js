@@ -13,6 +13,10 @@ app.use(express.json());
 
 // Auth API route
 app.use('/api/auth', authRoutes);
+const productRoutes = require('./routes/productRoutes');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
