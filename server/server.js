@@ -1,23 +1,24 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path'); // Added path import
 require('dotenv').config();
 const db = require('./config/db');
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
 const authRoutes = require('./routes/authRoutes');
-
-app.use(express.json());
-
-// Auth API route
-app.use('/api/auth', authRoutes);
 const productRoutes = require('./routes/productRoutes');
 
+const app = express();
+
+// Global Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve static image uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
-app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   res.send('Illam Chiya API is live!');
@@ -32,6 +33,5 @@ db.getConnection()
     app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
   })
   .catch((err) => {
-    console.log('DB connection issue:', err.message);
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    console.error('Database connection error:', err);
   });
