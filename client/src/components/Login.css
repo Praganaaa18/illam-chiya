@@ -1,0 +1,198 @@
+/* Full page background with tea garden image overlay */
+.login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+              url('https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=1920') center/cover no-repeat;
+  font-family: 'Georgia', serif;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+/* Branding Header */
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-logo h1 {
+  font-size: 1.6rem;
+  color: #2a3a2d;
+  letter-spacing: 2px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.role-selector {
+  margin-top: 0.6rem;
+  font-size: 1rem;
+  color: #2a3a2d;
+}
+
+.role-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #2a3a2d;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  font-weight: 400;
+}
+
+.role-btn.active {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.divider {
+  margin: 0 0.3rem;
+  color: #2a3a2d;
+}
+
+/* Form Card */
+.login-card {
+  background-color: #f1ebd9;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #2d4536;
+  margin: 0 0 0.3rem 0;
+  font-weight: 500;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #526356;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  color: #2d4536;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+
+/* Input Fields with Icons */
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border: 1.5px solid #a8ba9a;
+  border-radius: 12px;
+  background-color: #e8e3d3;
+  font-size: 0.95rem;
+  outline: none;
+  color: #2d4536;
+  box-sizing: border-box;
+}
+
+.input-wrapper input:focus {
+  border-color: #2d5a43;
+}
+
+.input-icon {
+  position: absolute;
+  right: 0.8rem;
+  pointer-events: none;
+}
+
+/* Remember Me & Forgot Password */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #2d4536;
+  cursor: pointer;
+}
+
+.remember-me input {
+  accent-color: #2d5a43;
+}
+
+.forgot-link {
+  color: #2d4536;
+  text-decoration: underline;
+}
+
+/* Submit Button */
+.login-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #2d5a43;
+  color: #ffffff;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-btn:hover {
+  background-color: #1f3f2f;
+}
+
+/* Footer Link */
+.register-footer {
+  text-align: center;
+  margin-top: 1.2rem;
+  font-size: 0.9rem;
+  color: #2d4536;
+}
+
+.register-link {
+  color: #2d5a43;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.error-message {
+  background-color: #fce8e6;
+  color: #a83232;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
