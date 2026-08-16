@@ -11,6 +11,7 @@
   font-family: 'Georgia', serif;
   padding: 2rem 1rem;
   box-sizing: border-box;
+  backdrop-filter:blur(8px);
 }
 
 /* Branding Header */
