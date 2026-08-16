@@ -49,7 +49,7 @@ const Login = () => {
             <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.4 19 2c1 2 2 4.1 2 9 0 5-4 9-10 9z"/>
             <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
           </svg>
-          <h1>THE TEA HARVEST</h1>
+          <h1>Ilam Chiya </h1>
         </div>
 
         <div className="role-selector">
