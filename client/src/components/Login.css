@@ -22,7 +22,7 @@
   right: 0;
   bottom: 0;
   background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-              url('https://encrypted-tbn0.gstatic.com/images?q=tbn:AND9Gc...') center/cover no-repeat;
+              url('https://cdn.shopify.com/s/files/1/0604/8399/3782/files/png_480x480.png?v=1683197817') center/cover no-repeat;
   filter: blur(8px); /* Adjust blur strength (e.g., 5px to 12px) */
   transform: scale(1.05); /* Slightly scales up to prevent white edges from the blur */
   z-index: -1; /* Keeps background behind your content */
