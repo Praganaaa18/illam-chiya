@@ -1,0 +1,143 @@
+.register-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Georgia', serif;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.register-page::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+              url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6t... (or your tea garden URL)') center/cover no-repeat;
+  filter: blur(8px);
+  transform: scale(1.05);
+  z-index: -1;
+}
+
+.register-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-logo h1 {
+  font-size: 1.6rem;
+  color: #2a3a2d;
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+.role-tag {
+  font-size: 0.95rem;
+  color: #2a3a2d;
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+.register-card {
+  background-color: #f1ebd9;
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.register-title {
+  text-align: center;
+  font-size: 1.7rem;
+  color: #2d4536;
+  margin: 0 0 0.3rem 0;
+}
+
+.register-subtitle {
+  text-align: center;
+  color: #526356;
+  margin: 0 0 1.2rem 0;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: #2d4536;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid #a8ba9a;
+  border-radius: 10px;
+  background-color: #e8e3d3;
+  font-size: 0.9rem;
+  outline: none;
+  color: #2d4536;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  border-color: #2d5a43;
+}
+
+.register-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #2d5a43;
+  color: #ffffff;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.register-btn:hover {
+  background-color: #1f3f2f;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #2d4536;
+}
+
+.login-link {
+  color: #2d5a43;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.error-message {
+  background-color: #fce8e6;
+  color: #a83232;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
