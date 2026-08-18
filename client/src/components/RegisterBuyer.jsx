@@ -27,6 +27,7 @@ const RegisterBuyer = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form Data:', formData); // Debugging line
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
@@ -40,8 +41,11 @@ const RegisterBuyer = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          role: 'buyer',
+          full_name: formData.fullName, // <--- Change 'name' to 'full_name'
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          role: 'buyer', // Hardcoded for Buyer Registration
         }),
       });
 
