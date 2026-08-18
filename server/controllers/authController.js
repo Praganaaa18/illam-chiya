@@ -3,16 +3,26 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, full_name, email, phone, password, role } = req.body;
+  const userFullName = full_name || name; // Accepts either full_name or name
+
   try {
     const [existing] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) return res.status(400).json({ message: 'Email already registered' });
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.query('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
+    
+    // Inserts into full_name, email, phone, password, role
+    await db.query(
+      'INSERT INTO users (full_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)',
+      [userFullName, email, phone || '', hashedPassword, role || 'buyer']
+    );
 
     res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
+    console.error('Database Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
