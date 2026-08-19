@@ -1,0 +1,132 @@
+/* Container forced to exact viewport height with no overflow */
+.seller-register-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+ background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), 
+            url('https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?q=80&w=1920&auto=format&fit=crop') no-repeat center center / cover;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevents window scrollbars */
+}
+
+/* Compact Card */
+.seller-register-card {
+  background: rgba(244, 241, 234, 0.98);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  padding: 16px 24px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 96vh; /* Strictly caps height within view */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.header-section h2 {
+  color: #1e3d29;
+  font-family: serif;
+  font-size: 1.3rem;
+  margin: 0 0 2px 0;
+}
+
+.header-section p {
+  color: #555;
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+.error-box {
+  background-color: #fde8e8;
+  color: #e53e3e;
+  border: 1px solid #f8b4b4;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+/* Tight form controls */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form-group label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 2px;
+}
+
+.form-group input {
+  padding: 4px 8px;
+  height: 32px; /* Fixed compact input height */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  outline: none;
+  background-color: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #3b7a57;
+}
+
+.submit-btn {
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  background-color: #2d5a3f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover {
+  background-color: #1e3d29;
+}
+
+.submit-btn:disabled {
+  background-color: #8fa89b;
+  cursor: not-allowed;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #4a5568;
+  margin-bottom: 0;
+}
+
+.login-link a {
+  color: #2d5a3f;
+  font-weight: bold;
+  text-decoration: underline;
+}
