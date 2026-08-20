@@ -13,12 +13,17 @@ const RegisterSeller = () => {
     confirmPassword: ''
   });
 
+  const [documentFile, setDocumentFile] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e) => {
+    setDocumentFile(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
@@ -29,21 +34,27 @@ const RegisterSeller = () => {
       return setError('Passwords do not match.');
     }
 
+    if (!documentFile) {
+      return setError('Please upload your business registration or PAN certificate.');
+    }
+
     setLoading(true);
 
     try {
+      // Send multipart/form-data for file handling
+      const dataPayload = new FormData();
+      dataPayload.append('full_name', formData.businessName);
+      dataPayload.append('email', formData.email);
+      dataPayload.append('phone', formData.phone);
+      dataPayload.append('address', formData.address);
+      dataPayload.append('pan_vat', formData.panVat);
+      dataPayload.append('password', formData.password);
+      dataPayload.append('role', 'seller');
+      dataPayload.append('document', documentFile);
+
       const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: formData.businessName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          pan_vat: formData.panVat,
-          password: formData.password,
-          role: 'seller'
-        })
+        body: dataPayload // Browser sets multipart boundary header automatically
       });
 
       const data = await response.json();
@@ -135,6 +146,16 @@ const RegisterSeller = () => {
             </div>
           </div>
 
+          <div className="form-group">
+            <label>Upload PAN / Registration Certificate</label>
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              onChange={handleFileChange}
+              required
+            />
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label>Create Password</label>
@@ -158,13 +179,11 @@ const RegisterSeller = () => {
                 onChange={handleChange}
                 required
               />
-              
             </div>
           </div>
 
           <button type="submit" className="submit-btn" disabled={loading}>
             {loading ? 'Registering...' : 'Register as Seller'}
-            
           </button>
         </form>
 
