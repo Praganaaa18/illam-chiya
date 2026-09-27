@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ProductManagement from './ProductManagement';
 import './SellerDashboard.css';
 
 const SellerDashboard = () => {
@@ -13,7 +14,8 @@ const SellerDashboard = () => {
   const [sellerInfo] = useState({
     businessName: "Illam Premium Organic Estate",
     email: "seller@illamchiya.com",
-    isVerified: true
+    isVerified: true,
+    sellerId: 1
   });
 
   const navigate = useNavigate();
@@ -34,7 +36,7 @@ const SellerDashboard = () => {
       case 'overview':
         return <OverviewSection sellerName={sellerInfo.businessName} />;
       case 'products':
-        return <ProductManagementPlaceholder />;
+        return <ProductManagement sellerId={sellerInfo.sellerId} />;
       case 'orders':
         return <OrdersPlaceholder />;
       case 'billing':
@@ -174,7 +176,7 @@ const OverviewSection = ({ sellerName }) => (
       </div>
     </div>
 
-    {/* Recent Activity Table Placeholder */}
+    {/* Recent Activity Table */}
     <div className="dashboard-card">
       <div className="card-header">
         <h4>Recent Orders</h4>
@@ -207,15 +209,6 @@ const OverviewSection = ({ sellerName }) => (
         </tbody>
       </table>
     </div>
-  </div>
-);
-
-// --- View 2: Product Management Placeholder ---
-const ProductManagementPlaceholder = () => (
-  <div className="dashboard-card placeholder-view">
-    <h3>🍃 Product Management</h3>
-    <p>Manage your tea inventory, add new harvests, and update prices here.</p>
-    <button className="primary-matcha-btn">+ Add New Tea Variety</button>
   </div>
 );
 

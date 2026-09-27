@@ -2,12 +2,16 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { register, login } = require('../controllers/authController');
 
 // ================= FILE STORAGE CONFIGURATION =================
+const uploadDir = path.join(__dirname, '../uploads');
+fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Saves files into server/uploads folder
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     // Generates unique filename using timestamp
