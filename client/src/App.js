@@ -6,6 +6,8 @@ import Login from './components/Login';
 import RegisterBuyer from './components/RegisterBuyer';
 import RegisterSeller from './components/RegisterSeller';
 import SellerDashboard from './components/SellerDashboard';
+import Cart from './components/Cart'; // Added Cart import
+import ConfirmOrder from './components/ConfirmOrder'; // Added ConfirmOrder import
 
 function App() {
   return (
@@ -16,6 +18,10 @@ function App() {
         <Route path="/register-buyer" element={<RegisterBuyer />} />
         <Route path="/register-seller" element={<RegisterSeller />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
+        
+        {/* Buyer Routes */}
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/confirm-order" element={<ConfirmOrder />} />
       </Routes>
     </Router>
   );
