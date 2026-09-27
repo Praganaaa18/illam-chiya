@@ -12,6 +12,9 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  // =========================================================================
+  // SUBTITLE 1: LOGIN FORM SUBMISSION & ROLE-BASED ROUTING
+  // =========================================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -30,9 +33,19 @@ const Login = () => {
         throw new Error(data.message || 'Invalid email or password.');
       }
 
+      // Save user session details
       localStorage.setItem('token', data.token);
-      localStorage.setItem('userRole', role);
-      navigate('/');
+      
+      // Determine user role from backend response or state selection
+      const activeRole = data.user?.role || role;
+      localStorage.setItem('userRole', activeRole);
+
+      // REDIRECT ROUTING: Send seller to dashboard, buyer to home
+      if (activeRole === 'seller') {
+        navigate('/seller-dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err.message);
     } finally {

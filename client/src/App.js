@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// Import all your components
-import Home from './components/Home.jsx';
-import Login from './components/Login.jsx';
-import RegisterBuyer from './components/RegisterBuyer.jsx';
-import RegisterSeller from './components/RegisterSeller.jsx';
+import Home from './components/Home';
+import Login from './components/Login';
+import RegisterBuyer from './components/RegisterBuyer';
+import RegisterSeller from './components/RegisterSeller';
+import SellerDashboard from './components/SellerDashboard';
 
 function App() {
   return (
@@ -15,6 +15,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register-buyer" element={<RegisterBuyer />} />
         <Route path="/register-seller" element={<RegisterSeller />} />
+        <Route path="/seller-dashboard" element={<SellerDashboard />} />
       </Routes>
     </Router>
   );
