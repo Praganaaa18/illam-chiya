@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './ProductManagement.css';
 
 const ProductManagement = ({ sellerId = 1 }) => {
@@ -6,8 +6,8 @@ const ProductManagement = ({ sellerId = 1 }) => {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', price: '', stock: '', image_url: '' });
 
-  // Fetch seller's products
-  const fetchProducts = async () => {
+  // Fetch seller's products wrapped in useCallback
+  const fetchProducts = useCallback(async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/products/seller/${sellerId}`);
       const data = await res.json();
@@ -15,9 +15,11 @@ const ProductManagement = ({ sellerId = 1 }) => {
     } catch (err) {
       console.error('Failed to fetch products', err);
     }
-  };
+  }, [sellerId]);
 
-  useEffect(() => { fetchProducts(); }, [sellerId]);
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -82,7 +84,7 @@ const ProductManagement = ({ sellerId = 1 }) => {
         <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
         <div className="pm-form-grid">
           <input name="name" placeholder="Product Name" value={form.name} onChange={handleChange} required />
-          <input name="price" type="number" placeholder="Price ($)" value={form.price} onChange={handleChange} required />
+          <input name="price" type="number" placeholder="Price (NPR)" value={form.price} onChange={handleChange} required />
           <input name="stock" type="number" placeholder="Stock Quantity" value={form.stock} onChange={handleChange} required />
           <input name="image_url" placeholder="Image URL" value={form.image_url} onChange={handleChange} />
           <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} style={{ gridColumn: 'span 2' }} rows="2" />
@@ -111,7 +113,7 @@ const ProductManagement = ({ sellerId = 1 }) => {
           {products.map((p) => (
             <tr key={p.id}>
               <td>{p.name}</td>
-              <td>${p.price}</td>
+              <td>Rs. {p.price}</td>
               <td>{p.stock}</td>
               <td>
                 <span className={p.status === 'active' ? 'status-active' : 'status-inactive'}>
