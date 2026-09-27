@@ -1,11 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path'); // Added path import
+const path = require('path');
 require('dotenv').config();
 const db = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const orderRoutes = require('./routes/orderRoutes'); // Added
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes); // Added
 
 app.get('/', (req, res) => {
   res.send('Illam Chiya API is live!');

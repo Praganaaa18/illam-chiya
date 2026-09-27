@@ -28,6 +28,34 @@
   z-index: -1; /* Keeps background behind your content */
 }
 
+/* Top Right "Back to Home" Link */
+.back-home-link {
+  position: absolute;
+  top: 1.8rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #2d4536;
+  background-color: rgba(241, 235, 217, 0.85); /* Matches card theme with translucency */
+  padding: 0.5rem 0.9rem;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease-in-out;
+  z-index: 10;
+}
+
+.back-home-link:hover {
+  background-color: #f1ebd9;
+  color: #1f3f2f;
+  transform: translateX(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
 /* Branding Header */
 .login-header {
   display: flex;
@@ -121,6 +149,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
 }
 
 .input-wrapper input {
@@ -139,10 +169,25 @@
   border-color: #2d5a43;
 }
 
+/* Validation Error state for Input Wrapper */
+.input-wrapper.input-error input {
+  border-color: #bc3b3b;
+  background-color: #f9ebeb;
+}
+
 .input-icon {
   position: absolute;
   right: 0.8rem;
   pointer-events: none;
+}
+
+/* Field-Level Inline Error Message */
+.field-error-message {
+  display: block;
+  color: #bc3b3b;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  font-weight: 600;
 }
 
 /* Remember Me & Forgot Password */
@@ -188,6 +233,11 @@
   background-color: #1f3f2f;
 }
 
+.login-btn:disabled {
+  background-color: #728b7a;
+  cursor: not-allowed;
+}
+
 /* Footer Link */
 .register-footer {
   text-align: center;
@@ -210,4 +260,14 @@
   font-size: 0.85rem;
   margin-bottom: 1rem;
   text-align: center;
+}
+
+/* Responsive adjust for mobile viewports */
+@media (max-width: 480px) {
+  .back-home-link {
+    top: 1rem;
+    right: 1rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+  }
 }
