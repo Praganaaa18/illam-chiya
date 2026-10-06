@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductManagement from './ProductManagement';
+import BillingsAndPayouts from './BillingsandPayouts';
+import FarmSettings from './FarmSettings';
 import './SellerDashboard.css';
 
 const SellerDashboard = () => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  // Track active tab to render corresponding view (overview, products, orders, etc.)
   const [activeTab, setActiveTab] = useState('overview');
   
-  // Dummy seller state (In production, load this from JWT/LocalStorage or backend)
+  // Dummy seller state (or load from localStorage/Auth Context)
   const [sellerInfo] = useState({
     businessName: "Illam Premium Organic Estate",
     email: "seller@illamchiya.com",
@@ -20,9 +21,7 @@ const SellerDashboard = () => {
 
   const navigate = useNavigate();
 
-  // Handle seller logout action
   const handleLogout = () => {
-    // Clear user tokens/session here if applicable
     localStorage.removeItem('token');
     navigate('/login');
   };
@@ -30,7 +29,6 @@ const SellerDashboard = () => {
   // =========================================================================
   // SUBTITLE 2: RENDER CONTROLLER (DYNAMIC CONTENT VIEWS)
   // =========================================================================
-  // Renders different content sections based on current active tab
   const renderMainContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -38,11 +36,11 @@ const SellerDashboard = () => {
       case 'products':
         return <ProductManagement sellerId={sellerInfo.sellerId} />;
       case 'orders':
-        return <OrdersPlaceholder />;
+        return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
-        return <BillingPlaceholder />;
+        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
       case 'settings':
-        return <SettingsPlaceholder />;
+        return <FarmSettings sellerId={sellerInfo.sellerId} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} />;
     }
@@ -212,28 +210,121 @@ const OverviewSection = ({ sellerName }) => (
   </div>
 );
 
-// --- View 3: Orders Placeholder ---
-const OrdersPlaceholder = () => (
-  <div className="dashboard-card placeholder-view">
-    <h3>📦 Orders & Shipping</h3>
-    <p>Track order fulfillments, print shipping slips, and view history.</p>
-  </div>
-);
+// --- View 3: Orders & Shipping Component ---
+const OrdersAndShipping = ({ sellerId = 1 }) => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-// --- View 4: Billing Placeholder ---
-const BillingPlaceholder = () => (
-  <div className="dashboard-card placeholder-view">
-    <h3>💳 Billings & Payouts</h3>
-    <p>View bank accounts, transaction history, and direct deposit payouts.</p>
-  </div>
-);
+  useEffect(() => {
+    fetchSellerOrders();
+  }, [sellerId]);
 
-// --- View 5: Settings Placeholder ---
-const SettingsPlaceholder = () => (
-  <div className="dashboard-card placeholder-view">
-    <h3>⚙️ Farm Settings</h3>
-    <p>Update tea estate bio, contact details, and certificate documents.</p>
-  </div>
-);
+  const fetchSellerOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/orders?seller_id=${sellerId}`);
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      
+      const data = await response.json();
+      setOrders(data);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError('Unable to load orders. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update status');
+
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+    } catch (err) {
+      console.error('Status update error:', err);
+      alert('Could not update status. Please try again.');
+    }
+  };
+
+  if (loading) return <div className="orders-loading">Loading seller orders...</div>;
+  if (error) return <div className="orders-error">{error}</div>;
+
+  return (
+    <div className="orders-shipping-container">
+      <div className="orders-header">
+        <h2>📦 Orders & Shipping</h2>
+        <p>Track incoming purchases, review buyer delivery details, and update shipment status.</p>
+      </div>
+
+      {orders.length === 0 ? (
+        <div className="no-orders">No orders found for your estate yet.</div>
+      ) : (
+        <div className="table-responsive">
+          <table className="seller-orders-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Buyer Info</th>
+                <th>Items Ordered</th>
+                <th>Total Price</th>
+                <th>Date</th>
+                <th>Current Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order.id}>
+                  <td className="order-id">#{order.id}</td>
+                  <td>
+                    <div className="buyer-name">{order.buyer_name}</div>
+                    <div className="buyer-phone">📞 {order.phone}</div>
+                    <div className="delivery-address" title={order.delivery_address}>
+                      📍 {order.delivery_address}
+                    </div>
+                  </td>
+                  <td className="items-summary">{order.items_summary}</td>
+                  <td className="order-price">Rs. {Number(order.total_price).toFixed(2)}</td>
+                  <td className="order-date">
+                    {new Date(order.created_at).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <span className={`status-pill ${order.status}`}>
+                      {order.status ? order.status.toUpperCase() : 'PENDING'}
+                    </span>
+                  </td>
+                  <td>
+                    <select
+                      className="status-dropdown"
+                      value={order.status || 'pending'}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default SellerDashboard;

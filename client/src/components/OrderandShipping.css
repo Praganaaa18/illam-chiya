@@ -1,0 +1,106 @@
+.orders-shipping-container {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.orders-header h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem;
+  color: #1e3327;
+  margin: 0 0 0.3rem 0;
+}
+
+.orders-header p {
+  color: #5f7063;
+  font-size: 0.9rem;
+  margin-bottom: 1.8rem;
+}
+
+.seller-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.seller-orders-table th {
+  background-color: #f6f8f5;
+  color: #2d5a43;
+  font-weight: 600;
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid #e1e8e3;
+}
+
+.seller-orders-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #edf2ee;
+  vertical-align: top;
+  color: #2c3e35;
+}
+
+.order-id {
+  font-weight: 700;
+  color: #2d5a43;
+}
+
+.buyer-name {
+  font-weight: 600;
+  color: #1e3327;
+}
+
+.buyer-phone, .delivery-address {
+  font-size: 0.8rem;
+  color: #6b7c70;
+  margin-top: 0.2rem;
+}
+
+.items-summary {
+  max-width: 220px;
+  line-height: 1.4;
+}
+
+.order-price {
+  font-weight: 600;
+}
+
+/* Status Pill Indicators */
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.status-pill.pending { background: #fef9c3; color: #854d0e; }
+.status-pill.processing { background: #e0f2fe; color: #0369a1; }
+.status-pill.shipped { background: #f3e8ff; color: #6b21a8; }
+.status-pill.delivered { background: #dcfce7; color: #15803d; }
+.status-pill.cancelled { background: #fee2e2; color: #b91c1c; }
+
+/* Dropdown styling */
+.status-dropdown {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #c8d6cb;
+  background-color: #fcfdfc;
+  color: #2d5a43;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.status-dropdown:focus {
+  border-color: #2d5a43;
+}
+
+.orders-loading, .no-orders, .orders-error {
+  padding: 3rem;
+  text-align: center;
+  color: #5f7063;
+}

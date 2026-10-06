@@ -1,0 +1,142 @@
+/* ==========================================================================
+   SUBTITLE 1: LAYOUT & FILTERS
+   ========================================================================== */
+.orders-shipping-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.orders-header h2 {
+  margin: 0 0 4px 0;
+  color: #2c4c3b;
+}
+
+.orders-header p {
+  margin: 0;
+  color: #5e7367;
+  font-size: 0.9rem;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid #dbe6dd;
+  padding-bottom: 8px;
+}
+
+.filter-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #5e7367;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background-color: #eaf2ec;
+  color: #2c4c3b;
+}
+
+.filter-btn.active {
+  background-color: #4e7c59;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   SUBTITLE 2: DATA TABLE & STATUS BADGES
+   ========================================================================== */
+.table-card {
+  background-color: #ffffff;
+  border: 1px solid #dbe6dd;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.orders-table th {
+  background-color: #f3f7f4;
+  padding: 12px;
+  color: #2c4c3b;
+  font-weight: 600;
+  border-bottom: 1px solid #dbe6dd;
+}
+
+.orders-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eaf2ec;
+  vertical-align: top;
+}
+
+.order-id {
+  font-weight: bold;
+  color: #2c4c3b;
+}
+
+.address-text {
+  font-size: 0.78rem;
+  color: #5e7367;
+}
+
+.amount-text {
+  font-weight: bold;
+  color: #2c4c3b;
+}
+
+.cod-badge {
+  background-color: #fef3c7;
+  color: #78350f;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cod-subtext {
+  font-size: 0.72rem;
+  color: #5e7367;
+}
+
+/* ==========================================================================
+   SUBTITLE 3: STATUS PILLS & DROPDOWNS
+   ========================================================================== */
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.status-pill.pending { background-color: #fef3c7; color: #92400e; }
+.status-pill.processing { background-color: #dbeafe; color: #1e40af; }
+.status-pill.shipped { background-color: #e0e7ff; color: #3730a3; }
+.status-pill.delivered { background-color: #d1fae5; color: #065f46; }
+
+.status-dropdown {
+  padding: 6px 10px;
+  border: 1px solid #c2d4c7;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background-color: #ffffff;
+  color: #2c4c3b;
+  cursor: pointer;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: #5e7367;
+}
