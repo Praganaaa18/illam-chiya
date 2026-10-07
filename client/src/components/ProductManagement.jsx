@@ -1,132 +1,226 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './ProductManagement.css';
 
-const ProductManagement = ({ sellerId = 1 }) => {
+const ProductManagement = () => {
   const [products, setProducts] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: '', description: '', price: '', stock: '', image_url: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock_quantity: '',
+    image_url: '',
+  });
 
-  // Fetch seller's products
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  // Fetch seller products on load
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/products/seller/${sellerId}`);
-      const data = await res.json();
-      setProducts(data);
+      const res = await axios.get('http://localhost:5000/api/products/seller/1');
+      setProducts(res.data);
     } catch (err) {
-      console.error('Failed to fetch products', err);
+      console.error('Error fetching products:', err);
     }
   };
 
-  useEffect(() => { fetchProducts(); }, [sellerId]);
+  // Handle Text/Number Form Inputs
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  // Handle File Input Selection
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
 
-  // Add or Edit Product
+  // Handle Form Submission (Add Product)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const url = editingId 
-      ? `http://localhost:5000/api/products/${editingId}`
-      : `http://localhost:5000/api/products`;
-    const method = editingId ? 'PUT' : 'POST';
-
     try {
-      await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, seller_id: sellerId })
+      let finalImageUrl = formData.image_url;
+
+      // Upload local image file if selected
+      if (selectedFile) {
+        const fileData = new FormData();
+        fileData.append('image', selectedFile);
+        
+        try {
+          const uploadRes = await axios.post('http://localhost:5000/api/upload', fileData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          finalImageUrl = uploadRes.data.filePath || uploadRes.data.url;
+        } catch (uploadErr) {
+          console.error('Image upload failed, continuing with fallback:', uploadErr);
+        }
+      }
+
+      const newProductPayload = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        stock_quantity: parseInt(formData.stock_quantity) || 0,
+        image_url: finalImageUrl || '',
+        seller_id: 1, // backend requirement baseline
+        category_id: 1, // backend requirement baseline
+        status: 'active' // Table default status
+      };
+
+      await axios.post('http://localhost:5000/api/products', newProductPayload);
+
+      // Reset Form State
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        stock_quantity: '',
+        image_url: '',
       });
-      setForm({ name: '', description: '', price: '', stock: '', image_url: '' });
-      setEditingId(null);
+      setSelectedFile(null);
       fetchProducts();
+      alert('Product added successfully!');
     } catch (err) {
-      console.error('Failed to save product', err);
+      console.error('Error adding product:', err);
+      alert('Failed to add product. Check browser console for backend error response.');
     }
   };
 
-  // Fill form for editing
-  const startEdit = (product) => {
-    setEditingId(product.id);
-    setForm({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      stock: product.stock,
-      image_url: product.image_url || ''
-    });
-  };
-
-  // Delete Product
-  const handleDelete = async (id) => {
-    if (window.confirm('Delete this product?')) {
-      await fetch(`http://localhost:5000/api/products/${id}`, { method: 'DELETE' });
-      fetchProducts();
+  // Handle Radio Button Status Change in Table
+  const handleStatusRadioChange = async (productId, newStatus) => {
+    try {
+      await axios.patch(`http://localhost:5000/api/products/${productId}/status`, { status: newStatus });
+      
+      // Update local state immediately
+      setProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, is_active: newStatus === 'active' ? 1 : 0 } : p))
+      );
+    } catch (err) {
+      console.error('Failed to update status:', err);
     }
-  };
-
-  // Toggle Active / Inactive status
-  const toggleStatus = async (id, currentStatus) => {
-    const nextStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    await fetch(`http://localhost:5000/api/products/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: nextStatus })
-    });
-    fetchProducts();
   };
 
   return (
-    <div className="product-management-container">
-      <h2 className="pm-header">Product Management</h2>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h2>🍃 Product Management</h2>
 
-      <form onSubmit={handleSubmit} className="pm-form-card">
-        <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
-        <div className="pm-form-grid">
-          <input name="name" placeholder="Product Name" value={form.name} onChange={handleChange} required />
-          <input name="price" type="number" placeholder="Price ($)" value={form.price} onChange={handleChange} required />
-          <input name="stock" type="number" placeholder="Stock Quantity" value={form.stock} onChange={handleChange} required />
-          <input name="image_url" placeholder="Image URL" value={form.image_url} onChange={handleChange} />
-          <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} style={{ gridColumn: 'span 2' }} rows="2" />
+      {/* Product Creation Form */}
+      <form onSubmit={handleSubmit} style={{ marginBottom: '30px', background: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
+        <h3>Add New Product</h3>
+        
+        <input
+          type="text"
+          name="name"
+          placeholder="Product Name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
+        />
+        
+        <input
+          type="number"
+          name="price"
+          step="0.01"
+          placeholder="Price ($)"
+          value={formData.price}
+          onChange={handleChange}
+          required
+          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
+        />
+
+        <input
+          type="number"
+          name="stock_quantity"
+          placeholder="Stock Quantity"
+          value={formData.stock_quantity}
+          onChange={handleChange}
+          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
+        />
+
+        {/* Image Input: URL String OR File Upload */}
+        <div className="image-input-container" style={{ marginBottom: '10px', background: '#fff', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image:</label>
+          <input
+            type="text"
+            name="image_url"
+            placeholder="Paste Image URL..."
+            value={formData.image_url}
+            onChange={handleChange}
+            style={{ display: 'block', marginBottom: '8px', width: '100%', padding: '8px' }}
+          />
+          <span style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '5px' }}>— OR Upload File —</span>
+          <input type="file" accept="image/*" onChange={handleFileChange} />
         </div>
-        <button type="submit" className="pm-btn-submit">
-          {editingId ? 'Update Product' : 'Add Product'}
+
+        <textarea
+          name="description"
+          placeholder="Description"
+          value={formData.description}
+          onChange={handleChange}
+          style={{ display: 'block', marginBottom: '15px', width: '100%', padding: '8px', height: '60px' }}
+        />
+
+        <button
+          type="submit"
+          style={{ padding: '8px 16px', backgroundColor: '#2d5a3f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          Add Product
         </button>
-        {editingId && (
-          <button type="button" onClick={() => { setEditingId(null); setForm({ name: '', description: '', price: '', stock: '', image_url: '' }); }} className="pm-btn-cancel">
-            Cancel
-          </button>
-        )}
       </form>
 
-      <table className="pm-table">
+      {/* Products Table with Radio Buttons for Status Toggle */}
+      <h3>Your Products</h3>
+      <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr>
+          <tr style={{ background: '#e0f2fe' }}>
+            <th>ID</th>
             <th>Name</th>
             <th>Price</th>
-            <th>Stock</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>Status (Active / Inactive)</th>
           </tr>
         </thead>
         <tbody>
-          {products.map((p) => (
-            <tr key={p.id}>
-              <td>{p.name}</td>
-              <td>${p.price}</td>
-              <td>{p.stock}</td>
-              <td>
-                <span className={p.status === 'active' ? 'status-active' : 'status-inactive'}>
-                  {p.status ? p.status.toUpperCase() : 'ACTIVE'}
-                </span>
-              </td>
-              <td>
-                <button onClick={() => toggleStatus(p.id, p.status || 'active')} className="btn-toggle">
-                  {p.status === 'active' ? 'Set Inactive' : 'Set Active'}
-                </button>
-                <button onClick={() => startEdit(p)} className="btn-edit">Edit</button>
-                <button onClick={() => handleDelete(p.id)} className="btn-delete">Remove</button>
-              </td>
-            </tr>
-          ))}
+          {products.map((product) => {
+            const currentStatus = product.is_active ? 'active' : 'inactive';
+            return (
+              <tr key={product.id}>
+                <td>{product.id}</td>
+                <td>{product.name}</td>
+                <td>${product.price}</td>
+                <td>
+                  {/* Radio Buttons for Inline Status Update */}
+                  <div className="table-status-group">
+                    <label className={`table-status-label ${currentStatus === 'active' ? 'active' : ''}`} style={{ marginRight: '10px', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name={`status-${product.id}`}
+                        value="active"
+                        checked={currentStatus === 'active'}
+                        onChange={() => handleStatusRadioChange(product.id, 'active')}
+                      />
+                      Active
+                    </label>
+                    <label className={`table-status-label ${currentStatus === 'inactive' ? 'inactive' : ''}`} style={{ cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name={`status-${product.id}`}
+                        value="inactive"
+                        checked={currentStatus === 'inactive'}
+                        onChange={() => handleStatusRadioChange(product.id, 'inactive')}
+                      />
+                      Inactive
+                    </label>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
