@@ -23,14 +23,16 @@
 }
 
 .buyer-card {
-  background: rgba(246, 245, 238, 0.94);
+  background: rgba(246, 245, 238, 0.96);
   backdrop-filter: blur(8px);
   border-radius: 20px;
-  padding: 1.2rem 1.8rem;
+  padding: 1.5rem 1.8rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 
 .card-logo {
@@ -57,6 +59,29 @@
   color: #5b6e61;
   font-size: 0.8rem;
   margin: 0 0 0.8rem 0;
+}
+
+/* Section Subtitles */
+.form-section-header {
+  margin-top: 0.8rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #d4dfd6;
+  padding-bottom: 0.25rem;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  color: #2d5a43;
+  margin: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section-subtitle {
+  font-size: 0.72rem;
+  color: #6a7e70;
+  margin: 2px 0 0 0;
 }
 
 .form-group {
@@ -88,6 +113,13 @@
 .form-group input:focus,
 .form-group select:focus {
   border-color: #2d5a43;
+}
+
+.field-error-text {
+  color: #c53030;
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+  font-weight: 600;
 }
 
 .form-row {
@@ -125,7 +157,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 0.4rem;
+  margin-top: 0.8rem;
   transition: background-color 0.2s;
 }
 
