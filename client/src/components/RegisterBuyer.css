@@ -1,133 +1,147 @@
-.register-page {
+.buyer-page {
   position: relative;
   min-height: 100vh;
   width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: 'Georgia', serif;
-  padding: 2rem 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 1rem;
   box-sizing: border-box;
   overflow: hidden;
 }
 
-.register-page::before {
+.buyer-page::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-              url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6t... (or your tea garden URL)') center/cover no-repeat;
-  filter: blur(8px);
+              url('https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+  filter: blur(4px);
   transform: scale(1.05);
   z-index: -1;
 }
 
-.register-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.brand-logo h1 {
-  font-size: 1.6rem;
-  color: #2a3a2d;
-  letter-spacing: 2px;
-  margin: 0;
-}
-
-.role-tag {
-  font-size: 0.95rem;
-  color: #2a3a2d;
-  font-weight: 600;
-  margin-top: 0.4rem;
-}
-
-.register-card {
-  background-color: #f1ebd9;
+.buyer-card {
+  background: rgba(246, 245, 238, 0.94);
+  backdrop-filter: blur(8px);
   border-radius: 20px;
-  padding: 2rem;
+  padding: 1.2rem 1.8rem;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
 }
 
-.register-title {
-  text-align: center;
-  font-size: 1.7rem;
-  color: #2d4536;
-  margin: 0 0 0.3rem 0;
+.card-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.2rem;
 }
 
-.register-subtitle {
+.card-logo svg {
+  width: 32px;
+  height: 32px;
+}
+
+.card-title {
   text-align: center;
-  color: #526356;
-  margin: 0 0 1.2rem 0;
-  font-size: 0.9rem;
+  font-size: 1.35rem;
+  color: #2b4c38;
+  font-family: 'Georgia', serif;
+  margin: 0 0 0.1rem 0;
+}
+
+.card-subtitle {
+  text-align: center;
+  color: #5b6e61;
+  font-size: 0.8rem;
+  margin: 0 0 0.8rem 0;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.55rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .form-group label {
-  display: block;
-  font-size: 0.85rem;
-  color: #2d4536;
-  margin-bottom: 0.3rem;
-  font-weight: 500;
+  font-size: 0.78rem;
+  color: #2b4c38;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
-  padding: 0.7rem 0.9rem;
-  border: 1.5px solid #a8ba9a;
-  border-radius: 10px;
-  background-color: #e8e3d3;
-  font-size: 0.9rem;
+  padding: 0.45rem 0.7rem;
+  border: 1.5px solid #8fad96;
+  border-radius: 8px;
+  background-color: #ffffff;
+  font-size: 0.82rem;
+  color: #2b4c38;
   outline: none;
-  color: #2d4536;
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: #2d5a43;
 }
 
-.register-btn {
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+.submit-btn {
   width: 100%;
-  padding: 0.8rem;
-  background-color: #2d5a43;
+  padding: 0.6rem;
+  background-color: #5a8a68;
   color: #ffffff;
   border: none;
-  border-radius: 25px;
-  font-size: 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   transition: background-color 0.2s;
 }
 
-.register-btn:hover {
-  background-color: #1f3f2f;
+.submit-btn:hover {
+  background-color: #446a4f;
 }
 
-.login-footer {
+.card-footer {
   text-align: center;
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  color: #2d4536;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: #2b4c38;
 }
 
 .login-link {
-  color: #2d5a43;
+  color: #5a8a68;
   font-weight: 700;
   text-decoration: underline;
 }
@@ -135,9 +149,9 @@
 .error-message {
   background-color: #fce8e6;
   color: #a83232;
-  padding: 0.6rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  padding: 0.4rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  margin-bottom: 0.6rem;
   text-align: center;
 }

@@ -78,4 +78,9 @@ CREATE TABLE reviews (
     FOREIGN KEY (buyer_id) REFERENCES users(id)
 );
 
+ALTER TABLE users 
+ADD COLUMN address VARCHAR(255) NULL,
+ADD COLUMN pan_vat VARCHAR(100) NULL,
+ADD COLUMN document_path VARCHAR(255) NULL;
+
 INSERT INTO categories (name, description) VALUES ('Orthodox Tea', 'Authentic high-altitude Orthodox tea leaves');
