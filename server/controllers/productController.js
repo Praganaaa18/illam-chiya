@@ -1,16 +1,34 @@
 const db = require('../config/db');
 
-// GET ALL PRODUCTS (Public Catalog - Active Only)
+// Helper function to normalize and format image URLs for backend responses
+const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+    // Windows slashes ko replace karo aur starting slashes remove karo
+    const cleanPath = url.replace(/\\/g, '/').replace(/^\/+/, '');
+    return cleanPath;
+};
+
+// GET ALL PRODUCTS (Home Page / Public Catalog - Active Only)
 const getAllProducts = async (req, res) => {
     try {
         const [products] = await db.execute(`SELECT * FROM products WHERE is_active = TRUE`);
-        res.json(products);
+        
+        // Ensure image URLs are correctly formatted for the frontend
+        const formattedProducts = products.map((product) => ({
+            ...product,
+            image_url: formatImageUrl(product.image_url)
+        }));
+
+        res.json(formattedProducts);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// CREATE PRODUCT (Supports 'active' / 'inactive' status from Radio Buttons)
+// CREATE PRODUCT
 const createProduct = async (req, res) => {
     const { 
         seller_id, 
@@ -25,8 +43,8 @@ const createProduct = async (req, res) => {
         status 
     } = req.body;
 
-    // Convert 'active'/'inactive' or boolean into 1 or 0 for MySQL TINYINT/BOOLEAN
     const isActive = (status === 'inactive' || status === false || status === 0) ? 0 : 1;
+    const formattedImageUrl = formatImageUrl(image_url);
 
     const query = `
         INSERT INTO products 
@@ -39,10 +57,10 @@ const createProduct = async (req, res) => {
             seller_id || 1, 
             category_id || 1, 
             name, 
-            description, 
-            price, 
-            stock_quantity || 0, 
-            image_url, 
+            description || '', 
+            parseFloat(price) || 0.00, 
+            parseInt(stock_quantity, 10) || 0, 
+            formattedImageUrl, 
             elevation || '5,000 ft', 
             process_type || 'Orthodox',
             isActive
@@ -53,23 +71,30 @@ const createProduct = async (req, res) => {
     }
 };
 
-// GET ALL PRODUCTS FOR A SPECIFIC SELLER (Includes Active & Inactive)
+// GET ALL PRODUCTS FOR A SPECIFIC SELLER
 const getSellerProducts = async (req, res) => {
     const { sellerId } = req.params;
     try {
         const [products] = await db.execute(`SELECT * FROM products WHERE seller_id = ?`, [sellerId]);
-        res.json(products);
+        
+        const formattedProducts = products.map((product) => ({
+            ...product,
+            image_url: formatImageUrl(product.image_url)
+        }));
+
+        res.json(formattedProducts);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// UPDATE PRODUCT DETAILS & STATUS
+// UPDATE PRODUCT
 const updateProduct = async (req, res) => {
     const { id } = req.params;
     const { name, description, price, stock_quantity, image_url, elevation, process_type, status } = req.body;
 
     const isActive = (status === 'inactive' || status === false || status === 0) ? 0 : 1;
+    const formattedImageUrl = formatImageUrl(image_url);
 
     const query = `
         UPDATE products 
@@ -78,8 +103,23 @@ const updateProduct = async (req, res) => {
     `;
 
     try {
-        await db.execute(query, [name, description, price, stock_quantity, image_url, elevation, process_type, isActive, id]);
-        res.json({ message: 'Product updated successfully' });
+        const [result] = await db.execute(query, [
+            name, 
+            description || '', 
+            parseFloat(price) || 0.00, 
+            parseInt(stock_quantity, 10) || 0, 
+            formattedImageUrl, 
+            elevation || '5,000 ft', 
+            process_type || 'Orthodox', 
+            isActive, 
+            id
+        ]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.json({ message: 'Product updated successfully', id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -89,19 +129,23 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
     const { id } = req.params;
     try {
-        await db.execute(`DELETE FROM products WHERE id = ?`, [id]);
-        res.json({ message: 'Product deleted successfully' });
+        const [result] = await db.execute(`DELETE FROM products WHERE id = ?`, [id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.json({ message: 'Product deleted successfully', id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// TOGGLE STATUS via Radio Buttons ('active' / 'inactive' or boolean)
+// TOGGLE STATUS via Radio Buttons
 const toggleProductStatus = async (req, res) => {
     const { id } = req.params;
     const { status, is_active } = req.body; 
 
-    // Handle string ('active'/'inactive'), boolean (true/false), or traditional body key
     let isActive;
     if (status !== undefined) {
         isActive = (status === 'active' || status === true || status === 1) ? 1 : 0;

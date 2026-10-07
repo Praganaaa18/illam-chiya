@@ -13,6 +13,7 @@ const ProductManagement = () => {
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null);
 
   // Fetch seller products on load
   useEffect(() => {
@@ -40,7 +41,7 @@ const ProductManagement = () => {
     }
   };
 
-  // Handle Form Submission (Add Product)
+  // Handle Form Submission (Add OR Update Product)
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -50,7 +51,7 @@ const ProductManagement = () => {
       if (selectedFile) {
         const fileData = new FormData();
         fileData.append('image', selectedFile);
-        
+
         try {
           const uploadRes = await axios.post('http://localhost:5000/api/upload', fileData, {
             headers: { 'Content-Type': 'multipart/form-data' }
@@ -61,42 +62,81 @@ const ProductManagement = () => {
         }
       }
 
-      const newProductPayload = {
+      const productPayload = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        stock_quantity: parseInt(formData.stock_quantity) || 0,
+        stock_quantity: parseInt(formData.stock_quantity, 10) || 0,
         image_url: finalImageUrl || '',
-        seller_id: 1, // backend requirement baseline
-        category_id: 1, // backend requirement baseline
-        status: 'active' // Table default status
+        seller_id: 1,
+        category_id: 1,
+        status: 'active'
       };
 
-      await axios.post('http://localhost:5000/api/products', newProductPayload);
+      if (editingProductId) {
+        // UPDATE existing product
+        await axios.put(`http://localhost:5000/api/products/${editingProductId}`, productPayload);
+        alert('Product updated successfully!');
+      } else {
+        // ADD new product
+        await axios.post('http://localhost:5000/api/products', productPayload);
+        alert('Product added successfully!');
+      }
 
-      // Reset Form State
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        stock_quantity: '',
-        image_url: '',
-      });
-      setSelectedFile(null);
+      resetForm();
       fetchProducts();
-      alert('Product added successfully!');
     } catch (err) {
-      console.error('Error adding product:', err);
-      alert('Failed to add product. Check browser console for backend error response.');
+      console.error('Error saving product:', err);
+      alert('Failed to save product. Check browser console for details.');
     }
+  };
+
+  // Populate Form for Editing
+  const handleEditClick = (product) => {
+    setEditingProductId(product.id);
+    setFormData({
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price || '',
+      stock_quantity: product.stock_quantity || '',
+      image_url: product.image_url || '',
+    });
+    setSelectedFile(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle Product Delete
+  const handleDeleteClick = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await axios.delete(`http://localhost:5000/api/products/${productId}`);
+        alert('Product deleted successfully!');
+        fetchProducts();
+      } catch (err) {
+        console.error('Failed to delete product:', err);
+        alert('Failed to delete product.');
+      }
+    }
+  };
+
+  // Reset Form State
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      stock_quantity: '',
+      image_url: '',
+    });
+    setSelectedFile(null);
+    setEditingProductId(null);
   };
 
   // Handle Radio Button Status Change in Table
   const handleStatusRadioChange = async (productId, newStatus) => {
     try {
       await axios.patch(`http://localhost:5000/api/products/${productId}/status`, { status: newStatus });
-      
-      // Update local state immediately
+
       setProducts((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, is_active: newStatus === 'active' ? 1 : 0 } : p))
       );
@@ -106,13 +146,13 @@ const ProductManagement = () => {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+    <div className="product-management-container">
       <h2>🍃 Product Management</h2>
 
-      {/* Product Creation Form */}
-      <form onSubmit={handleSubmit} style={{ marginBottom: '30px', background: '#f9f9f9', padding: '15px', borderRadius: '8px' }}>
-        <h3>Add New Product</h3>
-        
+      {/* Product Form */}
+      <form onSubmit={handleSubmit} className="product-form">
+        <h3>{editingProductId ? '✏️ Edit Product' : '➕ Add New Product'}</h3>
+
         <input
           type="text"
           name="name"
@@ -120,9 +160,8 @@ const ProductManagement = () => {
           value={formData.name}
           onChange={handleChange}
           required
-          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
         />
-        
+
         <input
           type="number"
           name="price"
@@ -131,7 +170,6 @@ const ProductManagement = () => {
           value={formData.price}
           onChange={handleChange}
           required
-          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
         />
 
         <input
@@ -140,21 +178,18 @@ const ProductManagement = () => {
           placeholder="Stock Quantity"
           value={formData.stock_quantity}
           onChange={handleChange}
-          style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
         />
 
-        {/* Image Input: URL String OR File Upload */}
-        <div className="image-input-container" style={{ marginBottom: '10px', background: '#fff', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Product Image:</label>
+        <div className="image-input-container">
+          <label>Product Image:</label>
           <input
             type="text"
             name="image_url"
             placeholder="Paste Image URL..."
             value={formData.image_url}
             onChange={handleChange}
-            style={{ display: 'block', marginBottom: '8px', width: '100%', padding: '8px' }}
           />
-          <span style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '5px' }}>— OR Upload File —</span>
+          <span>— OR Upload File —</span>
           <input type="file" accept="image/*" onChange={handleFileChange} />
         </div>
 
@@ -163,66 +198,87 @@ const ProductManagement = () => {
           placeholder="Description"
           value={formData.description}
           onChange={handleChange}
-          style={{ display: 'block', marginBottom: '15px', width: '100%', padding: '8px', height: '60px' }}
         />
 
-        <button
-          type="submit"
-          style={{ padding: '8px 16px', backgroundColor: '#2d5a3f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Add Product
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="submit-btn">
+            {editingProductId ? 'Update Product' : 'Add Product'}
+          </button>
+          {editingProductId && (
+            <button type="button" className="cancel-btn" onClick={resetForm}>
+              Cancel Edit
+            </button>
+          )}
+        </div>
       </form>
 
-      {/* Products Table with Radio Buttons for Status Toggle */}
-      <h3>Your Products</h3>
-      <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ background: '#e0f2fe' }}>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Status (Active / Inactive)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => {
-            const currentStatus = product.is_active ? 'active' : 'inactive';
-            return (
-              <tr key={product.id}>
-                <td>{product.id}</td>
-                <td>{product.name}</td>
-                <td>${product.price}</td>
-                <td>
-                  {/* Radio Buttons for Inline Status Update */}
-                  <div className="table-status-group">
-                    <label className={`table-status-label ${currentStatus === 'active' ? 'active' : ''}`} style={{ marginRight: '10px', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name={`status-${product.id}`}
-                        value="active"
-                        checked={currentStatus === 'active'}
-                        onChange={() => handleStatusRadioChange(product.id, 'active')}
-                      />
-                      Active
-                    </label>
-                    <label className={`table-status-label ${currentStatus === 'inactive' ? 'inactive' : ''}`} style={{ cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name={`status-${product.id}`}
-                        value="inactive"
-                        checked={currentStatus === 'inactive'}
-                        onChange={() => handleStatusRadioChange(product.id, 'inactive')}
-                      />
-                      Inactive
-                    </label>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* Products Table */}
+      <div className="products-table-container">
+        <h3>Your Products</h3>
+        <table className="products-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Status (Active / Inactive)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => {
+              const currentStatus = product.is_active ? 'active' : 'inactive';
+              return (
+                <tr key={product.id}>
+                  <td>{product.id}</td>
+                  <td>{product.name}</td>
+                  <td>${Number(product.price).toFixed(2)}</td>
+                  <td>
+                    <div className="table-status-group">
+                      <label className={`table-status-label ${currentStatus === 'active' ? 'active' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`status-${product.id}`}
+                          value="active"
+                          checked={currentStatus === 'active'}
+                          onChange={() => handleStatusRadioChange(product.id, 'active')}
+                        />
+                        Active
+                      </label>
+                      <label className={`table-status-label ${currentStatus === 'inactive' ? 'inactive' : ''}`}>
+                        <input
+                          type="radio"
+                          name={`status-${product.id}`}
+                          value="inactive"
+                          checked={currentStatus === 'inactive'}
+                          onChange={() => handleStatusRadioChange(product.id, 'inactive')}
+                        />
+                        Inactive
+                      </label>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button
+                        className="btn-edit"
+                        onClick={() => handleEditClick(product)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteClick(product.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
