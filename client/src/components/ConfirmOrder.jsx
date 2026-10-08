@@ -241,10 +241,10 @@ const ConfirmOrder = () => {
           <div className="summary-items">
             {cartItems.map((item) => (
               <div key={item.id} className="summary-item">
-                <img 
+                {/* <img 
                   src={item.image_url ? `http://localhost:5000${item.image_url}` : item.image || 'https://via.placeholder.com/60'} 
                   alt={item.name} 
-                />
+                /> */}
                 <div className="summary-item-info">
                   <h4>{item.name}</h4>
                   <span>Qty: {item.quantity}</span>
