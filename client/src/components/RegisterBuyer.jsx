@@ -14,6 +14,7 @@ const RegisterBuyer = () => {
     confirmPassword: '',
   });
 
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -21,14 +22,36 @@ const RegisterBuyer = () => {
 
   const navigate = useNavigate();
 
+  // Validation rules
+  const nameRegex = /^[a-zA-Z\s]*$/;
+  const phoneRegex = /^[0-9]*$/;
+  const addressRegex = /^[a-zA-Z0-9\s,.-]*$/;
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    let err = '';
+    if (name === 'fullName' && !nameRegex.test(value)) {
+      err = 'Special characters and numbers are not allowed in Full Name.';
+    } else if (name === 'phone' && !phoneRegex.test(value)) {
+      err = 'Special characters and letters are not allowed in Phone Number.';
+    } else if (name === 'deliveryAddress' && !addressRegex.test(value)) {
+      err = 'Special characters (like @, #, $, %) are not allowed in Delivery Address.';
+    }
+
+    setFieldErrors((prev) => ({ ...prev, [name]: err }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Data:', formData); // Debugging line
     setError('');
+
+    // Check if any field has active validation errors
+    const hasErrors = Object.values(fieldErrors).some((err) => err !== '');
+    if (hasErrors) {
+      return setError('Please correct the invalid fields before submitting.');
+    }
 
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match.');
@@ -41,11 +64,14 @@ const RegisterBuyer = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: formData.fullName, // <--- Change 'name' to 'full_name'
+          full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone,
+          delivery_address: formData.deliveryAddress,
+          address_type: formData.addressType,
+          gender: formData.gender,
           password: formData.password,
-          role: 'buyer', // Hardcoded for Buyer Registration
+          role: 'buyer',
         }),
       });
 
@@ -80,6 +106,12 @@ const RegisterBuyer = () => {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {/* SECTION 1: Personal & Delivery Information */}
+          <div className="form-section-header">
+            <h3 className="section-title">Personal & Delivery Details</h3>
+            <p className="section-subtitle">Provide your contact info and primary delivery destination.</p>
+          </div>
+
           <div className="form-group">
             <label>Full Name</label>
             <input
@@ -87,9 +119,10 @@ const RegisterBuyer = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              placeholder="Jane Cooper"
+              placeholder="e.g. Jane Cooper"
               required
             />
+            {fieldErrors.fullName && <span className="field-error-text">{fieldErrors.fullName}</span>}
           </div>
 
           <div className="form-group">
@@ -112,10 +145,11 @@ const RegisterBuyer = () => {
               value={formData.phone}
               onChange={handleChange}
               pattern="[0-9]{10}"
-            maxLength="10"
-              placeholder="e.g.9845612375"
+              maxLength="10"
+              placeholder="e.g. 9845612375"
               required
             />
+            {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
           </div>
 
           <div className="form-group">
@@ -125,9 +159,10 @@ const RegisterBuyer = () => {
               name="deliveryAddress"
               value={formData.deliveryAddress}
               onChange={handleChange}
-              placeholder="e.g. sanothimi,bhaktapur"
+              placeholder="e.g. Sanothimi, Bhaktapur"
               required
             />
+            {fieldErrors.deliveryAddress && <span className="field-error-text">{fieldErrors.deliveryAddress}</span>}
           </div>
 
           {/* Row 1: Address Type & Gender */}
@@ -148,6 +183,12 @@ const RegisterBuyer = () => {
                 <option value="Other">Other</option>
               </select>
             </div>
+          </div>
+
+          {/* SECTION 2: Account Security */}
+          <div className="form-section-header">
+            <h3 className="section-title">Account Security</h3>
+            <p className="section-subtitle">Set up a strong password to safeguard your account.</p>
           </div>
 
           {/* Row 2: Create Password & Confirm Password */}

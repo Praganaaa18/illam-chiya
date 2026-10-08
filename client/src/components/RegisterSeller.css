@@ -30,6 +30,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow-y: auto;
 }
 
 /* ==========================================================================
@@ -65,7 +66,32 @@
 }
 
 /* ==========================================================================
-   4. INPUT FIELDS & GRID
+   4. FORM SECTIONS
+   ========================================================================== */
+.form-section-header {
+  margin-top: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #d4dfd6;
+  padding-bottom: 2px;
+}
+
+.section-title {
+  font-size: 0.78rem;
+  color: #1e3d29;
+  margin: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section-subtitle {
+  font-size: 0.68rem;
+  color: #6a7e70;
+  margin: 1px 0 0 0;
+}
+
+/* ==========================================================================
+   5. INPUT FIELDS & GRID
    ========================================================================== */
 .form-group {
   display: flex;
@@ -96,14 +122,55 @@
   background-color: #fff;
   box-sizing: border-box;
   transition: border-color 0.2s;
+  width: 100%;
 }
 
 .form-group input:focus {
   border-color: #3b7a57;
 }
 
+/* Field level error message */
+.field-error-text {
+  color: #e53e3e;
+  font-size: 0.68rem;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
 /* ==========================================================================
-   5. FILE INPUT CUSTOM STYLING
+   6. PASSWORD TOGGLE INPUTS
+   ========================================================================== */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon input {
+  padding-right: 32px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.eye-btn:hover {
+  color: #1e3d29;
+}
+
+/* ==========================================================================
+   7. FILE INPUT CUSTOM STYLING
    ========================================================================== */
 .form-group input[type="file"] {
   padding: 3px 6px;
@@ -130,7 +197,7 @@
 }
 
 /* ==========================================================================
-   6. ACTIONS & FOOTER
+   8. ACTIONS & FOOTER
    ========================================================================== */
 .submit-btn {
   width: 100%;
@@ -143,7 +210,7 @@
   font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
-  margin-top: 6px;
+  margin-top: 10px;
   transition: background 0.2s;
 }
 

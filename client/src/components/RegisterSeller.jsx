@@ -10,16 +10,36 @@ const RegisterSeller = () => {
     address: '',
     panVat: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
 
   const [documentFile, setDocumentFile] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
+  // Validation rules
+  const phoneRegex = /^[0-9]*$/;
+  const alphaNumericRegex = /^[a-zA-Z0-9\s,.-]*$/;
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    let err = '';
+    if (name === 'phone' && !phoneRegex.test(value)) {
+      err = 'Special characters and letters are not allowed in Contact Phone.';
+    } else if ((name === 'businessName' || name === 'address') && !alphaNumericRegex.test(value)) {
+      err = 'Special characters (like @, #, $, %) are not allowed.';
+    } else if (name === 'panVat' && !alphaNumericRegex.test(value)) {
+      err = 'Special characters are not allowed in PAN / VAT Number.';
+    }
+
+    setFieldErrors((prev) => ({ ...prev, [name]: err }));
   };
 
   const handleFileChange = (e) => {
@@ -29,6 +49,12 @@ const RegisterSeller = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Check if any field has validation errors
+    const hasErrors = Object.values(fieldErrors).some((err) => err !== '');
+    if (hasErrors) {
+      return setError('Please correct the invalid fields before submitting.');
+    }
 
     if (formData.password.trim() !== formData.confirmPassword.trim()) {
       return setError('Passwords do not match.');
@@ -41,7 +67,6 @@ const RegisterSeller = () => {
     setLoading(true);
 
     try {
-      // Send multipart/form-data for file handling
       const dataPayload = new FormData();
       dataPayload.append('full_name', formData.businessName);
       dataPayload.append('email', formData.email);
@@ -54,7 +79,7 @@ const RegisterSeller = () => {
 
       const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
-        body: dataPayload // Browser sets multipart boundary header automatically
+        body: dataPayload,
       });
 
       const data = await response.json();
@@ -82,6 +107,12 @@ const RegisterSeller = () => {
         {error && <div className="error-box">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {/* SECTION 1: Business Profile */}
+          <div className="form-section-header">
+            <h3 className="section-title">Business & Contact Info</h3>
+            <p className="section-subtitle">Basic details regarding your tea farm or business enterprise.</p>
+          </div>
+
           <div className="form-group">
             <label>Business / Farm Name</label>
             <input
@@ -92,6 +123,7 @@ const RegisterSeller = () => {
               onChange={handleChange}
               required
             />
+            {fieldErrors.businessName && <span className="field-error-text">{fieldErrors.businessName}</span>}
           </div>
 
           <div className="form-row">
@@ -115,9 +147,17 @@ const RegisterSeller = () => {
                 placeholder="98XXXXXXXX"
                 value={formData.phone}
                 onChange={handleChange}
+                maxLength="10"
                 required
               />
+              {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
             </div>
+          </div>
+
+          {/* SECTION 2: Legal Verification */}
+          <div className="form-section-header">
+            <h3 className="section-title">Legal Verification</h3>
+            <p className="section-subtitle">Required for business validation and payout routing.</p>
           </div>
 
           <div className="form-row">
@@ -131,6 +171,7 @@ const RegisterSeller = () => {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.address && <span className="field-error-text">{fieldErrors.address}</span>}
             </div>
 
             <div className="form-group">
@@ -143,6 +184,7 @@ const RegisterSeller = () => {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.panVat && <span className="field-error-text">{fieldErrors.panVat}</span>}
             </div>
           </div>
 
@@ -156,29 +198,53 @@ const RegisterSeller = () => {
             />
           </div>
 
+          {/* SECTION 3: Account Security */}
+          <div className="form-section-header">
+            <h3 className="section-title">Account Credentials</h3>
+            <p className="section-subtitle">Password to log in to your seller account.</p>
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label>Create Password</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="input-with-icon">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  👁
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
               <label>Confirm Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
+              <div className="input-with-icon">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  👁
+                </button>
+              </div>
             </div>
           </div>
 
