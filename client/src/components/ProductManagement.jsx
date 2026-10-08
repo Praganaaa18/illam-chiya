@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import './ProductManagement.css';
+import axios from 'axios';
 
 const ProductManagement = () => {
   const [products, setProducts] = useState([]);
@@ -28,7 +29,7 @@ const ProductManagement = () => {
     } catch (err) {
       console.error('Error fetching products:', err);
     }
-  }, [sellerId]);
+  }, []);
 
   // Handle Text/Number Form Inputs
   const handleChange = (e) => {
