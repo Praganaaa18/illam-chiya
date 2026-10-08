@@ -1,10 +1,28 @@
 const db = require('../config/db');
 
-// GET ALL PRODUCTS (Public Active Catalog)
+// Helper function to normalize and format image URLs for backend responses
+const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+    // Windows slashes ko replace karo aur starting slashes remove karo
+    const cleanPath = url.replace(/\\/g, '/').replace(/^\/+/, '');
+    return cleanPath;
+};
+
+// GET ALL PRODUCTS (Home Page / Public Catalog - Active Only)
 const getAllProducts = async (req, res) => {
     try {
         const [products] = await db.execute(`SELECT * FROM products WHERE is_active = TRUE`);
-        res.json(products);
+        
+        // Ensure image URLs are correctly formatted for the frontend
+        const formattedProducts = products.map((product) => ({
+            ...product,
+            image_url: formatImageUrl(product.image_url)
+        }));
+
+        res.json(formattedProducts);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -12,23 +30,40 @@ const getAllProducts = async (req, res) => {
 
 // CREATE PRODUCT
 const createProduct = async (req, res) => {
-    const { seller_id, category_id, name, description, price, stock_quantity, image_url, elevation, process_type } = req.body;
+    const { 
+        seller_id, 
+        category_id, 
+        name, 
+        description, 
+        price, 
+        stock_quantity, 
+        image_url, 
+        elevation, 
+        process_type, 
+        status 
+    } = req.body;
+
+    const isActive = (status === 'inactive' || status === false || status === 0) ? 0 : 1;
+    const formattedImageUrl = formatImageUrl(image_url);
+
     const query = `
         INSERT INTO products 
         (seller_id, category_id, name, description, price, stock_quantity, image_url, elevation, process_type, is_active) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
+
     try {
         const [result] = await db.execute(query, [
             seller_id || 1, 
             category_id || 1, 
             name, 
-            description, 
-            price, 
-            stock_quantity || 0, 
-            image_url, 
+            description || '', 
+            parseFloat(price) || 0.00, 
+            parseInt(stock_quantity, 10) || 0, 
+            formattedImageUrl, 
             elevation || '5,000 ft', 
-            process_type || 'Orthodox'
+            process_type || 'Orthodox',
+            isActive
         ]);
         res.status(201).json({ message: 'Product added successfully', id: result.insertId });
     } catch (err) {
@@ -36,12 +71,18 @@ const createProduct = async (req, res) => {
     }
 };
 
-// GET SELLER PRODUCTS
+// GET ALL PRODUCTS FOR A SPECIFIC SELLER
 const getSellerProducts = async (req, res) => {
     const { sellerId } = req.params;
     try {
         const [products] = await db.execute(`SELECT * FROM products WHERE seller_id = ?`, [sellerId]);
-        res.json(products);
+        
+        const formattedProducts = products.map((product) => ({
+            ...product,
+            image_url: formatImageUrl(product.image_url)
+        }));
+
+        res.json(formattedProducts);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -50,15 +91,35 @@ const getSellerProducts = async (req, res) => {
 // UPDATE PRODUCT
 const updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, stock_quantity, image_url, elevation, process_type } = req.body;
+    const { name, description, price, stock_quantity, image_url, elevation, process_type, status } = req.body;
+
+    const isActive = (status === 'inactive' || status === false || status === 0) ? 0 : 1;
+    const formattedImageUrl = formatImageUrl(image_url);
+
     const query = `
         UPDATE products 
-        SET name = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, elevation = ?, process_type = ? 
+        SET name = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, elevation = ?, process_type = ?, is_active = ?
         WHERE id = ?
     `;
+
     try {
-        await db.execute(query, [name, description, price, stock_quantity, image_url, elevation, process_type, id]);
-        res.json({ message: 'Product updated successfully' });
+        const [result] = await db.execute(query, [
+            name, 
+            description || '', 
+            parseFloat(price) || 0.00, 
+            parseInt(stock_quantity, 10) || 0, 
+            formattedImageUrl, 
+            elevation || '5,000 ft', 
+            process_type || 'Orthodox', 
+            isActive, 
+            id
+        ]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.json({ message: 'Product updated successfully', id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -68,20 +129,34 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
     const { id } = req.params;
     try {
-        await db.execute(`DELETE FROM products WHERE id = ?`, [id]);
-        res.json({ message: 'Product deleted successfully' });
+        const [result] = await db.execute(`DELETE FROM products WHERE id = ?`, [id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.json({ message: 'Product deleted successfully', id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// TOGGLE STATUS (Active / Inactive)
+// TOGGLE STATUS via Radio Buttons
 const toggleProductStatus = async (req, res) => {
     const { id } = req.params;
-    const { is_active } = req.body; // Expecting boolean true/false
+    const { status, is_active } = req.body; 
+
+    let isActive;
+    if (status !== undefined) {
+        isActive = (status === 'active' || status === true || status === 1) ? 1 : 0;
+    } else {
+        isActive = (is_active === true || is_active === 1 || is_active === 'active') ? 1 : 0;
+    }
+
     try {
-        await db.execute(`UPDATE products SET is_active = ? WHERE id = ?`, [is_active, id]);
-        res.json({ message: `Product active status set to ${is_active}` });
+        await db.execute(`UPDATE products SET is_active = ? WHERE id = ?`, [isActive, id]);
+        const statusLabel = isActive === 1 ? 'active' : 'inactive';
+        res.json({ message: `Product status updated to ${statusLabel}`, is_active: isActive });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
