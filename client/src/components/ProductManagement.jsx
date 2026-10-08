@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import './ProductManagement.css';
 
 const ProductManagement = () => {
@@ -20,19 +20,23 @@ const ProductManagement = () => {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
+  // Fetch seller's products wrapped in useCallback
+  const fetchProducts = useCallback(async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/products/seller/1');
       setProducts(res.data);
     } catch (err) {
       console.error('Error fetching products:', err);
     }
-  };
+  }, [sellerId]);
 
   // Handle Text/Number Form Inputs
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Handle File Input Selection
   const handleFileChange = (e) => {
