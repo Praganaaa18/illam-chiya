@@ -15,11 +15,6 @@ const ProductManagement = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
 
-  // Fetch seller products on load
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   // Fetch seller's products wrapped in useCallback
   const fetchProducts = useCallback(async () => {
     try {

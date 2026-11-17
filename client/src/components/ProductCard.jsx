@@ -5,6 +5,11 @@ import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const navigate = useNavigate();
+  const imageUrl = product.image_url
+    ? /^https?:\/\//i.test(product.image_url)
+      ? product.image_url
+      : `http://localhost:5000/${product.image_url.replace(/^\/+/, '')}`
+    : 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400';
 
   const handleAddToCartClick = () => {
     const token = localStorage.getItem('token');
@@ -26,10 +31,7 @@ const ProductCard = ({ product, onAddToCart }) => {
       <div className="product-image-container">
         {/* Fallback image if product image path is missing */}
         <img
-          src={
-            product.image_url ||
-            'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400'
-          }
+          src={imageUrl}
           alt={product.name}
           className="product-image"
         />

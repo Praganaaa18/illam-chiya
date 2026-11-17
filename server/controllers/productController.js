@@ -8,7 +8,7 @@ const formatImageUrl = (url) => {
     }
     // Windows slashes ko replace karo aur starting slashes remove karo
     const cleanPath = url.replace(/\\/g, '/').replace(/^\/+/, '');
-    return cleanPath;
+    return `/${cleanPath}`;
 };
 
 // GET ALL PRODUCTS (Home Page / Public Catalog - Active Only)
