@@ -25,18 +25,19 @@ const ProductCard = ({ product, onAddToCart }) => {
     <div className="product-card">
       <div className="product-image-container">
         {/* Fallback image if product image path is missing */}
-        <img 
-          src={product.image || 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400'} 
-          alt={product.name} 
-          className="product-image" 
+        <img
+          src={
+            product.image_url ||
+            'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400'
+          }
+          alt={product.name}
+          className="product-image"
         />
         <span className="product-category">{product.category || 'Tea'}</span>
       </div>
 
       <div className="product-info">
-        <span className="product-vendor">
-          By {product.vendor_name || product.vendor || 'Local Estate'}
-        </span>
+        <span className="product-vendor">By {product.vendor_name || product.vendor || 'Local Estate'}</span>
         <h3 className="product-title">{product.name}</h3>
         <p className="product-description">{product.description}</p>
 

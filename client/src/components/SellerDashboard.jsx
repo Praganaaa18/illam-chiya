@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductManagement from './ProductManagement';
 import BillingsAndPayouts from './BillingsandPayouts';
 import FarmSettings from './FarmSettings';
 import './SellerDashboard.css';
+import axios from 'axios';
 
 const SellerDashboard = () => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   // Dummy seller state (or load from localStorage/Auth Context)
-  const [sellerInfo] = useState({
-    businessName: "Illam Premium Organic Estate",
-    email: "seller@illamchiya.com",
-    isVerified: true,
-    sellerId: 1
+  // const [sellerInfo] = useState({
+  //   businessName: 'Illam Premium Organic Estate',
+  //   email: 'seller@illamchiya.com',
+  //   isVerified: true,
+  //   sellerId: 1,
+  // });
+
+  const [sellerInfo, setSellerInfo] = useState({
+    businessName: '',
+    email: '',
+    isVerified: false,
+    sellerId: 1,
   });
 
   const navigate = useNavigate();
@@ -25,6 +33,25 @@ const SellerDashboard = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
+
+  const fetchSellerInfo = useCallback(async () => {
+    try {
+      const loggedInUserId = localStorage.getItem('userId');
+      const res = await axios.get(`http://localhost:5000/api/sellers/info/${loggedInUserId}`);
+      setSellerInfo({
+        businessName: res.data.full_name || '',
+        email: res.data.email || '',
+        isVerified: res.data.is_verified || true,
+        sellerId: res.data.id || null,
+      });
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSellerInfo();
+  }, [fetchSellerInfo]);
 
   // =========================================================================
   // SUBTITLE 2: RENDER CONTROLLER (DYNAMIC CONTENT VIEWS)
@@ -51,7 +78,6 @@ const SellerDashboard = () => {
   // =========================================================================
   return (
     <div className="matcha-dashboard-container">
-      
       {/* ---------------- SIDEBAR NAVIGATION ---------------- */}
       <aside className="matcha-sidebar">
         <div className="brand-logo-section">
@@ -60,38 +86,33 @@ const SellerDashboard = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <button 
+          <button
             className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
+            onClick={() => setActiveTab('overview')}>
             📊 Dashboard Overview
           </button>
-          
-          <button 
+
+          <button
             className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
-            onClick={() => setActiveTab('products')}
-          >
+            onClick={() => setActiveTab('products')}>
             🍃 Product Management
           </button>
 
-          <button 
+          <button
             className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
+            onClick={() => setActiveTab('orders')}>
             📦 Orders & Shipping
           </button>
 
-          <button 
+          <button
             className={`nav-item ${activeTab === 'billing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('billing')}
-          >
+            onClick={() => setActiveTab('billing')}>
             💳 Billings & Payouts
           </button>
 
-          <button 
+          <button
             className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
+            onClick={() => setActiveTab('settings')}>
             ⚙️ Farm Settings
           </button>
         </nav>
@@ -105,7 +126,6 @@ const SellerDashboard = () => {
 
       {/* ---------------- RIGHT CONTENT WRAPPER ---------------- */}
       <div className="matcha-main-wrapper">
-        
         {/* TOP HEADER BAR */}
         <header className="matcha-topbar">
           <div className="topbar-left">
@@ -117,20 +137,15 @@ const SellerDashboard = () => {
               {sellerInfo.isVerified ? '✅ Verified Seller' : '⏳ Pending Verification'}
             </span>
             <div className="user-profile-chip">
-              <div className="avatar-circle">
-                {sellerInfo.businessName.charAt(0)}
-              </div>
+              <div className="avatar-circle">{sellerInfo.businessName.charAt(0)}</div>
               <span className="profile-name">{sellerInfo.businessName}</span>
             </div>
           </div>
         </header>
 
         {/* DYNAMIC WORKSPACE CONTENT */}
-        <main className="matcha-content-area">
-          {renderMainContent()}
-        </main>
+        <main className="matcha-content-area">{renderMainContent()}</main>
       </div>
-
     </div>
   );
 };
@@ -195,14 +210,18 @@ const OverviewSection = ({ sellerName }) => (
             <td>Sujan Shrestha</td>
             <td>First Flush Orthodox (500g)</td>
             <td>NPR 2,400</td>
-            <td><span className="status-badge pending">Pending Dispatch</span></td>
+            <td>
+              <span className="status-badge pending">Pending Dispatch</span>
+            </td>
           </tr>
           <tr>
             <td>#ILLAM-1088</td>
             <td>Anita Rai</td>
             <td>Special White Tea (250g)</td>
             <td>NPR 1,850</td>
-            <td><span className="status-badge completed">Delivered</span></td>
+            <td>
+              <span className="status-badge completed">Delivered</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -225,7 +244,7 @@ const OrdersAndShipping = ({ sellerId = 1 }) => {
       setLoading(true);
       const response = await fetch(`http://localhost:5000/api/orders?seller_id=${sellerId}`);
       if (!response.ok) throw new Error('Failed to fetch orders');
-      
+
       const data = await response.json();
       setOrders(data);
     } catch (err) {
@@ -247,9 +266,7 @@ const OrdersAndShipping = ({ sellerId = 1 }) => {
       if (!response.ok) throw new Error('Failed to update status');
 
       setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
+        prevOrders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)),
       );
     } catch (err) {
       console.error('Status update error:', err);
@@ -296,9 +313,7 @@ const OrdersAndShipping = ({ sellerId = 1 }) => {
                   </td>
                   <td className="items-summary">{order.items_summary}</td>
                   <td className="order-price">Rs. {Number(order.total_price).toFixed(2)}</td>
-                  <td className="order-date">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </td>
+                  <td className="order-date">{new Date(order.created_at).toLocaleDateString()}</td>
                   <td>
                     <span className={`status-pill ${order.status}`}>
                       {order.status ? order.status.toUpperCase() : 'PENDING'}
@@ -308,8 +323,7 @@ const OrdersAndShipping = ({ sellerId = 1 }) => {
                     <select
                       className="status-dropdown"
                       value={order.status || 'pending'}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    >
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}>
                       <option value="pending">Pending</option>
                       <option value="processing">Processing</option>
                       <option value="shipped">Shipped</option>

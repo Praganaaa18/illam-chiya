@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import './ProductManagement.css';
 import axios from 'axios';
@@ -52,19 +51,13 @@ const ProductManagement = () => {
     try {
       let finalImageUrl = formData.image_url;
 
-      // Upload local image file if selected
       if (selectedFile) {
         const fileData = new FormData();
         fileData.append('image', selectedFile);
 
-        try {
-          const uploadRes = await axios.post('http://localhost:5000/api/upload', fileData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          finalImageUrl = uploadRes.data.filePath || uploadRes.data.url;
-        } catch (uploadErr) {
-          console.error('Image upload failed, continuing with fallback:', uploadErr);
-        }
+        const uploadRes = await axios.post('http://localhost:5000/api/upload', fileData);
+
+        finalImageUrl = uploadRes.data.filePath || uploadRes.data.url;
       }
 
       const productPayload = {
@@ -75,7 +68,7 @@ const ProductManagement = () => {
         image_url: finalImageUrl || '',
         seller_id: 1,
         category_id: 1,
-        status: 'active'
+        status: 'active',
       };
 
       if (editingProductId) {
@@ -143,7 +136,7 @@ const ProductManagement = () => {
       await axios.patch(`http://localhost:5000/api/products/${productId}/status`, { status: newStatus });
 
       setProducts((prev) =>
-        prev.map((p) => (p.id === productId ? { ...p, is_active: newStatus === 'active' ? 1 : 0 } : p))
+        prev.map((p) => (p.id === productId ? { ...p, is_active: newStatus === 'active' ? 1 : 0 } : p)),
       );
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -195,15 +188,10 @@ const ProductManagement = () => {
             onChange={handleChange}
           />
           <span>— OR Upload File —</span>
-          <input type="file" accept="image/*" onChange={handleFileChange} />
+          <input type="file" name="image" accept="image/*" onChange={handleFileChange} />
         </div>
 
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-        />
+        <textarea name="description" placeholder="Description" value={formData.description} onChange={handleChange} />
 
         <div className="form-actions">
           <button type="submit" className="submit-btn">
@@ -264,16 +252,10 @@ const ProductManagement = () => {
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <button
-                        className="btn-edit"
-                        onClick={() => handleEditClick(product)}
-                      >
+                      <button className="btn-edit" onClick={() => handleEditClick(product)}>
                         Edit
                       </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteClick(product.id)}
-                      >
+                      <button className="btn-delete" onClick={() => handleDeleteClick(product.id)}>
                         Delete
                       </button>
                     </div>

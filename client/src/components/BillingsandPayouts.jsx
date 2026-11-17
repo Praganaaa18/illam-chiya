@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './BillingsandPayouts.css';
+import './BillingsAndPayouts.css';
 
 const BillingsAndPayouts = ({ sellerId = 1 }) => {
   const [transactions, setTransactions] = useState([]);
@@ -139,11 +139,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="filter-select"
-          >
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
             <option value="All">All Statuses</option>
             <option value="delivered">Delivered</option>
             <option value="shipped">Shipped</option>
@@ -181,7 +177,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
                     <td className="order-id">{formattedId}</td>
                     <td>{item.customer}</td>
                     <td>{item.address}</td>
-                    <td><strong>NPR {total.toLocaleString()}</strong></td>
+                    <td>
+                      <strong>NPR {total.toLocaleString()}</strong>
+                    </td>
                     <td className="fee-text">- NPR {fee.toLocaleString()}</td>
                     <td className="net-text">NPR {net.toLocaleString()}</td>
                     <td>
@@ -194,7 +192,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
               })
             ) : (
               <tr>
-                <td colSpan="8" className="no-data">No transactions found.</td>
+                <td colSpan="8" className="no-data">
+                  No transactions found.
+                </td>
               </tr>
             )}
           </tbody>
@@ -206,14 +206,23 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
           <div className="modal-card">
             <h3>Settle Commission Dues</h3>
             <p>
-              Please clear your 5% platform fee of <strong>NPR {commissionFeeDue.toLocaleString()}</strong> via bank transfer or eSewa/Khalti.
+              Please clear your 5% platform fee of <strong>NPR {commissionFeeDue.toLocaleString()}</strong> via bank
+              transfer or eSewa/Khalti.
             </p>
 
             <div className="payment-info-box">
-              <p><strong>Bank:</strong> Nabil Bank</p>
-              <p><strong>Account Name:</strong> Ilam Chiya Platform Pvt. Ltd.</p>
-              <p><strong>Account No:</strong> 0120017500291</p>
-              <p><strong>eSewa / Khalti ID:</strong> 9801234567</p>
+              <p>
+                <strong>Bank:</strong> Nabil Bank
+              </p>
+              <p>
+                <strong>Account Name:</strong> Ilam Chiya Platform Pvt. Ltd.
+              </p>
+              <p>
+                <strong>Account No:</strong> 0120017500291
+              </p>
+              <p>
+                <strong>eSewa / Khalti ID:</strong> 9801234567
+              </p>
             </div>
 
             {settleMessage ? (
@@ -222,12 +231,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
               <form onSubmit={handleSettleSubmit}>
                 <div className="form-group">
                   <label>Upload Payment Voucher / Screenshot</label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setProofFile(e.target.files[0])}
-                    required
-                  />
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setProofFile(e.target.files[0])} required />
                 </div>
                 <div className="modal-actions">
                   <button type="button" className="cancel-btn" onClick={() => setShowSettleModal(false)}>
