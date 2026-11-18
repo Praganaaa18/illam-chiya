@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './ProductManagement.css';
 import axios from 'axios';
 
-const ProductManagement = () => {
+const ProductManagement = ({ sellerId = Number(localStorage.getItem('userId')) || null }) => {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -17,13 +17,14 @@ const ProductManagement = () => {
 
   // Fetch seller's products wrapped in useCallback
   const fetchProducts = useCallback(async () => {
+    if (!sellerId) return;
     try {
-      const res = await axios.get('http://localhost:5000/api/products/seller/1');
+      const res = await axios.get(`http://localhost:5000/api/products/seller/${sellerId}`);
       setProducts(res.data);
     } catch (err) {
       console.error('Error fetching products:', err);
     }
-  }, []);
+  }, [sellerId]);
 
   // Handle Text/Number Form Inputs
   const handleChange = (e) => {
@@ -61,7 +62,7 @@ const ProductManagement = () => {
         price: parseFloat(formData.price),
         stock_quantity: parseInt(formData.stock_quantity, 10) || 0,
         image_url: finalImageUrl || '',
-        seller_id: 1,
+        seller_id: sellerId,
         category_id: 1,
         status: 'active',
       };

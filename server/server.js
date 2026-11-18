@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const financeRoutes = require("./routes/financeRoutes"); // <-- 1. IMPORT FINANCE ROUTES HERE
+const inventoryRoutes = require("./routes/inventoryRoutes");
 const sellerRoutes = require("./routes/sellerRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/finance", financeRoutes); // <-- 2. MOUNT FINANCE ROUTE HERE
+app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/upload", uploadRoutes);
 
