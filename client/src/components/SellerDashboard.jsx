@@ -24,7 +24,7 @@ const SellerDashboard = () => {
     businessName: '',
     email: '',
     isVerified: false,
-    sellerId: 1,
+    sellerId: localStorage.getItem('userId') || null,
   });
 
   const navigate = useNavigate();
@@ -41,11 +41,11 @@ const SellerDashboard = () => {
       setSellerInfo({
         businessName: res.data.full_name || '',
         email: res.data.email || '',
-        isVerified: res.data.is_verified || true,
+        isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching seller information:', err);
     }
   }, []);
 
