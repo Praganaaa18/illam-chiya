@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './ProductManagement.css';
 
@@ -32,6 +32,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [busyProductId, setBusyProductId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
@@ -110,14 +111,18 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
-    if (name === 'image_url') setSelectedFile(null);
   };
+
+  const discardSelectedFile = useCallback(() => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
 
   const handleOpenAddModal = () => {
     setNotice(null);
     setEditingProductId(null);
     setFormData({ ...INITIAL_FORM });
-    setSelectedFile(null);
+    discardSelectedFile();
     setIsModalOpen(true);
   };
 
@@ -132,15 +137,15 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       image_url: product.image_url || '',
       status: isProductActive(product) ? 'active' : 'inactive',
     });
-    setSelectedFile(null);
+    discardSelectedFile();
     setIsModalOpen(true);
   };
 
   const resetForm = useCallback(() => {
     setFormData({ ...INITIAL_FORM });
-    setSelectedFile(null);
+    discardSelectedFile();
     setEditingProductId(null);
-  }, []);
+  }, [discardSelectedFile]);
 
   const closeModal = useCallback(() => {
     if (isSaving) return;
@@ -462,11 +467,29 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                 </div>
               </div>
               <div className="pm-form-group">
-                <label htmlFor="pm-product-image-url">Product Image (URL or File Upload)</label>
-                <input id="pm-product-image-url" type="text" name="image_url" placeholder="Paste image URL..." value={formData.image_url} onChange={handleChange} />
+                <label htmlFor="pm-product-image">Product Image (File Upload)</label>
                 <div className="pm-file-box">
-                  <input type="file" accept="image/*" aria-label="Upload product image" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
-                  {selectedFile && <span className="pm-selected-file">{selectedFile.name}</span>}
+                  <input
+                    ref={fileInputRef}
+                    id="pm-product-image"
+                    type="file"
+                    accept="image/*"
+                    aria-label="Upload product image"
+                    disabled={isSaving}
+                    onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                  />
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      className="pm-file-discard"
+                      aria-label="Discard selected image"
+                      title="Discard selected image"
+                      disabled={isSaving}
+                      onClick={discardSelectedFile}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="pm-form-group">
