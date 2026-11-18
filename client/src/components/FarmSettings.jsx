@@ -12,10 +12,10 @@ const FarmSettings = ({ sellerId = 1 }) => {
     registrationNumber: 'REG-ILLAM-2081-99',
   });
 
-  const [certificates, setCertificates] = useState([
+  const certificates = [
     { id: 1, name: 'Organic Organic Farming Cert.pdf', status: 'Verified' },
     { id: 2, name: 'Nepal Tea Board License.pdf', status: 'Verified' }
-  ]);
+  ];
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');

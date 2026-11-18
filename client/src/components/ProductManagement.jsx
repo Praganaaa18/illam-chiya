@@ -22,6 +22,10 @@ const isProductActive = (product) =>
 const getErrorMessage = (error, fallback) =>
   error.response?.data?.error || error.response?.data?.message || error.message || fallback;
 
+const getAuthConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+});
+
 const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +54,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const response = await axios.get(`${API_ORIGIN}/api/products/seller/${sellerId}`);
+      const response = await axios.get(`${API_ORIGIN}/api/products/seller/${sellerId}`, getAuthConfig());
       if (!Array.isArray(response.data)) {
         throw new Error('The server returned an invalid product list.');
       }
@@ -173,7 +177,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       if (selectedFile) {
         const uploadData = new FormData();
         uploadData.append('image', selectedFile);
-        const uploadResponse = await axios.post(`${API_ORIGIN}/api/upload`, uploadData);
+        const uploadResponse = await axios.post(`${API_ORIGIN}/api/upload`, uploadData, getAuthConfig());
         imageUrl = uploadResponse.data.filePath || uploadResponse.data.url || '';
         if (!imageUrl) throw new Error('The image upload completed without returning an image URL.');
       }
@@ -190,9 +194,9 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       };
 
       if (editingProductId) {
-        await axios.put(`${API_ORIGIN}/api/products/${editingProductId}`, productPayload);
+        await axios.put(`${API_ORIGIN}/api/products/${editingProductId}`, productPayload, getAuthConfig());
       } else {
-        await axios.post(`${API_ORIGIN}/api/products`, productPayload);
+        await axios.post(`${API_ORIGIN}/api/products`, productPayload, getAuthConfig());
       }
 
       setIsModalOpen(false);
@@ -212,7 +216,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setNotice(null);
     setBusyProductId(product.id);
     try {
-      await axios.delete(`${API_ORIGIN}/api/products/${product.id}`);
+      await axios.delete(`${API_ORIGIN}/api/products/${product.id}`, getAuthConfig());
       setSelectedRows((selected) => selected.filter((id) => id !== product.id));
       setNotice({ type: 'success', message: 'Product deleted successfully.' });
       await fetchProducts();
@@ -230,7 +234,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setNotice(null);
     setBusyProductId(product.id);
     try {
-      await axios.patch(`${API_ORIGIN}/api/products/${product.id}/status`, { status: newStatus });
+      await axios.patch(`${API_ORIGIN}/api/products/${product.id}/status`, { status: newStatus }, getAuthConfig());
       setProducts((current) =>
         current.map((item) =>
           item.id === product.id ? { ...item, is_active: newStatus === 'active' ? 1 : 0 } : item,

@@ -1,6 +1,6 @@
 // --- Subtitle: Import React, React Router Hooks, and Components ---
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
 import './Home.css';
 

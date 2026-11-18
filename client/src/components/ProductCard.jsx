@@ -1,6 +1,6 @@
 // ProductCard.jsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {

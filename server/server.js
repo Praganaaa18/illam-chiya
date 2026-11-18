@@ -10,6 +10,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const financeRoutes = require("./routes/financeRoutes"); // <-- 1. IMPORT FINANCE ROUTES HERE
 const sellerRoutes = require("./routes/sellerRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/finance", financeRoutes); // <-- 2. MOUNT FINANCE ROUTE HERE
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 // Health Check Route
 app.get("/", (req, res) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './BillingsandPayouts.css';
 
 const BillingsAndPayouts = ({ sellerId = 1 }) => {
@@ -11,11 +11,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
   const [settleMessage, setSettleMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchLedgerData();
-  }, [sellerId]);
-
-  const fetchLedgerData = async () => {
+  const fetchLedgerData = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`http://localhost:5000/api/finance/ledger/${sellerId}`);
@@ -28,7 +24,11 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sellerId]);
+
+  useEffect(() => {
+    fetchLedgerData();
+  }, [fetchLedgerData]);
 
   const isDelivered = (status) => status.toLowerCase() === 'delivered';
   const isPending = (status) => ['pending', 'processing', 'shipped'].includes(status.toLowerCase());

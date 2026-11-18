@@ -1,0 +1,366 @@
+.inv-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1e2d24;
+}
+
+/* KPI Summary Cards */
+.inv-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.inv-kpi-card {
+  background-color: #f3efe4;
+  border: 1px solid #e2dccb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 2px 6px rgba(30, 45, 36, 0.04);
+}
+
+.kpi-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e32;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1b2a21;
+}
+
+.kpi-icon-box {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.kpi-icon-box.green { background-color: #d8e6dc; }
+.kpi-icon-box.amber { background-color: #f7e6c4; }
+.kpi-icon-box.gold { background-color: #f3e2c7; }
+.kpi-icon-box.forest { background-color: #d5e4d9; }
+
+/* Main Table Card */
+.inv-main-card {
+  background-color: #f5f1e6;
+  border: 1px solid #e2dccb;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 4px 12px rgba(30, 45, 36, 0.04);
+}
+
+/* Toolbar */
+.inv-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.inv-search-box {
+  display: flex;
+  align-items: center;
+  background-color: #faf8f2;
+  border: 1px solid #d5cfc0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  width: 280px;
+}
+
+.search-icon {
+  margin-right: 8px;
+  font-size: 0.85rem;
+  color: #6b7870;
+}
+
+.inv-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+  color: #1e2d24;
+}
+
+.inv-filter-group {
+  display: flex;
+  gap: 12px;
+}
+
+.inv-select {
+  background-color: #faf8f2;
+  border: 1px solid #d5cfc0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  color: #2c3e32;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Table */
+.inv-table-wrapper {
+  overflow-x: auto;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.inv-table th {
+  padding: 12px 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #2c3e32;
+  border-bottom: 1px solid #dcd5c4;
+  line-height: 1.3;
+}
+
+.inv-table td {
+  padding: 14px 10px;
+  border-bottom: 1px solid #e5dfd0;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.inv-product-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inv-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #d5cfc0;
+}
+
+.inv-thumb-fallback {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d5cfc0;
+  border-radius: 8px;
+  background: #e8efe9;
+}
+
+.inv-prod-name {
+  font-weight: 700;
+  color: #1e2d24;
+  font-size: 0.92rem;
+}
+
+.inv-prod-cat {
+  font-size: 0.78rem;
+  color: #556b5d;
+  margin-top: 2px;
+}
+
+.inv-num {
+  font-weight: 600;
+  color: #2c3e32;
+}
+
+.inv-num.bold {
+  font-weight: 700;
+  color: #1b2a21;
+}
+
+/* Status Pills */
+.inv-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-block;
+  color: #ffffff;
+}
+
+.inv-badge.in-stock {
+  background-color: #467856;
+}
+
+.inv-badge.low-stock {
+  background-color: #d49b38;
+}
+
+.inv-badge.out-of-stock {
+  background-color: #b84a39;
+}
+
+/* Action Button */
+.inv-restock-btn {
+  background: transparent;
+  border: 1px solid #c9c2b0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c3e32;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inv-restock-btn:hover {
+  background-color: #467856;
+  color: #ffffff;
+  border-color: #467856;
+}
+
+.inv-empty, .inv-loading {
+  text-align: center;
+  padding: 30px;
+  color: #5e7367;
+}
+
+/* Quick Restock Modal */
+.inv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 30, 24, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.inv-modal {
+  background: #faf8f2;
+  border: 1px solid #d5cfc0;
+  border-radius: 12px;
+  padding: 24px;
+  width: 340px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.inv-modal h3 {
+  margin: 0 0 8px 0;
+  color: #1e2d24;
+}
+
+.inv-modal label {
+  display: block;
+  margin: 14px 0 6px 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.inv-modal input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #c9c2b0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.inv-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btn-cancel {
+  background: #e5dfd0;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-confirm {
+  background: #467856;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-cancel:disabled,
+.btn-confirm:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.inv-error,
+.inv-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+}
+
+.inv-error {
+  border: 1px solid #d9a39a;
+  background: #fff0ed;
+  color: #8d3022;
+}
+
+.inv-notice {
+  border: 1px solid #c4e3ce;
+  background: #eaf5ee;
+  color: #20583a;
+}
+
+.inv-retry-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .inv-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .inv-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inv-search-box {
+    width: auto;
+  }
+
+  .inv-main-card {
+    padding: 14px;
+  }
+
+  .inv-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
