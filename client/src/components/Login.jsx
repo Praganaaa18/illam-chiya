@@ -7,14 +7,44 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Field validation errors & general submission errors
+  const [validationErrors, setValidationErrors] = useState({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
+  // Validate form inputs before sending to server
+  const validateForm = () => {
+    const errors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email.trim()) {
+      errors.email = 'Email address is required.';
+    } else if (!emailRegex.test(email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required.';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters.';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Trigger validation
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -32,7 +62,14 @@ const Login = () => {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('userRole', role);
-      navigate('/');
+      localStorage.setItem('userId', data.user?.id);
+
+      // Navigate based on selected role
+      if (role === 'seller') {
+        navigate('/seller/dashboard');
+      } else {
+        navigate('/'); // Home / Buyer Marketplace
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -42,31 +79,62 @@ const Login = () => {
 
   return (
     <div className="login-page">
+      {/* Aesthetic Top-Right "Back to Home" Arrow Button */}
+      <Link to="/" className="back-home-link" aria-label="Back to Home">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Back to Home</span>
+      </Link>
+
       {/* Top Branding & Role Switcher */}
       <div className="login-header">
         <div className="brand-logo">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2d5a43" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.4 19 2c1 2 2 4.1 2 9 0 5-4 9-10 9z"/>
-            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          <svg
+            width="36"
+            height="36"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#2d5a43"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.4 19 2c1 2 2 4.1 2 9 0 5-4 9-10 9z" />
+            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
           </svg>
           <h1> Ilam Chiya </h1>
         </div>
 
         <div className="role-selector">
           <span>I am a: </span>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`role-btn ${role === 'buyer' ? 'active' : ''}`}
-            onClick={() => setRole('buyer')}
-          >
+            onClick={() => {
+              setRole('buyer');
+              setValidationErrors({});
+              setError('');
+            }}>
             Buyer
           </button>
           <span className="divider">|</span>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`role-btn ${role === 'seller' ? 'active' : ''}`}
-            onClick={() => setRole('seller')}
-          >
+            onClick={() => {
+              setRole('seller');
+              setValidationErrors({});
+              setError('');
+            }}>
             Seller
           </button>
         </div>
@@ -74,56 +142,78 @@ const Login = () => {
 
       {/* Main Login Card */}
       <div className="login-card">
-        <h2 className="login-title">Welcome Back</h2>
-        <p className="login-subtitle">Log in to your account</p>
+        <h2 className="login-title">{role === 'buyer' ? 'Buyer Portal' : 'Seller Portal'}</h2>
+        <p className="login-subtitle">
+          {role === 'buyer'
+            ? 'Sign in to explore teas, add items to cart, and place orders'
+            : 'Sign in to manage your tea inventory, listings, and sales'}
+        </p>
 
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label>Email Address</label>
-            <div className="input-wrapper">
+            <div className={`input-wrapper ${validationErrors.email ? 'input-error' : ''}`}>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (validationErrors.email) setValidationErrors({ ...validationErrors, email: '' });
+                }}
                 placeholder="enter your email address"
-                required
               />
-              <svg className="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a8b7b" strokeWidth="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
+              <svg
+                className="input-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#7a8b7b"
+                strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
               </svg>
             </div>
+            {validationErrors.email && <span className="field-error-message">{validationErrors.email}</span>}
           </div>
 
           <div className="form-group">
             <label>Password</label>
-            <div className="input-wrapper">
+            <div className={`input-wrapper ${validationErrors.password ? 'input-error' : ''}`}>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (validationErrors.password) setValidationErrors({ ...validationErrors, password: '' });
+                }}
                 placeholder="••••••••••••"
-                required
               />
-              <svg className="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a8b7b" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              <svg
+                className="input-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#7a8b7b"
+                strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
             </div>
+            {validationErrors.password && <span className="field-error-message">{validationErrors.password}</span>}
           </div>
 
           <div className="form-options">
             <label className="remember-me">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
               <span>Remember me</span>
             </label>
-            <a href="#forgot" className="forgot-link">Forgot Password?</a>
+            <a href="#forgot" className="forgot-link">
+              Forgot Password?
+            </a>
           </div>
 
           <button type="submit" className="login-btn" disabled={loading}>
@@ -132,11 +222,8 @@ const Login = () => {
 
           <p className="register-footer">
             Don't have an account?{' '}
-            <Link 
-              to={role === 'buyer' ? '/register-buyer' : '/register-seller'} 
-              className="register-link"
-            >
-              Register
+            <Link to={role === 'buyer' ? '/register-buyer' : '/register-seller'} className="register-link">
+              Register as {role === 'buyer' ? 'Buyer' : 'Seller'}
             </Link>
           </p>
         </form>

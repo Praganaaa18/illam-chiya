@@ -70,15 +70,8 @@ Bash
 cd server
 npm install
 
-##Create a .env file inside the server/ directory:
+Copy `server/.env.example` to `server/.env` and set `DB_PASSWORD` to the password for your local MySQL user. The `.env` file is ignored by Git, so keep credentials there rather than in source code.
 
-Code snippet
-PORT=5000
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=illam_chiya_db
-JWT_SECRET=your_jwt_secret_key
 Start the backend server:
 
 Bash

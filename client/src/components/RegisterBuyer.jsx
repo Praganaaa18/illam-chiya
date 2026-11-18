@@ -7,22 +7,51 @@ const RegisterBuyer = () => {
     fullName: '',
     email: '',
     phone: '',
+    deliveryAddress: '',
+    addressType: 'Home',
+    gender: 'Male',
     password: '',
     confirmPassword: '',
   });
+
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
+  // Validation rules
+  const nameRegex = /^[a-zA-Z\s]*$/;
+  const phoneRegex = /^[0-9]*$/;
+  const addressRegex = /^[a-zA-Z0-9\s,.-]*$/;
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    let err = '';
+    if (name === 'fullName' && !nameRegex.test(value)) {
+      err = 'Special characters and numbers are not allowed in Full Name.';
+    } else if (name === 'phone' && !phoneRegex.test(value)) {
+      err = 'Special characters and letters are not allowed in Phone Number.';
+    } else if (name === 'deliveryAddress' && !addressRegex.test(value)) {
+      err = 'Special characters (like @, #, $, %) are not allowed in Delivery Address.';
+    }
+
+    setFieldErrors((prev) => ({ ...prev, [name]: err }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Data:', formData); // Debugging line
     setError('');
+
+    // Check if any field has active validation errors
+    const hasErrors = Object.values(fieldErrors).some((err) => err !== '');
+    if (hasErrors) {
+      return setError('Please correct the invalid fields before submitting.');
+    }
 
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match.');
@@ -35,11 +64,14 @@ const RegisterBuyer = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: formData.fullName, // <--- Change 'name' to 'full_name'
+          full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone,
+          delivery_address: formData.deliveryAddress,
+          address_type: formData.addressType,
+          gender: formData.gender,
           password: formData.password,
-          role: 'buyer', // Hardcoded for Buyer Registration
+          role: 'buyer',
         }),
       });
 
@@ -49,7 +81,6 @@ const RegisterBuyer = () => {
         throw new Error(data.message || 'Registration failed.');
       }
 
-      // Redirect user to login after successful sign-up
       navigate('/login');
     } catch (err) {
       setError(err.message);
@@ -59,25 +90,28 @@ const RegisterBuyer = () => {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-header">
-        <div className="brand-logo">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2d5a43" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <div className="buyer-page">
+      <div className="buyer-card">
+        {/* Tea Leaf Header Logo */}
+        <div className="card-logo">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#2d5a43" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.4 19 2c1 2 2 4.1 2 9 0 5-4 9-10 9z"/>
             <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
           </svg>
-          <h1>THE TEA HARVEST</h1>
         </div>
-        <p className="role-tag">Buyer Registration</p>
-      </div>
 
-      <div className="register-card">
-        <h2 className="register-title">Create Account</h2>
-        <p className="register-subtitle">Sign up to source & order premium teas</p>
+        <h2 className="card-title">Join the Tea Community</h2>
+        <p className="card-subtitle">Sign up to discover and order your favorite brews.</p>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {/* SECTION 1: Personal & Delivery Information */}
+          <div className="form-section-header">
+            <h3 className="section-title">Personal & Delivery Details</h3>
+            <p className="section-subtitle">Provide your contact info and primary delivery destination.</p>
+          </div>
+
           <div className="form-group">
             <label>Full Name</label>
             <input
@@ -85,9 +119,10 @@ const RegisterBuyer = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              placeholder="e.g. John Doe"
+              placeholder="e.g. Jane Cooper"
               required
             />
+            {fieldErrors.fullName && <span className="field-error-text">{fieldErrors.fullName}</span>}
           </div>
 
           <div className="form-group">
@@ -97,7 +132,7 @@ const RegisterBuyer = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="buyer@example.com"
+              placeholder="jane.cooper@email.com"
               required
             />
           </div>
@@ -109,40 +144,103 @@ const RegisterBuyer = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="+977 9800000000"
+              pattern="[0-9]{10}"
+              maxLength="10"
+              placeholder="e.g. 9845612375"
               required
             />
+            {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label>Delivery Address</label>
             <input
-              type="password"
-              name="password"
-              value={formData.password}
+              type="text"
+              name="deliveryAddress"
+              value={formData.deliveryAddress}
               onChange={handleChange}
-              placeholder="••••••••••••"
+              placeholder="e.g. Sanothimi, Bhaktapur"
               required
             />
+            {fieldErrors.deliveryAddress && <span className="field-error-text">{fieldErrors.deliveryAddress}</span>}
           </div>
 
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••••••"
-              required
-            />
+          {/* Row 1: Address Type & Gender */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Address Type</label>
+              <select name="addressType" value={formData.addressType} onChange={handleChange}>
+                <option value="Home">Home</option>
+                <option value="Office">Office</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Gender</label>
+              <select name="gender" value={formData.gender} onChange={handleChange}>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
 
-          <button type="submit" className="register-btn" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Register as Buyer'}
+          {/* SECTION 2: Account Security */}
+          <div className="form-section-header">
+            <h3 className="section-title">Account Security</h3>
+            <p className="section-subtitle">Set up a strong password to safeguard your account.</p>
+          </div>
+
+          {/* Row 2: Create Password & Confirm Password */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Create Password</label>
+              <div className="input-with-icon">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  👁
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <div className="input-with-icon">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="••••••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  👁
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? 'Creating Account...' : 'Create my Account'}
           </button>
 
-          <p className="login-footer">
+          <p className="card-footer">
             Already have an account? <Link to="/login" className="login-link">Log In</Link>
           </p>
         </form>
