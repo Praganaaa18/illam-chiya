@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import ProductManagement from './ProductManagement';
 import BillingsAndPayouts from './BillingsandPayouts';
 import FarmSettings from './FarmSettings';
+import InventoryManagement from './InventoryManagement';
 import './SellerDashboard.css';
 import axios from 'axios';
 
-const SellerDashboard = () => {
+const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Dummy seller state (or load from localStorage/Auth Context)
   // const [sellerInfo] = useState({
@@ -24,10 +25,14 @@ const SellerDashboard = () => {
     businessName: '',
     email: '',
     isVerified: false,
-    sellerId: 1,
+    sellerId: Number(localStorage.getItem('userId')) || null,
   });
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -62,6 +67,8 @@ const SellerDashboard = () => {
         return <OverviewSection sellerName={sellerInfo.businessName} />;
       case 'products':
         return <ProductManagement sellerId={sellerInfo.sellerId} />;
+      case 'inventory':
+        return <InventoryManagement sellerId={sellerInfo.sellerId} />;
       case 'orders':
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
@@ -99,6 +106,12 @@ const SellerDashboard = () => {
           </button>
 
           <button
+            className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}>
+            📊 Inventory Management
+          </button>
+
+          <button
             className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
             onClick={() => setActiveTab('orders')}>
             📦 Orders & Shipping
@@ -129,7 +142,7 @@ const SellerDashboard = () => {
         {/* TOP HEADER BAR */}
         <header className="matcha-topbar">
           <div className="topbar-left">
-            <h3>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
+            <h3>{activeTab === 'inventory' ? 'Inventory Management' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
           </div>
 
           <div className="topbar-right">
