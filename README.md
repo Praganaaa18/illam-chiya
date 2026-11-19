@@ -77,6 +77,11 @@ Start the backend server:
 Bash
 npm run dev
 
+If startup reports `ER_ACCESS_DENIED_ERROR`, MySQL is running but rejected the
+configured user or password. Update `DB_USER` and `DB_PASSWORD` in `server/.env`
+to match a MySQL account on your machine, then restart the server. Do not share
+your `.env` file or put real credentials in source control.
+
 3. Frontend Configuration
 Bash
 cd client

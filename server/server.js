@@ -46,4 +46,10 @@ db.getConnection()
   })
   .catch((err) => {
     console.error("Database connection error:", err);
+    if (err.code === "ER_ACCESS_DENIED_ERROR") {
+      console.error(
+        "MySQL rejected the configured credentials. Check DB_USER and DB_PASSWORD in server/.env."
+      );
+    }
+    process.exitCode = 1;
   });
