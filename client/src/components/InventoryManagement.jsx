@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import React, { useCallback, useEffect, useState } from 'react';
+import API from '../services/api';
 import './InventoryManagement.css';
 
 const InventoryManagement = ({ sellerId }) => {
@@ -17,15 +17,11 @@ const InventoryManagement = ({ sellerId }) => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isRestocking, setIsRestocking] = useState(false);
-
-  // Quick Restock Modal State
   const [restockModal, setRestockModal] = useState({ open: false, product: null, amount: 10 });
-
   const activeSellerId = sellerId || localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
 
   const fetchInventory = useCallback(async () => {
-    if (!activeSellerId || !token) {
+    if (!activeSellerId) {
       setError('Please sign in again to view your inventory.');
       setLoading(false);
       return;
@@ -33,9 +29,7 @@ const InventoryManagement = ({ sellerId }) => {
 
     setError('');
     try {
-      const res = await axios.get(`http://localhost:5000/api/inventory?seller_id=${activeSellerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await API.get('/inventory', { params: { seller_id: activeSellerId } });
       if (!Array.isArray(res.data.items) || !res.data.metrics) {
         throw new Error('The server returned invalid inventory data.');
       }
@@ -43,19 +37,20 @@ const InventoryManagement = ({ sellerId }) => {
       setMetrics(res.data.metrics);
     } catch (err) {
       console.error('Error fetching inventory:', err);
-      setError(err.response?.data?.error || err.message || 'Could not load inventory.');
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Could not load inventory.');
     } finally {
       setLoading(false);
     }
-  }, [activeSellerId, token]);
+  }, [activeSellerId]);
 
   useEffect(() => {
     fetchInventory();
-  }, [activeSellerId, fetchInventory]);
+  }, [fetchInventory]);
 
   const handleRestockSubmit = async (e) => {
     e.preventDefault();
     if (!restockModal.product) return;
+
     const addQuantity = Number(restockModal.amount);
     if (!Number.isInteger(addQuantity) || addQuantity <= 0) {
       setNotice('Enter a positive whole-number quantity.');
@@ -64,18 +59,18 @@ const InventoryManagement = ({ sellerId }) => {
 
     setIsRestocking(true);
     setNotice('');
+    setError('');
     try {
-      await axios.patch(
-        `http://localhost:5000/api/inventory/${restockModal.product.id}/restock`,
-        { add_quantity: addQuantity },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await API.patch(`/inventory/${restockModal.product.id}/restock`, {
+        add_quantity: addQuantity,
+        seller_id: activeSellerId
+      });
       setRestockModal({ open: false, product: null, amount: 10 });
       setNotice('Inventory restocked successfully.');
       await fetchInventory();
     } catch (err) {
       console.error('Error restocking inventory:', err);
-      setNotice(err.response?.data?.error || err.message || 'Failed to update stock.');
+      setNotice(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update stock.');
     } finally {
       setIsRestocking(false);
     }
@@ -109,12 +104,12 @@ const InventoryManagement = ({ sellerId }) => {
         </div>
       )}
       {notice && <div className="inv-notice" role="status">{notice}</div>}
-      {/* 4 KPI SUMMARY CARDS */}
+
       <div className="inv-kpi-grid">
         <div className="inv-kpi-card">
           <div className="kpi-content">
             <span className="kpi-title">Total Stock Value</span>
-            <h3 className="kpi-value">Rs. {metrics.totalStockValue.toLocaleString()}</h3>
+            <h3 className="kpi-value">Rs. {Number(metrics.totalStockValue).toLocaleString()}</h3>
           </div>
           <div className="kpi-icon-box green">💵</div>
         </div>
@@ -122,7 +117,7 @@ const InventoryManagement = ({ sellerId }) => {
         <div className="inv-kpi-card">
           <div className="kpi-content">
             <span className="kpi-title">Low Stock Alerts</span>
-            <h3 className="kpi-value">({metrics.lowStockCount} Items)</h3>
+            <h3 className="kpi-value">{metrics.lowStockCount} Items</h3>
           </div>
           <div className="kpi-icon-box amber">⚠️</div>
         </div>
@@ -130,7 +125,7 @@ const InventoryManagement = ({ sellerId }) => {
         <div className="inv-kpi-card">
           <div className="kpi-content">
             <span className="kpi-title">Reserved for Active Orders</span>
-            <h3 className="kpi-value">({metrics.reservedOrdersCount} Items)</h3>
+            <h3 className="kpi-value">{metrics.reservedOrdersCount} Units</h3>
           </div>
           <div className="kpi-icon-box gold">📦</div>
         </div>
@@ -138,13 +133,12 @@ const InventoryManagement = ({ sellerId }) => {
         <div className="inv-kpi-card">
           <div className="kpi-content">
             <span className="kpi-title">Delivered Stock Revenue</span>
-            <h3 className="kpi-value">Rs. {metrics.deliveredRevenue.toLocaleString()}</h3>
+            <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
           </div>
           <div className="kpi-icon-box forest">🧾</div>
         </div>
       </div>
 
-      {/* MAIN INVENTORY TABLE CARD */}
       <div className="inv-main-card">
         <div className="inv-toolbar">
           <div className="inv-search-box">
@@ -163,7 +157,7 @@ const InventoryManagement = ({ sellerId }) => {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <option value="All">Filter by</option>
+              <option value="All">Filter by Status</option>
               <option value="In Stock">In Stock</option>
               <option value="Low Stock">Low Stock</option>
               <option value="Out of Stock">Out of Stock</option>
@@ -226,8 +220,8 @@ const InventoryManagement = ({ sellerId }) => {
                     <td className="inv-num">{item.current_stock}</td>
                     <td className="inv-num">{item.reserved_stock}</td>
                     <td className="inv-num bold">{item.available_stock}</td>
-                    <td className="inv-num">Rs. {item.unit_price.toLocaleString()}</td>
-                    <td className="inv-num">Rs. {item.stock_value.toLocaleString()}</td>
+                    <td className="inv-num">Rs. {Number(item.unit_price).toLocaleString()}</td>
+                    <td className="inv-num">Rs. {Number(item.stock_value).toLocaleString()}</td>
                     <td>
                       <span className={`inv-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
                         {item.status}
@@ -249,7 +243,6 @@ const InventoryManagement = ({ sellerId }) => {
         </div>
       </div>
 
-      {/* QUICK RESTOCK MODAL */}
       {restockModal.open && (
         <div className="inv-modal-overlay" onMouseDown={(event) => {
           if (event.target === event.currentTarget && !isRestocking) {
