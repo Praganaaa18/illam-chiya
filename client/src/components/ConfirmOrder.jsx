@@ -10,6 +10,7 @@ const ConfirmOrder = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
   // Form details state
   const [shippingDetails, setShippingDetails] = useState({
@@ -102,17 +103,14 @@ const ConfirmOrder = () => {
 
       if (response.ok) {
         localStorage.removeItem('cart');
-        setOrderId(data.order_id || Math.floor(100000 + Math.random() * 900000));
+        setOrderId(data.order_id);
         setOrderPlaced(true);
       } else {
-        alert(data.message || 'Failed to place order. Please try again.');
+        setSubmitError(data.message || 'Failed to place order. Please try again.');
       }
     } catch (err) {
       console.error('Order Submission Error:', err);
-      // Local fallback simulation if endpoint is not live yet
-      localStorage.removeItem('cart');
-      setOrderId(Math.floor(100000 + Math.random() * 900000));
-      setOrderPlaced(true);
+      setSubmitError('Unable to connect to the order service. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +128,7 @@ const ConfirmOrder = () => {
           </p>
           <div className="success-actions">
             <Link to="/" className="home-btn">Back to Home</Link>
+            <Link to="/order-tracking" className="track-order-btn">Track your package</Link>
           </div>
         </div>
       </div>
@@ -147,6 +146,7 @@ const ConfirmOrder = () => {
       <div className="checkout-grid">
         {/* Shipping & Payment Form */}
         <form onSubmit={handlePlaceOrder} className="checkout-form">
+          {submitError && <p className="error-text" role="alert">{submitError}</p>}
           {/* Shipping Details */}
           <div className="form-section">
             <h2>1. Shipping Details</h2>

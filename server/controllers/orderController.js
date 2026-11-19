@@ -7,7 +7,6 @@ const db = require('../config/db');
 exports.createOrder = async (req, res) => {
   console.log('Received order creation request:', req.body);
   const { 
-    buyer_id, 
     recipient_name, 
     full_name, 
     phone, 
@@ -37,7 +36,7 @@ exports.createOrder = async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const validBuyerId = buyer_id || 1; 
+    const validBuyerId = req.user.id;
     const finalAmount = total_amount || grand_total || 0;
 
     const [orderResult] = await connection.execute(
@@ -86,6 +85,45 @@ exports.createOrder = async (req, res) => {
     });
   } finally {
     if (connection) connection.release();
+  }
+};
+
+// Fetch the authenticated buyer's orders and their package contents
+exports.getBuyerOrders = async (req, res) => {
+  try {
+    const [orders] = await db.query(
+      `SELECT
+        o.id,
+        o.total_amount AS total_price,
+        o.shipping_address AS delivery_address,
+        o.order_status AS status,
+        o.created_at,
+        COALESCE(SUM(oi.price * oi.quantity), 0) AS subtotal,
+        (
+          SELECT p.image_url
+          FROM order_items image_item
+          JOIN products p ON image_item.product_id = p.id
+          WHERE image_item.order_id = o.id
+          ORDER BY image_item.id
+          LIMIT 1
+        ) AS product_image,
+        GROUP_CONCAT(
+          CONCAT(p.name, ' (x', oi.quantity, ')')
+          ORDER BY p.name
+          SEPARATOR ', '
+        ) AS items_summary
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE o.buyer_id = ?
+      GROUP BY o.id, o.total_amount, o.shipping_address, o.order_status, o.created_at
+      ORDER BY o.created_at DESC`,
+      [req.user.id]
+    );
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Error fetching buyer orders:', error);
+    res.status(500).json({ message: 'Server error fetching your orders.' });
   }
 };
 
