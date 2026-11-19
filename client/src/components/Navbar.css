@@ -1,0 +1,150 @@
+.navbar {
+  display: flex;
+  height: 88px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4rem;
+  border-bottom: 1px solid #eaeaea;
+  background: #fff;
+  position: relative;
+  z-index: 50;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #2d3748;
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-link,
+.nav-button {
+  color: #2d3748;
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.nav-search-box {
+  display: flex;
+  width: clamp(220px, 22vw, 340px);
+  height: 42px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.65rem;
+  border: 1px solid #ccd7d0;
+  border-radius: 999px;
+  background: #f8faf8;
+}
+
+.nav-search-box:focus-within {
+  border-color: #1b3b2b;
+  box-shadow: 0 0 0 3px rgba(27, 59, 43, 0.1);
+  background: #fff;
+}
+
+.nav-search-box input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
+.nav-search-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #edf2ef;
+  cursor: pointer;
+}
+
+.tracking-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: #1b3b2b;
+  stroke-width: 1.7;
+}
+
+.cart-badge {
+  border-radius: 50%;
+  background: #eee;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #d7e1da;
+  border-radius: 50%;
+  background: #1b3b2b;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 190px;
+  padding: 0.55rem;
+  border: 1px solid #e2e7e3;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(28, 48, 37, 0.16);
+}
+
+.profile-dropdown-name {
+  display: block;
+  margin: 0.25rem 0.45rem 0.55rem;
+  overflow: hidden;
+  color: #667068;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-dropdown button {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #edf0ed;
+  border-radius: 7px;
+  background: transparent;
+  padding: 0.75rem 0.65rem;
+  color: #a23b3b;
+  text-align: left;
+  cursor: pointer;
+}

@@ -6,14 +6,14 @@
   background-size: cover;
   background-position: center;
   font-family: 'Georgia', serif;
-  padding: 42px 5%;
   color: #2d4536;
   box-sizing: border-box;
 }
 
 .checkout-header {
   max-width: 1180px;
-  margin: 0 auto 26px;
+  margin: 0 auto;
+  padding: 42px 5% 26px;
 }
 
 .back-cart-link {
@@ -30,6 +30,22 @@
   box-shadow: 0 5px 16px rgba(36, 57, 44, 0.06);
 }
 
+.back-cart-link svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 7px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 0.18s ease;
+}
+
+.back-cart-link:hover svg {
+  transform: translateX(-3px);
+}
+
 .checkout-header h1 {
   font-size: clamp(2rem, 4vw, 3.15rem);
   color: #173a27;
@@ -44,6 +60,7 @@
   max-width: 1180px;
   margin: 0 auto;
   align-items: start;
+  padding: 0 5%;
 }
 
 /* Form Styles */
@@ -277,9 +294,43 @@
   min-height: 100vh;
   background-color: #f6f4ee;
   display: flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+}
+
+.success-back-home {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(178, 180, 160, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #2d5a43;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 5px 16px rgba(36, 57, 44, 0.08);
+}
+
+.success-back-home svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 7px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 0.18s ease;
+}
+
+.success-back-home:hover svg {
+  transform: translateX(-3px);
 }
 
 .success-card {
@@ -345,10 +396,14 @@
 /* Mobile responsive */
 @media (max-width: 768px) {
   .confirm-order-container {
+    padding: 0;
+  }
+  .checkout-header {
     padding: 24px 16px;
   }
   .checkout-grid {
     grid-template-columns: 1fr;
+    padding: 0 16px 24px;
   }
   .form-row {
     grid-template-columns: 1fr;

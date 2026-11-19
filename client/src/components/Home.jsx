@@ -1,7 +1,8 @@
 // --- Subtitle: Import React, React Router Hooks, and Components ---
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
+import Navbar from './Navbar';
 import './Home.css';
 
 const Home = () => {
@@ -9,29 +10,9 @@ const Home = () => {
   const [products, setProducts] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const navigate = useNavigate();
   const productsSectionRef = useRef(null);
-  const searchInputRef = useRef(null);
-  const profileMenuRef = useRef(null);
-  const isLoggedIn = Boolean(localStorage.getItem('token'));
-  const userName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'User';
-  const userInitial = userName.trim().charAt(0).toUpperCase();
-
-  useEffect(() => {
-    if (showSearch) searchInputRef.current?.focus();
-  }, [showSearch]);
-
-  useEffect(() => {
-    if (!showProfileMenu) return undefined;
-    const handleOutsideClick = (event) => {
-      if (!profileMenuRef.current?.contains(event.target)) setShowProfileMenu(false);
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [showProfileMenu]);
 
   // --- Subtitle: Fetch Products & Calculate Cart Count on Load ---
   useEffect(() => {
@@ -56,33 +37,8 @@ const Home = () => {
     }
   };
 
-  // --- Subtitle: Logout Handler ---
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPhone');
-    localStorage.removeItem('userAddress');
-    setShowProfileMenu(false);
-    navigate('/login');
-  };
-
-  // --- Subtitle: Navigation Handler for Cart Button ---
-  const handleCartNavigation = () => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
-
-    if (!token || userRole !== 'buyer') {
-      navigate('/login');
-    } else {
-      navigate('/cart');
-    }
-  };
-
   // --- Subtitle: Add to Cart Action Handler ---
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, requestedQuantity = 1) => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole');
 
@@ -95,9 +51,9 @@ const Home = () => {
     const existingItemIndex = existingCart.findIndex((item) => item.id === product.id);
 
     if (existingItemIndex > -1) {
-      existingCart[existingItemIndex].quantity += 1;
+      existingCart[existingItemIndex].quantity += requestedQuantity;
     } else {
-      existingCart.push({ ...product, quantity: 1 });
+      existingCart.push({ ...product, quantity: requestedQuantity });
     }
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
@@ -119,95 +75,12 @@ const Home = () => {
       {/* ==========================================
           HEADER / NAVIGATION BAR
           ========================================== */}
-      <header className="navbar">
-        <div className="logo-container" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <span>🍃</span>
-          <span>ILAM CHIYA</span>
-        </div>
-
-        <nav className="nav-links">
-          <Link to="/" className="nav-link">🏠 Home</Link>
-
-          {/* Toggleable Search Input */}
-          {showSearch ? (
-            <div className="nav-search-box">
-              <span>🔍</span>
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search orthodox, green, oolong..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-              />
-              <button
-                type="button"
-                className="nav-search-close"
-                onClick={() => {
-                  setSearchQuery('');
-                  setShowSearch(false);
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="nav-button nav-search-trigger"
-              onClick={() => setShowSearch(true)}
-              aria-label="Open search"
-            >
-              <span aria-hidden="true">🔍</span>
-              <span className="nav-search-label">Search</span>
-            </button>
-          )}
-
-          {/* Protected Cart Navigation Button */}
-          <button type="button" onClick={handleCartNavigation} className="nav-button">
-            🛒 Cart <span className="cart-badge">{cartCount}</span>
-          </button>
-
-          {/* Package Tracking Button connected to Orders & Shipping */}
-          <button
-            type="button"
-            onClick={() => navigate('/order-tracking')}
-            className="nav-button"
-            title="Track Package & Orders"
-            aria-label="Track Package"
-          >
-            <svg className="tracking-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-              <path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9M8 5.3l8 4.5" />
-            </svg>
-            Track Package
-          </button>
-
-          {/* Logged-in profile menu, positioned beside Track Package */}
-          {isLoggedIn ? (
-            <div className="profile-menu" ref={profileMenuRef}>
-              <button
-                type="button"
-                className="profile-avatar"
-                onClick={() => setShowProfileMenu((isOpen) => !isOpen)}
-                aria-label={`Open profile menu for ${userName}`}
-                aria-expanded={showProfileMenu}
-              >
-                {userInitial}
-              </button>
-              {showProfileMenu && (
-                <div className="profile-dropdown">
-                  <span className="profile-dropdown-name">{userName}</span>
-                  <button type="button" className="profile-logout" onClick={handleLogout}>
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Link to="/login" className="nav-link">👤 Log In</Link>
-          )}
-        </nav>
-      </header>
+      <Navbar
+        cartCount={cartCount}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSearchClose={() => setSearchQuery('')}
+      />
 
       {/* ==========================================
           HERO BANNER SECTION
@@ -248,7 +121,7 @@ const Home = () => {
           ========================================== */}
       <section className="products-section" ref={productsSectionRef}>
         <h2 className="section-title">
-          {searchQuery ? `Search Results for "${searchQuery}"` : 'Featured Harvests'}
+          {searchQuery ? `Search Results for "${searchQuery}"` : 'Product catalog'}
         </h2>
 
         <div className="product-grid">

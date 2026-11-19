@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
+import Navbar from './Navbar';
 import './ConfirmOrder.css';
 
 const ConfirmOrder = () => {
@@ -163,6 +164,12 @@ const ConfirmOrder = () => {
   if (orderPlaced) {
     return (
       <div className="order-success-page">
+        <Link to="/" className="success-back-home" aria-label="Back to home">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+          <span>Back to Home</span>
+        </Link>
         <div className="success-card">
           <div className="success-icon">🍃</div>
           <h2>Order Confirmed!</h2>
@@ -181,9 +188,15 @@ const ConfirmOrder = () => {
 
   return (
     <div className="confirm-order-container">
+      <Navbar cartCount={cartItems.length} showSearch={false} />
       {/* Header */}
       <div className="checkout-header">
-        <Link to="/cart" className="back-cart-link">← Back to Cart</Link>
+        <Link to="/cart" className="back-cart-link" aria-label="Back to cart">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+          <span>Back to Cart</span>
+        </Link>
         <h1>Confirm Your Tea Order</h1>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
+import Navbar from './Navbar';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
@@ -88,44 +89,11 @@ const OrderTracking = () => {
   const total = Number(selectedOrder?.total_price || 0);
   const shipping = Math.max(total - subtotal, 0);
 
-  const handleCartNavigation = () => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
-    navigate(token && userRole === 'buyer' ? '/cart' : '/login');
-  };
-
   const handlePrintInvoice = () => window.print();
 
   return (
     <div className="ot-page">
-      <header className="navbar">
-        <div className="logo-container" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <span>🍃</span>
-          <span>ILAM CHIYA</span>
-        </div>
-
-        <nav className="nav-links">
-          <Link to="/" className="nav-link">🏠 Home</Link>
-          <button type="button" className="nav-button">🔍 Search</button>
-          <button type="button" onClick={handleCartNavigation} className="nav-button">
-            🛒 Cart <span className="cart-badge">{cartCount}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/order-tracking')}
-            className="nav-button"
-            title="Track Package & Orders"
-            aria-label="Track Package"
-          >
-            <svg className="tracking-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-              <path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9M8 5.3l8 4.5" />
-            </svg>
-            Track Package
-          </button>
-          <Link to="/login" className="nav-link">👤 Log In</Link>
-        </nav>
-      </header>
+      <Navbar cartCount={cartCount} showSearch={false} />
 
       <main className="ot-container">
         <button
