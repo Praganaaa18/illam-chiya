@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router';
 import './Login.css';
 
 const Login = () => {
@@ -59,13 +59,16 @@ const Login = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Invalid email or password.');
       }
+      const accountRole = data.user?.role;
+      if (!['buyer', 'seller'].includes(accountRole)) {
+        throw new Error('This account does not have a buyer or seller portal.');
+      }
 
       localStorage.setItem('token', data.token);
-      localStorage.setItem('userRole', role);
+      localStorage.setItem('userRole', accountRole);
       localStorage.setItem('userId', data.user?.id);
 
-      // Navigate based on selected role
-      if (role === 'seller') {
+      if (accountRole === 'seller') {
         navigate('/seller/dashboard');
       } else {
         navigate('/'); // Home / Buyer Marketplace

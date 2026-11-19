@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router';
 import './ConfirmOrder.css';
 
 const ConfirmOrder = () => {
@@ -32,8 +32,16 @@ const ConfirmOrder = () => {
     }
 
     // Load Cart Items
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    if (savedCart.length === 0) {
+    let savedCart;
+    try {
+      savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    } catch (error) {
+      console.error('Unable to read saved cart:', error);
+      localStorage.removeItem('cart');
+      setSubmitError('Your saved cart could not be read. Please add your items again.');
+      return;
+    }
+    if (!Array.isArray(savedCart) || savedCart.length === 0) {
       navigate('/cart');
     } else {
       setCartItems(savedCart);
@@ -73,6 +81,7 @@ const ConfirmOrder = () => {
     if (!validateForm()) return;
 
     setLoading(true);
+    setSubmitError('');
 
     const token = localStorage.getItem('token');
     const orderPayload = {
@@ -101,16 +110,20 @@ const ConfirmOrder = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
-        localStorage.removeItem('cart');
-        setOrderId(data.order_id);
-        setOrderPlaced(true);
-      } else {
+      if (!response.ok) {
         setSubmitError(data.message || 'Failed to place order. Please try again.');
+        return;
       }
+      if (!data.order_id) {
+        throw new Error('The server did not return an order ID. Please contact support before retrying.');
+      }
+
+      localStorage.removeItem('cart');
+      setOrderId(data.order_id);
+      setOrderPlaced(true);
     } catch (err) {
       console.error('Order Submission Error:', err);
-      setSubmitError('Unable to connect to the order service. Please try again.');
+      setSubmitError(err.message || 'Unable to place your order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -230,6 +243,7 @@ const ConfirmOrder = () => {
             </div>
           </div>
 
+          {submitError && <p className="error-text" role="alert">{submitError}</p>}
           <button type="submit" className="place-order-btn" disabled={loading}>
             {loading ? 'Processing Order...' : `Confirm Order • Rs. ${grandTotal}`}
           </button>

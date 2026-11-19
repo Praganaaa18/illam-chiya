@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import API from '../services/api';
 import './InventoryManagement.css';
 
@@ -15,28 +15,33 @@ const InventoryManagement = ({ sellerId }) => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [isRestocking, setIsRestocking] = useState(false);
-
   const [restockModal, setRestockModal] = useState({ open: false, product: null, amount: 10 });
+  const activeSellerId = sellerId || localStorage.getItem('userId');
 
   const fetchInventory = useCallback(async () => {
-    if (!sellerId) {
+    if (!activeSellerId) {
+      setError('Please sign in again to view your inventory.');
       setLoading(false);
-      setError('Unable to identify your seller account. Please sign in again.');
       return;
     }
+
+    setError('');
     try {
-      setError('');
-      const res = await API.get('/inventory', { params: { seller_id: sellerId } });
+      const res = await API.get('/inventory', { params: { seller_id: activeSellerId } });
+      if (!Array.isArray(res.data.items) || !res.data.metrics) {
+        throw new Error('The server returned invalid inventory data.');
+      }
       setItems(res.data.items);
       setMetrics(res.data.metrics);
     } catch (err) {
       console.error('Error fetching inventory:', err);
-      setError('Unable to load inventory. Please try again.');
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Could not load inventory.');
     } finally {
       setLoading(false);
     }
-  }, [sellerId]);
+  }, [activeSellerId]);
 
   useEffect(() => {
     fetchInventory();
@@ -46,24 +51,38 @@ const InventoryManagement = ({ sellerId }) => {
     e.preventDefault();
     if (!restockModal.product) return;
 
+    const addQuantity = Number(restockModal.amount);
+    if (!Number.isInteger(addQuantity) || addQuantity <= 0) {
+      setNotice('Enter a positive whole-number quantity.');
+      return;
+    }
+
+    setIsRestocking(true);
+    setNotice('');
+    setError('');
     try {
-      setIsRestocking(true);
-      setError('');
       await API.patch(`/inventory/${restockModal.product.id}/restock`, {
-        add_quantity: Number(restockModal.amount),
-        seller_id: sellerId
+        add_quantity: addQuantity,
+        seller_id: activeSellerId
       });
       setRestockModal({ open: false, product: null, amount: 10 });
+      setNotice('Inventory restocked successfully.');
       await fetchInventory();
     } catch (err) {
       console.error('Error restocking inventory:', err);
-      setError(err.response?.data?.message || 'Failed to update stock. Please try again.');
+      setNotice(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update stock.');
     } finally {
       setIsRestocking(false);
     }
   };
 
   const categories = ['All', ...new Set(items.map(i => i.category))];
+
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return `http://localhost:5000${imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`}`;
+  };
 
   const filteredItems = items.filter(item => {
     const matchesSearch =
@@ -74,11 +93,18 @@ const InventoryManagement = ({ sellerId }) => {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  if (loading) return <div className="inv-loading">Loading inventory data...</div>;
+  if (loading) return <div className="inv-loading" role="status">Loading inventory data...</div>;
 
   return (
     <div className="inv-container">
-      {error && <div className="inv-error" role="alert">{error}</div>}
+      {error && (
+        <div className="inv-error" role="alert">
+          <span>{error}</span>
+          <button type="button" className="inv-retry-btn" onClick={fetchInventory}>Try again</button>
+        </div>
+      )}
+      {notice && <div className="inv-notice" role="status">{notice}</div>}
+
       <div className="inv-kpi-grid">
         <div className="inv-kpi-card">
           <div className="kpi-content">
@@ -166,7 +192,9 @@ const InventoryManagement = ({ sellerId }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredItems.length === 0 ? (
+              {error ? (
+                <tr><td colSpan="8" className="inv-empty">Inventory could not be loaded.</td></tr>
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="inv-empty">No matching tea inventory found.</td>
                 </tr>
@@ -175,13 +203,14 @@ const InventoryManagement = ({ sellerId }) => {
                   <tr key={item.id}>
                     <td>
                       <div className="inv-product-cell">
-                        <img
-                          src={item.image_url
-                            ? (item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`)
-                            : '/logo192.png'}
-                          alt={item.name}
-                          className="inv-thumb"
-                        />
+                        {getImageUrl(item.image_url) ? (
+                          <img
+                            src={getImageUrl(item.image_url)}
+                            alt={item.name}
+                            className="inv-thumb"
+                            onError={(event) => { event.currentTarget.hidden = true; }}
+                          />
+                        ) : <span className="inv-thumb-fallback" aria-hidden="true">🍃</span>}
                         <div>
                           <div className="inv-prod-name">{item.name}</div>
                           <div className="inv-prod-cat">🌿 {item.category}</div>
@@ -215,13 +244,19 @@ const InventoryManagement = ({ sellerId }) => {
       </div>
 
       {restockModal.open && (
-        <div className="inv-modal-overlay">
-          <div className="inv-modal">
-            <h3>Restock {restockModal.product.name}</h3>
+        <div className="inv-modal-overlay" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !isRestocking) {
+            setRestockModal({ open: false, product: null, amount: 10 });
+          }
+        }}>
+          <div className="inv-modal" role="dialog" aria-modal="true" aria-labelledby="inv-restock-title">
+            <h3 id="inv-restock-title">Restock {restockModal.product.name}</h3>
             <p>Current Stock: <strong>{restockModal.product.current_stock}</strong> units</p>
             <form onSubmit={handleRestockSubmit}>
-              <label>Quantity to Add:</label>
+              {notice && <div className="inv-error" role="alert">{notice}</div>}
+              <label htmlFor="inv-restock-quantity">Quantity to Add:</label>
               <input
+                id="inv-restock-quantity"
                 type="number"
                 min="1"
                 step="1"
@@ -233,12 +268,16 @@ const InventoryManagement = ({ sellerId }) => {
                 <button
                   type="button"
                   className="btn-cancel"
-                  onClick={() => setRestockModal({ open: false, product: null, amount: 10 })}
+                  disabled={isRestocking}
+                  onClick={() => {
+                    setNotice('');
+                    setRestockModal({ open: false, product: null, amount: 10 });
+                  }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="btn-confirm" disabled={isRestocking}>
-                  {isRestocking ? 'Updating...' : 'Confirm Restock'}
+                  {isRestocking ? 'Saving…' : 'Confirm Restock'}
                 </button>
               </div>
             </form>

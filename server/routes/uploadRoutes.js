@@ -1,9 +1,13 @@
 const express = require('express');
 const upload = require('../middleware/uploadMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/', (req, res) => {
+router.post('/', authMiddleware, (req, res) => {
+    if (req.user.role !== 'seller') {
+        return res.status(403).json({ error: 'Seller access is required.' });
+    }
     upload.single('image')(req, res, (error) => {
         if (error) {
             const statusCode = error.code === 'LIMIT_FILE_SIZE'
