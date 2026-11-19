@@ -405,10 +405,49 @@
 }
 
 .pm-file-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px;
   border: 1px dashed #cbd5e1;
   border-radius: 6px;
   background-color: #f8fafc;
+}
+
+.pm-file-box input[type="file"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-file-discard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #dc2626;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pm-file-discard:hover {
+  background-color: #fee2e2;
+}
+
+.pm-file-discard:focus-visible {
+  outline: 3px solid rgba(220, 38, 38, 0.25);
+  outline-offset: 2px;
+}
+
+.pm-file-discard:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .pm-modal-footer {

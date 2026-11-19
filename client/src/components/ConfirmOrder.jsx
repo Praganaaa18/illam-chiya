@@ -141,6 +141,7 @@ const ConfirmOrder = () => {
           </p>
           <div className="success-actions">
             <Link to="/" className="home-btn">Back to Home</Link>
+            <Link to="/order-tracking" className="track-order-btn">Track your package</Link>
           </div>
         </div>
       </div>
@@ -158,6 +159,7 @@ const ConfirmOrder = () => {
       <div className="checkout-grid">
         {/* Shipping & Payment Form */}
         <form onSubmit={handlePlaceOrder} className="checkout-form">
+          {submitError && <p className="error-text" role="alert">{submitError}</p>}
           {/* Shipping Details */}
           <div className="form-section">
             <h2>1. Shipping Details</h2>
