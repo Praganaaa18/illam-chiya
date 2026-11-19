@@ -8,11 +8,11 @@ import FarmSettings from './FarmSettings';
 import './SellerDashboard.css';
 import axios from 'axios';
 
-const SellerDashboard = () => {
+const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Dummy seller state (or load from localStorage/Auth Context)
   // const [sellerInfo] = useState({
@@ -33,6 +33,12 @@ const SellerDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userAddress');
     navigate('/login');
   };
 
@@ -48,12 +54,15 @@ const SellerDashboard = () => {
       const res = await axios.get(`http://localhost:5000/api/sellers/info/${loggedInUserId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const sellerName = res.data.business_name || res.data.full_name || '';
       setSellerInfo({
-        businessName: res.data.business_name || res.data.full_name || '',
+        businessName: sellerName,
         email: res.data.email || '',
         isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
+      if (sellerName) localStorage.setItem('userName', sellerName);
+      if (res.data.email) localStorage.setItem('userEmail', res.data.email);
     } catch (err) {
       console.error('Error fetching seller information:', err);
     }

@@ -46,6 +46,37 @@ const ConfirmOrder = () => {
     } else {
       setCartItems(savedCart);
     }
+
+    const fallbackName = localStorage.getItem('userName') || '';
+    const fallbackPhone = localStorage.getItem('userPhone') || '';
+    const fallbackAddress = localStorage.getItem('userAddress') || '';
+    setShippingDetails((current) => ({
+      ...current,
+      fullName: fallbackName,
+      phone: fallbackPhone,
+      address: fallbackAddress,
+    }));
+
+    fetch('http://localhost:5000/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Unable to load account details.');
+        const profileAddress = data.delivery_address || data.address || '';
+        setShippingDetails((current) => ({
+          ...current,
+          fullName: data.full_name || current.fullName,
+          phone: data.phone || current.phone,
+          address: profileAddress || current.address,
+        }));
+        localStorage.setItem('userName', data.full_name || '');
+        localStorage.setItem('userPhone', data.phone || '');
+        localStorage.setItem('userAddress', profileAddress || '');
+      })
+      .catch((profileError) => {
+        console.error('Unable to load checkout profile:', profileError);
+      });
   }, [navigate]);
 
   // Totals Calculation

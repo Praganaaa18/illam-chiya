@@ -1,5 +1,5 @@
 // --- Subtitle: Import React, React Router Hooks, and Components ---
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
 import './Home.css';
@@ -10,10 +10,28 @@ const Home = () => {
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const navigate = useNavigate();
   const productsSectionRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const profileMenuRef = useRef(null);
   const isLoggedIn = Boolean(localStorage.getItem('token'));
+  const userName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'User';
+  const userInitial = userName.trim().charAt(0).toUpperCase();
+
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
+
+  useEffect(() => {
+    if (!showProfileMenu) return undefined;
+    const handleOutsideClick = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) setShowProfileMenu(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showProfileMenu]);
 
   // --- Subtitle: Fetch Products & Calculate Cart Count on Load ---
   useEffect(() => {
@@ -43,6 +61,11 @@ const Home = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userAddress');
+    setShowProfileMenu(false);
     navigate('/login');
   };
 
@@ -110,11 +133,11 @@ const Home = () => {
             <div className="nav-search-box">
               <span>🔍</span>
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search orthodox, green, oolong..."
                 value={searchQuery}
                 onChange={handleSearchChange}
-                autoFocus
               />
               <button
                 type="button"
@@ -130,10 +153,12 @@ const Home = () => {
           ) : (
             <button
               type="button"
-              className="nav-button"
+              className="nav-button nav-search-trigger"
               onClick={() => setShowSearch(true)}
+              aria-label="Open search"
             >
-              🔍 Search
+              <span aria-hidden="true">🔍</span>
+              <span className="nav-search-label">Search</span>
             </button>
           )}
 
@@ -142,14 +167,6 @@ const Home = () => {
             🛒 Cart <span className="cart-badge">{cartCount}</span>
           </button>
 
-          {/* Dynamic Log In / Log Out Button */}
-          {isLoggedIn ? (
-            <button onClick={handleLogout} className="logout-btn">
-              Logout
-            </button>
-          ) : (
-            <Link to="/login" className="nav-link">👤 Log In</Link>
-          )}
           {/* Package Tracking Button connected to Orders & Shipping */}
           <button
             type="button"
@@ -165,7 +182,30 @@ const Home = () => {
             Track Package
           </button>
 
-          <Link to="/login" className="nav-link">👤 Log In</Link>
+          {/* Logged-in profile menu, positioned beside Track Package */}
+          {isLoggedIn ? (
+            <div className="profile-menu" ref={profileMenuRef}>
+              <button
+                type="button"
+                className="profile-avatar"
+                onClick={() => setShowProfileMenu((isOpen) => !isOpen)}
+                aria-label={`Open profile menu for ${userName}`}
+                aria-expanded={showProfileMenu}
+              >
+                {userInitial}
+              </button>
+              {showProfileMenu && (
+                <div className="profile-dropdown">
+                  <span className="profile-dropdown-name">{userName}</span>
+                  <button type="button" className="profile-logout" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/login" className="nav-link">👤 Log In</Link>
+          )}
         </nav>
       </header>
 

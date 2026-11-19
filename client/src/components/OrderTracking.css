@@ -100,6 +100,10 @@
   gap: 18px;
 }
 
+.ot-invoice {
+  display: none;
+}
+
 .ot-card {
   box-sizing: border-box;
   padding: 14px;
@@ -453,22 +457,72 @@
 }
 
 @media print {
-  .navbar,
-  .ot-order-select-label,
-  .ot-action-stack,
-  .ot-preferences,
-  .ot-page {
-    background: #fff;
+  body * {
+    visibility: hidden;
   }
 
-  .navbar,
-  .ot-action-stack,
-  .ot-preferences {
-    display: none;
+  .ot-invoice,
+  .ot-invoice * {
+    visibility: visible;
   }
 
-  .ot-container {
-    max-width: none;
+  .ot-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+    padding: 24px;
     background: #fff;
+    color: #20231f;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .ot-invoice-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #1b3b2b;
+  }
+
+  .ot-invoice-brand > span {
+    font-size: 28px;
+  }
+
+  .ot-invoice-brand div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ot-invoice-meta,
+  .ot-invoice-address,
+  .ot-invoice-items,
+  .ot-invoice-totals {
+    margin-top: 18px;
+  }
+
+  .ot-invoice-meta {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ot-invoice-address,
+  .ot-invoice-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ot-invoice-totals div {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+
+  .ot-invoice-total {
+    border-top: 2px solid #20231f;
+    font-size: 16px;
   }
 }

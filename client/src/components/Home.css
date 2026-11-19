@@ -16,9 +16,13 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 4rem;
+  height: 88px;
+  padding: 0 4rem;
+  box-sizing: border-box;
   background-color: #ffffff;
   border-bottom: 1px solid #eaeaea;
+  position: relative;
+  z-index: 50;
 }
 
 .logo-container {
@@ -31,24 +35,152 @@ body {
 
 .nav-links {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
 }
 
-.nav-link {
-  text-decoration: none;
-  color: #333333;
-  font-weight: 500;
+.nav-search-box {
+  display: flex;
+  align-items: center;
+  width: clamp(220px, 22vw, 340px);
+  height: 42px;
+  box-sizing: border-box;
+  gap: 0.45rem;
+  padding: 0 0.65rem;
+  border: 1px solid #ccd7d0;
+  border-radius: 999px;
+  background: #f8faf8;
+  box-shadow: 0 4px 14px rgba(27, 59, 43, 0.06);
+  transition: width 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.nav-search-box:focus-within {
+  border-color: #1b3b2b;
+  box-shadow: 0 0 0 3px rgba(27, 59, 43, 0.1);
+  background: #ffffff;
+}
+
+.nav-search-box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: inherit;
+  color: #23372b;
+}
+
+.nav-search-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #edf2ef;
+  color: #1b3b2b;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.nav-search-trigger {
+  min-width: 92px;
+  justify-content: center;
+  color: #1b3b2b;
+  font-weight: 600;
 }
 
 .nav-button {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  white-space: nowrap;
+  color: #2d3748;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #d7e1da;
+  border-radius: 50%;
+  background: #1b3b2b;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(27, 59, 43, 0.16);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 190px;
+  padding: 0.55rem;
+  border: 1px solid #e2e7e3;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(28, 48, 37, 0.16);
+}
+
+.profile-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 15px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: #ffffff;
+  border-left: 1px solid #e2e7e3;
+  border-top: 1px solid #e2e7e3;
+}
+
+.profile-dropdown-name {
+  display: block;
+  overflow: hidden;
+  margin: 0.25rem 0.45rem 0.55rem;
+  color: #667068;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-dropdown button {
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  padding: 0.75rem 0.65rem;
+  color: #1b3b2b;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.profile-dropdown button:hover {
+  background: #f2f6f3;
+}
+
+.profile-dropdown .profile-logout {
+  margin-top: 0.25rem;
+  border-top: 1px solid #edf0ed;
+  border-radius: 0 0 7px 7px;
+  color: #a23b3b;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #333333;
+  font-weight: 500;
 }
 
 .tracking-icon {
@@ -255,4 +387,58 @@ body {
 .footer-links span {
   margin-right: 1rem;
   cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .navbar {
+    height: auto;
+    min-height: 88px;
+    padding: 1rem 2rem;
+  }
+
+  .nav-links {
+    gap: 0.65rem;
+  }
+
+  .nav-search-box {
+    width: 220px;
+  }
+
+  .nav-search-label {
+    display: none;
+  }
+
+  .nav-search-trigger {
+    min-width: 44px;
+  }
+}
+
+@media (max-width: 760px) {
+  .navbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .logo-container {
+    height: 44px;
+  }
+
+  .nav-links {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .nav-search-box {
+    width: 100%;
+  }
+
+  .nav-search-trigger {
+    min-width: 44px;
+  }
+
+  .nav-links > .nav-link,
+  .nav-button {
+    font-size: 0.82rem;
+  }
 }

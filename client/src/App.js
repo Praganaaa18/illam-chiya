@@ -24,6 +24,7 @@ function App() {
         {/* Seller Dashboard Routes */}
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
         <Route path="/seller-dashboard/inventory" element={<SellerDashboard initialTab="inventory" />} />
+        <Route path="/seller-dashboard/settings" element={<SellerDashboard initialTab="settings" />} />
         <Route path="/seller/dashboard" element={<SellerDashboard />} />
         
         {/* Buyer & Tracking Routes */}

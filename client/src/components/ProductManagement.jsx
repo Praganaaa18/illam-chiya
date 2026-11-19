@@ -37,6 +37,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [editingProductId, setEditingProductId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
+  const productNameRef = useRef(null);
+  const modalTriggerRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
@@ -122,7 +124,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = (event) => {
+    modalTriggerRef.current = event?.currentTarget || null;
     setNotice(null);
     setEditingProductId(null);
     setFormData({ ...INITIAL_FORM });
@@ -130,7 +133,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (product) => {
+  const handleEditClick = (product, event) => {
+    modalTriggerRef.current = event?.currentTarget || null;
     setNotice(null);
     setEditingProductId(product.id);
     setFormData({
@@ -159,11 +163,16 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
 
   useEffect(() => {
     if (!isModalOpen) return undefined;
+    const modalTrigger = modalTriggerRef.current;
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') closeModal();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    productNameRef.current?.focus();
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      modalTrigger?.focus();
+    };
   }, [isModalOpen, closeModal]);
 
   const handleSubmit = async (event) => {
@@ -421,7 +430,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     </td>
                     <td>
                       <div className="pm-actions">
-                        <button type="button" className="pm-btn-edit" disabled={isBusy} onClick={() => handleEditClick(product)}>
+                        <button type="button" className="pm-btn-edit" disabled={isBusy} onClick={(event) => handleEditClick(product, event)}>
                           <span aria-hidden="true">✎</span> Edit
                         </button>
                         <button type="button" className="pm-btn-delete" disabled={isBusy} onClick={() => handleDeleteClick(product)}>
@@ -458,7 +467,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
             <form onSubmit={handleSubmit} className="pm-modal-form">
               <div className="pm-form-group">
                 <label htmlFor="pm-product-name">Product Name *</label>
-                <input id="pm-product-name" type="text" name="name" placeholder="e.g., First Flush Orthodox Tea" value={formData.name} onChange={handleChange} required maxLength="150" />
+                <input ref={productNameRef} id="pm-product-name" type="text" name="name" placeholder="e.g., First Flush Orthodox Tea" value={formData.name} onChange={handleChange} required maxLength="150" />
               </div>
               <div className="pm-form-row">
                 <div className="pm-form-group">

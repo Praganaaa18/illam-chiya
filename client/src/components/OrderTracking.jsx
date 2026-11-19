@@ -313,6 +313,33 @@ const OrderTracking = () => {
                 </section>
               </aside>
             </div>
+
+            <section className="ot-invoice">
+              <div className="ot-invoice-brand">
+                <span>🍃</span>
+                <div>
+                  <strong>ILLAM CHIYA</strong>
+                  <span>Order Invoice</span>
+                </div>
+              </div>
+              <div className="ot-invoice-meta">
+                <span><strong>Invoice:</strong> #ILLAM-{selectedOrder.id}</span>
+                <span><strong>Date:</strong> {formatDate(selectedOrder.created_at)}</span>
+              </div>
+              <div className="ot-invoice-address">
+                <strong>Delivery Address</strong>
+                <span>{selectedOrder.delivery_address}</span>
+              </div>
+              <div className="ot-invoice-items">
+                <strong>Item</strong>
+                <span>{selectedOrder.items_summary || 'Order items'}</span>
+              </div>
+              <div className="ot-invoice-totals">
+                <div><span>Subtotal</span><strong>NPR {subtotal.toLocaleString()}</strong></div>
+                <div><span>Shipping</span><strong>NPR {shipping.toLocaleString()}</strong></div>
+                <div className="ot-invoice-total"><span>Total</span><strong>NPR {total.toLocaleString()}</strong></div>
+              </div>
+            </section>
           </>
         ) : null}
       </main>
