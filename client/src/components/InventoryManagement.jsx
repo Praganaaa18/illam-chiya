@@ -1,0 +1,252 @@
+import React, { useCallback, useState, useEffect } from 'react';
+import API from '../services/api';
+import './InventoryManagement.css';
+
+const InventoryManagement = ({ sellerId }) => {
+  const [items, setItems] = useState([]);
+  const [metrics, setMetrics] = useState({
+    totalStockValue: 0,
+    lowStockCount: 0,
+    reservedOrdersCount: 0,
+    deliveredRevenue: 0
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isRestocking, setIsRestocking] = useState(false);
+
+  const [restockModal, setRestockModal] = useState({ open: false, product: null, amount: 10 });
+
+  const fetchInventory = useCallback(async () => {
+    if (!sellerId) {
+      setLoading(false);
+      setError('Unable to identify your seller account. Please sign in again.');
+      return;
+    }
+    try {
+      setError('');
+      const res = await API.get('/inventory', { params: { seller_id: sellerId } });
+      setItems(res.data.items);
+      setMetrics(res.data.metrics);
+    } catch (err) {
+      console.error('Error fetching inventory:', err);
+      setError('Unable to load inventory. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [sellerId]);
+
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
+
+  const handleRestockSubmit = async (e) => {
+    e.preventDefault();
+    if (!restockModal.product) return;
+
+    try {
+      setIsRestocking(true);
+      setError('');
+      await API.patch(`/inventory/${restockModal.product.id}/restock`, {
+        add_quantity: Number(restockModal.amount),
+        seller_id: sellerId
+      });
+      setRestockModal({ open: false, product: null, amount: 10 });
+      await fetchInventory();
+    } catch (err) {
+      console.error('Error restocking inventory:', err);
+      setError(err.response?.data?.message || 'Failed to update stock. Please try again.');
+    } finally {
+      setIsRestocking(false);
+    }
+  };
+
+  const categories = ['All', ...new Set(items.map(i => i.category))];
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+    const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  if (loading) return <div className="inv-loading">Loading inventory data...</div>;
+
+  return (
+    <div className="inv-container">
+      {error && <div className="inv-error" role="alert">{error}</div>}
+      <div className="inv-kpi-grid">
+        <div className="inv-kpi-card">
+          <div className="kpi-content">
+            <span className="kpi-title">Total Stock Value</span>
+            <h3 className="kpi-value">Rs. {Number(metrics.totalStockValue).toLocaleString()}</h3>
+          </div>
+          <div className="kpi-icon-box green">💵</div>
+        </div>
+
+        <div className="inv-kpi-card">
+          <div className="kpi-content">
+            <span className="kpi-title">Low Stock Alerts</span>
+            <h3 className="kpi-value">{metrics.lowStockCount} Items</h3>
+          </div>
+          <div className="kpi-icon-box amber">⚠️</div>
+        </div>
+
+        <div className="inv-kpi-card">
+          <div className="kpi-content">
+            <span className="kpi-title">Reserved for Active Orders</span>
+            <h3 className="kpi-value">{metrics.reservedOrdersCount} Units</h3>
+          </div>
+          <div className="kpi-icon-box gold">📦</div>
+        </div>
+
+        <div className="inv-kpi-card">
+          <div className="kpi-content">
+            <span className="kpi-title">Delivered Stock Revenue</span>
+            <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
+          </div>
+          <div className="kpi-icon-box forest">🧾</div>
+        </div>
+      </div>
+
+      <div className="inv-main-card">
+        <div className="inv-toolbar">
+          <div className="inv-search-box">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="inv-filter-group">
+            <select
+              className="inv-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">Filter by Status</option>
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+
+            <select
+              className="inv-select"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat === 'All' ? 'All Filters' : cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="inv-table-wrapper">
+          <table className="inv-table">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Current<br />Stock</th>
+                <th>Reserved Stock<br />from Orders</th>
+                <th>Available<br />Stock</th>
+                <th>Unit<br />Price</th>
+                <th>Stock<br />Value</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="inv-empty">No matching tea inventory found.</td>
+                </tr>
+              ) : (
+                filteredItems.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <div className="inv-product-cell">
+                        <img
+                          src={item.image_url
+                            ? (item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`)
+                            : '/logo192.png'}
+                          alt={item.name}
+                          className="inv-thumb"
+                        />
+                        <div>
+                          <div className="inv-prod-name">{item.name}</div>
+                          <div className="inv-prod-cat">🌿 {item.category}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="inv-num">{item.current_stock}</td>
+                    <td className="inv-num">{item.reserved_stock}</td>
+                    <td className="inv-num bold">{item.available_stock}</td>
+                    <td className="inv-num">Rs. {Number(item.unit_price).toLocaleString()}</td>
+                    <td className="inv-num">Rs. {Number(item.stock_value).toLocaleString()}</td>
+                    <td>
+                      <span className={`inv-badge ${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="inv-restock-btn"
+                        onClick={() => setRestockModal({ open: true, product: item, amount: 10 })}
+                      >
+                        Quick Restock
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {restockModal.open && (
+        <div className="inv-modal-overlay">
+          <div className="inv-modal">
+            <h3>Restock {restockModal.product.name}</h3>
+            <p>Current Stock: <strong>{restockModal.product.current_stock}</strong> units</p>
+            <form onSubmit={handleRestockSubmit}>
+              <label>Quantity to Add:</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={restockModal.amount}
+                onChange={(e) => setRestockModal({ ...restockModal, amount: e.target.value })}
+                required
+              />
+              <div className="inv-modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setRestockModal({ open: false, product: null, amount: 10 })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-confirm" disabled={isRestocking}>
+                  {isRestocking ? 'Updating...' : 'Confirm Restock'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default InventoryManagement;
