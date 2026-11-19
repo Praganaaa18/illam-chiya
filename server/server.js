@@ -3,14 +3,15 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 const db = require("./config/db");
+const { runMigrations } = require("./config/migrations");
 
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const financeRoutes = require("./routes/financeRoutes"); // <-- 1. IMPORT FINANCE ROUTES HERE
-const inventoryRoutes = require("./routes/inventoryRoutes");
 const sellerRoutes = require("./routes/sellerRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
 
 const app = express();
 
@@ -26,9 +27,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/finance", financeRoutes); // <-- 2. MOUNT FINANCE ROUTE HERE
-app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 // Health Check Route
 app.get("/", (req, res) => {
@@ -37,13 +38,21 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Test DB Connection and Start Express Server
-db.getConnection()
-  .then((connection) => {
+// Run pending migrations, then test the connection and start Express.
+async function startServer() {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await runMigrations(connection);
     console.log("Database connected successfully!");
     connection.release();
+    connection = null;
     app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  })
-  .catch((err) => {
-    console.error("Database connection error:", err);
-  });
+  } catch (err) {
+    if (connection) connection.release();
+    console.error("Database startup error:", err);
+    process.exitCode = 1;
+  }
+}
+
+startServer();

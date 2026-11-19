@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import ProductManagement from './ProductManagement';
+import InventoryManagement from './InventoryManagement';
+import OrdersAndShipping from './OrdersAndShipping';
 import BillingsAndPayouts from './BillingsandPayouts';
 import FarmSettings from './FarmSettings';
-import InventoryManagement from './InventoryManagement';
 import './SellerDashboard.css';
 import axios from 'axios';
 
-const SellerDashboard = ({ initialTab = 'overview' }) => {
+const SellerDashboard = () => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Dummy seller state (or load from localStorage/Auth Context)
   // const [sellerInfo] = useState({
@@ -25,14 +26,10 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
     businessName: '',
     email: '',
     isVerified: false,
-    sellerId: Number(localStorage.getItem('userId')) || null,
+    sellerId: localStorage.getItem('userId') || null,
   });
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -40,19 +37,27 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   };
 
   const fetchSellerInfo = useCallback(async () => {
+    const loggedInUserId = localStorage.getItem('userId');
+    const token = localStorage.getItem('token');
+    if (!loggedInUserId || !token) {
+      navigate('/login');
+      return;
+    }
+
     try {
-      const loggedInUserId = localStorage.getItem('userId');
-      const res = await axios.get(`http://localhost:5000/api/sellers/info/${loggedInUserId}`);
+      const res = await axios.get(`http://localhost:5000/api/sellers/info/${loggedInUserId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setSellerInfo({
-        businessName: res.data.full_name || '',
+        businessName: res.data.business_name || res.data.full_name || '',
         email: res.data.email || '',
-        isVerified: res.data.is_verified || true,
+        isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching seller information:', err);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     fetchSellerInfo();
@@ -108,7 +113,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
           <button
             className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
             onClick={() => setActiveTab('inventory')}>
-            📊 Inventory Management
+            📋 Inventory Management
           </button>
 
           <button
@@ -142,7 +147,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
         {/* TOP HEADER BAR */}
         <header className="matcha-topbar">
           <div className="topbar-left">
-            <h3>{activeTab === 'inventory' ? 'Inventory Management' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
+            <h3>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
           </div>
 
           <div className="topbar-right">
@@ -241,117 +246,5 @@ const OverviewSection = ({ sellerName }) => (
     </div>
   </div>
 );
-
-// --- View 3: Orders & Shipping Component ---
-const OrdersAndShipping = ({ sellerId = 1 }) => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchSellerOrders();
-  }, [sellerId]);
-
-  const fetchSellerOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/orders?seller_id=${sellerId}`);
-      if (!response.ok) throw new Error('Failed to fetch orders');
-
-      const data = await response.json();
-      setOrders(data);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Unable to load orders. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update status');
-
-      setOrders((prevOrders) =>
-        prevOrders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)),
-      );
-    } catch (err) {
-      console.error('Status update error:', err);
-      alert('Could not update status. Please try again.');
-    }
-  };
-
-  if (loading) return <div className="orders-loading">Loading seller orders...</div>;
-  if (error) return <div className="orders-error">{error}</div>;
-
-  return (
-    <div className="orders-shipping-container">
-      <div className="orders-header">
-        <h2>📦 Orders & Shipping</h2>
-        <p>Track incoming purchases, review buyer delivery details, and update shipment status.</p>
-      </div>
-
-      {orders.length === 0 ? (
-        <div className="no-orders">No orders found for your estate yet.</div>
-      ) : (
-        <div className="table-responsive">
-          <table className="seller-orders-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Buyer Info</th>
-                <th>Items Ordered</th>
-                <th>Total Price</th>
-                <th>Date</th>
-                <th>Current Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="order-id">#{order.id}</td>
-                  <td>
-                    <div className="buyer-name">{order.buyer_name}</div>
-                    <div className="buyer-phone">📞 {order.phone}</div>
-                    <div className="delivery-address" title={order.delivery_address}>
-                      📍 {order.delivery_address}
-                    </div>
-                  </td>
-                  <td className="items-summary">{order.items_summary}</td>
-                  <td className="order-price">Rs. {Number(order.total_price).toFixed(2)}</td>
-                  <td className="order-date">{new Date(order.created_at).toLocaleDateString()}</td>
-                  <td>
-                    <span className={`status-pill ${order.status}`}>
-                      {order.status ? order.status.toUpperCase() : 'PENDING'}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      className="status-dropdown"
-                      value={order.status || 'pending'}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}>
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default SellerDashboard;

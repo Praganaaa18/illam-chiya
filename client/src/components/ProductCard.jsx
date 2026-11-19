@@ -1,6 +1,6 @@
 // ProductCard.jsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
@@ -27,35 +27,38 @@ const ProductCard = ({ product, onAddToCart }) => {
   };
 
   return (
-    <div className="product-card">
-      <div className="product-image-container">
-        {/* Fallback image if product image path is missing */}
-        <img
-          src={imageUrl}
-          alt={product.name}
-          className="product-image"
-        />
-        <span className="product-category">{product.category || 'Tea'}</span>
-      </div>
+    <article className="product-card">
+      <Link to={`/products/${product.id}`} className="product-card-link">
+        <div className="product-image-container">
+          {/* Fallback image if product image path is missing */}
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="product-image"
+          />
+          <span className="product-category">{product.category || 'Tea'}</span>
+        </div>
 
-      <div className="product-info">
-        <span className="product-vendor">By {product.vendor_name || product.vendor || 'Local Estate'}</span>
-        <h3 className="product-title">{product.name}</h3>
-        <p className="product-description">{product.description}</p>
+        <div className="product-info">
+          <span className="product-vendor">By {product.vendor_name || product.vendor || 'Local Estate'}</span>
+          <h3 className="product-title">{product.name}</h3>
+          <p className="product-description">{product.description}</p>
+        </div>
+      </Link>
 
-        <div className="product-bottom-row">
+      <div className="product-bottom-row">
+        <Link to={`/products/${product.id}`} className="product-price-link" aria-label={`View ${product.name} details and price`}>
           <div className="product-price">
             <span className="currency">Rs.</span>
             <span className="amount">{product.price}</span>
             <span className="unit">/ pack</span>
           </div>
-
-          <button onClick={handleAddToCartClick} className="add-to-cart-btn">
-            Add to Cart
-          </button>
-        </div>
+        </Link>
+        <button onClick={handleAddToCartClick} className="add-to-cart-btn">
+          Add to Cart
+        </button>
       </div>
-    </div>
+    </article>
   );
 };
 

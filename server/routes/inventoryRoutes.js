@@ -1,9 +1,10 @@
 const express = require('express');
-const { getSellerInventory, restockProduct } = require('../controllers/inventoryController');
-
 const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
+const { getInventory, restockProduct } = require('../controllers/inventoryController');
 
-router.get('/', getSellerInventory);
+router.use(authMiddleware);
+router.get('/', getInventory);
 router.patch('/:id/restock', restockProduct);
 
 module.exports = router;

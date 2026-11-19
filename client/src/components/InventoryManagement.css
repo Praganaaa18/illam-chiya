@@ -154,6 +154,17 @@
   border: 1px solid #d5cfc0;
 }
 
+.inv-thumb-fallback {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d5cfc0;
+  border-radius: 8px;
+  background: #e8efe9;
+}
 .inv-prod-name {
   font-weight: 700;
   color: #1e2d24;
@@ -235,7 +246,6 @@
   opacity: 0.65;
   cursor: wait;
 }
-
 /* Quick Restock Modal */
 .inv-modal-overlay {
   position: fixed;
@@ -303,6 +313,44 @@
   font-weight: 600;
 }
 
+.btn-cancel:disabled,
+.btn-confirm:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.inv-error,
+.inv-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+}
+
+.inv-error {
+  border: 1px solid #d9a39a;
+  background: #fff0ed;
+  color: #8d3022;
+}
+
+.inv-notice {
+  border: 1px solid #c4e3ce;
+  background: #eaf5ee;
+  color: #20583a;
+}
+
+.inv-retry-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 @media (max-width: 1024px) {
   .inv-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -310,6 +358,11 @@
 }
 
 @media (max-width: 640px) {
+  .inv-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .inv-toolbar,
   .inv-filter-group {
     align-items: stretch;

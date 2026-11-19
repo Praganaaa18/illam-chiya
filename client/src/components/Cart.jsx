@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router';
 import './Cart.css';
 
 const Cart = () => {
@@ -72,9 +72,11 @@ const Cart = () => {
               <div key={item.id} className="cart-item-card">
                 <img
                   src={
-                    item.image_url
-                      ? `http://localhost:5000${item.image_url}`
-                      : item.image || 'https://via.placeholder.com/100'
+                    item.image_url && /^https?:\/\//i.test(item.image_url)
+                      ? item.image_url
+                      : item.image_url
+                        ? `http://localhost:5000/${item.image_url.replace(/^\/+/, '')}`
+                        : item.image || 'https://via.placeholder.com/100'
                   }
                   alt={item.name}
                   className="cart-item-img"
