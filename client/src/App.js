@@ -8,6 +8,7 @@ import RegisterSeller from './components/RegisterSeller';
 import SellerDashboard from './components/SellerDashboard';
 import Cart from './components/Cart';
 import ConfirmOrder from './components/ConfirmOrder';
+import OrderTracking from './components/OrderTracking';
 
 function App() {
   return (
@@ -23,9 +24,11 @@ function App() {
         <Route path="/seller-dashboard/inventory" element={<SellerDashboard initialTab="inventory" />} />
         <Route path="/seller/dashboard" element={<SellerDashboard />} />
         
-        {/* Buyer Routes */}
+        {/* Buyer & Tracking Routes */}
         <Route path="/cart" element={<Cart />} />
         <Route path="/confirm-order" element={<ConfirmOrder />} />
+        <Route path="/orders-shipping" element={<OrderTracking />} />
+        <Route path="/order-tracking" element={<OrderTracking />} />
       </Routes>
     </Router>
   );
