@@ -12,10 +12,10 @@ const FarmSettings = ({ sellerId = 1 }) => {
     registrationNumber: 'REG-ILLAM-2081-99',
   });
 
-  const [certificates, setCertificates] = useState([
+  const certificates = [
     { id: 1, name: 'Organic Organic Farming Cert.pdf', status: 'Verified' },
     { id: 2, name: 'Nepal Tea Board License.pdf', status: 'Verified' }
-  ]);
+  ];
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -52,20 +52,31 @@ const FarmSettings = ({ sellerId = 1 }) => {
   return (
     <div className="farm-settings-container">
       <div className="settings-header">
-        <h2>⚙️ Farm Settings</h2>
-        <p>Manage your tea estate profile, official contact details, and compliance certificates.</p>
+        <div className="settings-header-icon" aria-hidden="true">⚙️</div>
+        <div>
+          <span className="settings-eyebrow">YOUR SELLER PROFILE</span>
+          <h2>Farm Settings</h2>
+          <p>Manage your tea estate profile, official contact details, and compliance certificates.</p>
+        </div>
       </div>
 
-      {message && <div className="settings-alert-banner">{message}</div>}
+      {message && <div className="settings-alert-banner" role="status">{message}</div>}
 
       <form onSubmit={handleSaveSettings} className="settings-form">
-        {/* SECTION 1: ESTATE PROFILE */}
         <div className="settings-section">
-          <h3>🏡 Estate Profile</h3>
+          <div className="settings-section-heading">
+            <span className="settings-section-icon" aria-hidden="true">🏡</span>
+            <div>
+              <h3>Estate Profile</h3>
+              <p>Introduce your farm and the tea you grow.</p>
+            </div>
+            <span className="settings-step">01</span>
+          </div>
           
           <div className="form-group">
-            <label>Tea Estate / Business Name</label>
+            <label htmlFor="farm-business-name">Tea Estate / Business Name</label>
             <input
+              id="farm-business-name"
               type="text"
               name="businessName"
               value={formData.businessName}
@@ -75,8 +86,9 @@ const FarmSettings = ({ sellerId = 1 }) => {
           </div>
 
           <div className="form-group">
-            <label>Estate Bio & Description</label>
+            <label htmlFor="farm-estate-bio">Estate Bio & Description</label>
             <textarea
+              id="farm-estate-bio"
               name="teaEstateBio"
               rows="4"
               value={formData.teaEstateBio}
@@ -86,14 +98,21 @@ const FarmSettings = ({ sellerId = 1 }) => {
           </div>
         </div>
 
-        {/* SECTION 2: CONTACT & LOCATION */}
         <div className="settings-section">
-          <h3>📞 Contact & Location</h3>
+          <div className="settings-section-heading">
+            <span className="settings-section-icon" aria-hidden="true">📞</span>
+            <div>
+              <h3>Contact & Location</h3>
+              <p>Keep your official contact information up to date.</p>
+            </div>
+            <span className="settings-step">02</span>
+          </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label>Contact Email</label>
+              <label htmlFor="farm-contact-email">Contact Email</label>
               <input
+                id="farm-contact-email"
                 type="email"
                 name="contactEmail"
                 value={formData.contactEmail}
@@ -103,8 +122,9 @@ const FarmSettings = ({ sellerId = 1 }) => {
             </div>
 
             <div className="form-group">
-              <label>Phone Number</label>
+              <label htmlFor="farm-contact-phone">Phone Number</label>
               <input
+                id="farm-contact-phone"
                 type="text"
                 name="contactPhone"
                 value={formData.contactPhone}
@@ -115,8 +135,9 @@ const FarmSettings = ({ sellerId = 1 }) => {
           </div>
 
           <div className="form-group">
-            <label>Estate Address</label>
+            <label htmlFor="farm-address">Estate Address</label>
             <input
+              id="farm-address"
               type="text"
               name="address"
               value={formData.address}
@@ -126,13 +147,20 @@ const FarmSettings = ({ sellerId = 1 }) => {
           </div>
         </div>
 
-        {/* SECTION 3: LEGAL & CERTIFICATES */}
         <div className="settings-section">
-          <h3>📜 Registration & Verification Documents</h3>
+          <div className="settings-section-heading">
+            <span className="settings-section-icon" aria-hidden="true">📜</span>
+            <div>
+              <h3>Registration & Verification</h3>
+              <p>Manage your business registration and compliance documents.</p>
+            </div>
+            <span className="settings-step">03</span>
+          </div>
 
           <div className="form-group">
-            <label>Business Registration Number</label>
+            <label htmlFor="farm-registration-number">Business Registration Number</label>
             <input
+              id="farm-registration-number"
               type="text"
               name="registrationNumber"
               value={formData.registrationNumber}
@@ -141,28 +169,29 @@ const FarmSettings = ({ sellerId = 1 }) => {
           </div>
 
           <div className="form-group">
-            <label>Uploaded Certificates</label>
+            <span className="settings-field-label">Uploaded Certificates</span>
             <div className="certificate-list">
               {certificates.map((cert) => (
                 <div key={cert.id} className="certificate-item">
-                  <span className="cert-name">📄 {cert.name}</span>
-                  <span className="cert-badge">{cert.status}</span>
+                  <span className="cert-file-icon" aria-hidden="true">PDF</span>
+                  <span className="cert-name">{cert.name}</span>
+                  <span className="cert-badge"><span aria-hidden="true">✓</span> {cert.status}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="form-group">
-            <label>Upload New Certificate / License</label>
-            <input type="file" className="file-input-field" accept=".pdf,.png,.jpg" />
+            <label htmlFor="farm-certificate-upload">Upload New Certificate / License</label>
+            <input id="farm-certificate-upload" type="file" className="file-input-field" accept=".pdf,.png,.jpg" />
             <small className="help-text">Accepted formats: PDF, JPG, PNG (Max 5MB)</small>
           </div>
         </div>
 
-        {/* SAVE BUTTON */}
         <div className="form-actions">
           <button type="submit" className="save-btn" disabled={saving}>
-            {saving ? 'Saving...' : '💾 Save Changes'}
+            <span aria-hidden="true">{saving ? '◌' : '✓'}</span>
+            {saving ? 'Saving changes…' : 'Save Changes'}
           </button>
         </div>
       </form>

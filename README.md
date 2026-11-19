@@ -99,3 +99,7 @@ GET /api/products — Retrieve all published tea products
 POST /api/products — Create new tea entry (Requires auth & multipart upload)
 
 GET /uploads/:filename — Serve uploaded media assets
+
+GET /api/inventory?seller_id=:sellerId — Retrieve seller inventory, active-order reservations, and stock/revenue metrics
+
+PATCH /api/inventory/:productId/restock — Add stock for a seller product (`seller_id`, `add_quantity`)

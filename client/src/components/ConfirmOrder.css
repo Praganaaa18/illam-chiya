@@ -325,6 +325,23 @@
   font-weight: bold;
 }
 
+.success-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.track-order-btn {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  border: 1px solid #2d5a43;
+  border-radius: 25px;
+  color: #2d5a43;
+  font-weight: bold;
+  text-decoration: none;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .confirm-order-container {

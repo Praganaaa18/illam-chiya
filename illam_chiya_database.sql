@@ -51,8 +51,20 @@ CREATE TABLE orders (
     shipping_address TEXT NOT NULL,
     payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
     order_status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+    carrier_name VARCHAR(120) NULL,
+    tracking_number VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (buyer_id) REFERENCES users(id)
+);
+
+CREATE TABLE order_tracking_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order_tracking_events_order_created (order_id, created_at),
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE order_items (
