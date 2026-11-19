@@ -31,8 +31,11 @@ const OrdersAndShipping = ({ sellerId }) => {
   const [orders, setOrders] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [isShipmentDetailsOpen, setIsShipmentDetailsOpen] = useState(false);
   const [tracking, setTracking] = useState(null);
   const [statusDraft, setStatusDraft] = useState('');
+  const [carrierNameDraft, setCarrierNameDraft] = useState('');
+  const [trackingNumberDraft, setTrackingNumberDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +43,8 @@ const OrdersAndShipping = ({ sellerId }) => {
   const [trackingError, setTrackingError] = useState('');
   const [notice, setNotice] = useState('');
   const trackingRequest = useRef(0);
+  const detailsTriggerRef = useRef(null);
+  const closeDetailsButtonRef = useRef(null);
 
   const activeSellerId = sellerId || localStorage.getItem('userId');
   const token = localStorage.getItem('token');
@@ -81,10 +86,14 @@ const OrdersAndShipping = ({ sellerId }) => {
     if (!orderId || !token) {
       setTracking(null);
       setTrackingLoading(false);
+      setCarrierNameDraft('');
+      setTrackingNumberDraft('');
       return;
     }
     setTracking(null);
     setStatusDraft('');
+    setCarrierNameDraft('');
+    setTrackingNumberDraft('');
     setTrackingError('');
     setTrackingLoading(true);
     try {
@@ -94,6 +103,8 @@ const OrdersAndShipping = ({ sellerId }) => {
       if (requestId === trackingRequest.current) {
         setTracking(response.data);
         setStatusDraft(response.data.status || 'pending');
+        setCarrierNameDraft(response.data.carrier_name || '');
+        setTrackingNumberDraft(response.data.tracking_number || '');
       }
     } catch (requestError) {
       console.error('Error fetching shipment history:', requestError);
@@ -114,6 +125,24 @@ const OrdersAndShipping = ({ sellerId }) => {
     fetchTracking(selectedOrderId);
   }, [fetchTracking, selectedOrderId]);
 
+  useEffect(() => {
+    if (!isShipmentDetailsOpen) return undefined;
+
+    const detailsTrigger = detailsTriggerRef.current;
+    const closeButton = closeDetailsButtonRef.current;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsShipmentDetailsOpen(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    if (closeButton) closeButton.focus();
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (detailsTrigger) detailsTrigger.focus();
+    };
+  }, [isShipmentDetailsOpen]);
+
   const filteredOrders = useMemo(() => {
     if (activeFilter === 'all') return orders;
     if (activeFilter === 'pending') {
@@ -123,23 +152,38 @@ const OrdersAndShipping = ({ sellerId }) => {
   }, [activeFilter, orders]);
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
+  const selectedTracking = tracking && String(tracking.id) === String(selectedOrderId)
+    ? tracking
+    : null;
   const availableStatuses = selectedOrder
     ? [selectedOrder.status, ...(STATUS_TRANSITIONS[selectedOrder.status] || [])]
     : [];
+  const carrierDetailsChanged = Boolean(selectedTracking) && (
+    carrierNameDraft.trim() !== (selectedTracking.carrier_name || '') ||
+    trackingNumberDraft.trim() !== (selectedTracking.tracking_number || '')
+  );
+  const statusChanged = Boolean(selectedOrder) && statusDraft !== selectedOrder.status;
+  const shipmentChanged = statusChanged || carrierDetailsChanged;
 
   const handleUpdateShipment = async (event) => {
     event.preventDefault();
-    if (!selectedOrder || !token || statusDraft === selectedOrder.status) return;
+    if (!selectedOrder || !token || !shipmentChanged) return;
 
     setBusy(true);
     setNotice('');
     try {
       await axios.patch(
         `${API_ORIGIN}/api/orders/${selectedOrder.id}/status`,
-        { status: statusDraft },
+        {
+          status: statusDraft,
+          carrier_name: carrierNameDraft.trim(),
+          tracking_number: trackingNumberDraft.trim(),
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      setNotice(`Shipment updated to ${STATUS_LABELS[statusDraft] || statusDraft}.`);
+      setNotice(statusChanged
+        ? `Shipment updated to ${STATUS_LABELS[statusDraft] || statusDraft}.`
+        : 'Carrier details updated successfully.');
       await fetchOrders();
       await fetchTracking(selectedOrder.id);
     } catch (requestError) {
@@ -188,7 +232,7 @@ const OrdersAndShipping = ({ sellerId }) => {
         </div>
       )}
 
-      <div className="shipping-workspace">
+      <div className={`shipping-workspace ${isShipmentDetailsOpen && selectedOrder ? 'has-details' : ''}`}>
         <div className="shipping-table-card">
           {loading ? (
             <div className="shipping-empty" role="status">Loading orders…</div>
@@ -231,9 +275,11 @@ const OrdersAndShipping = ({ sellerId }) => {
                         <button
                           type="button"
                           className="shipping-details-button"
-                          onClick={() => {
+                          onClick={(event) => {
                             setNotice('');
                             setSelectedOrderId(order.id);
+                            detailsTriggerRef.current = event.currentTarget;
+                            setIsShipmentDetailsOpen(true);
                           }}
                           aria-label={`View tracking for order ${order.id}`}>
                           Details
@@ -247,75 +293,108 @@ const OrdersAndShipping = ({ sellerId }) => {
           )}
         </div>
 
-        <aside className="shipping-detail-card" aria-label="Selected order shipment details">
-          {!selectedOrder ? (
-            <div className="shipping-empty">Select an order to view shipment details.</div>
-          ) : (
-            <>
-              <div className="shipping-detail-heading">
-                <div>
-                  <span className="shipping-detail-eyebrow">Shipment details</span>
-                  <h3>Order #IC-{selectedOrder.id}</h3>
-                </div>
-                <span className={`shipping-status ${selectedOrder.status || 'pending'}`}>
-                  {STATUS_LABELS[selectedOrder.status] || selectedOrder.status || 'Pending'}
-                </span>
-              </div>
+        {isShipmentDetailsOpen && selectedOrder && (
+          <aside
+            className="shipping-detail-card"
+            aria-label={`Shipment details for order ${selectedOrder.id}`}
+          >
+            <div className="shipping-detail-toolbar">
+              <span className="shipping-detail-eyebrow">Shipment details</span>
+              <button
+                ref={closeDetailsButtonRef}
+                type="button"
+                className="shipping-details-close"
+                aria-label="Close shipment details"
+                onClick={() => setIsShipmentDetailsOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="shipping-detail-heading">
+              <h3>Order #IC-{selectedOrder.id}</h3>
+              <span className={`shipping-status ${selectedOrder.status || 'pending'}`}>
+                {STATUS_LABELS[selectedOrder.status] || selectedOrder.status || 'Pending'}
+              </span>
+            </div>
 
-              <div className="shipping-customer">
-                <strong>{selectedOrder.buyer_name || 'Buyer'}</strong>
-                <span>{selectedOrder.phone || 'Phone not provided'}</span>
-                <span>{selectedOrder.delivery_address || 'Delivery address not provided'}</span>
-                <span>Placed {formatDate(selectedOrder.created_at)}</span>
-              </div>
+            <div className="shipping-customer">
+              <strong>{selectedOrder.buyer_name || 'Buyer'}</strong>
+              <span>{selectedOrder.phone || 'Phone not provided'}</span>
+              <span>{selectedOrder.delivery_address || 'Delivery address not provided'}</span>
+              <span>Placed {formatDate(selectedOrder.created_at)}</span>
+            </div>
 
-              <h4 className="shipping-timeline-title">Tracking updates</h4>
-              {trackingLoading ? (
-                <div className="shipping-empty compact" role="status">Loading shipment history…</div>
-              ) : trackingError ? (
-                <div className="shipping-error" role="alert">
-                  <span>{trackingError}</span>
-                  <button type="button" onClick={() => fetchTracking(selectedOrder.id)}>Retry</button>
-                </div>
-              ) : (
-                <ol className="shipping-timeline">
-                  {(tracking?.events || []).map((item, index) => (
-                    <li className="shipping-timeline-event" key={`${item.created_at}-${index}`}>
-                      <span className={`shipping-timeline-marker ${item.status || ''}`} aria-hidden="true">✓</span>
-                      <div>
-                        <strong>{item.description}</strong>
-                        <time dateTime={item.created_at}>{formatDate(item.created_at)}</time>
-                      </div>
-                    </li>
+            <h4 className="shipping-timeline-title">Tracking updates</h4>
+            {trackingLoading ? (
+              <div className="shipping-empty compact" role="status">Loading shipment history…</div>
+            ) : trackingError ? (
+              <div className="shipping-error" role="alert">
+                <span>{trackingError}</span>
+                <button type="button" onClick={() => fetchTracking(selectedOrder.id)}>Retry</button>
+              </div>
+            ) : (
+              <ol className="shipping-timeline">
+                {(selectedTracking?.events || []).map((item, index) => (
+                  <li className="shipping-timeline-event" key={`${item.created_at}-${index}`}>
+                    <span className={`shipping-timeline-marker ${item.status || ''}`} aria-hidden="true">✓</span>
+                    <div>
+                      <strong>{item.description}</strong>
+                      <time dateTime={item.created_at}>{formatDate(item.created_at)}</time>
+                    </div>
+                  </li>
+                ))}
+                {!trackingLoading && (!selectedTracking?.events || selectedTracking.events.length === 0) && (
+                  <li className="shipping-timeline-empty">No shipment updates have been recorded.</li>
+                )}
+              </ol>
+            )}
+
+            <form className="shipping-update-form" onSubmit={handleUpdateShipment}>
+              <label htmlFor="shipping-status">Update shipment status</label>
+              <div className="shipping-update-controls">
+                <select
+                  id="shipping-status"
+                  value={statusDraft || selectedOrder.status || 'pending'}
+                  onChange={(event) => setStatusDraft(event.target.value)}
+                  disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}>
+                  {availableStatuses.map((status) => (
+                    <option key={status} value={status}>{STATUS_LABELS[status]}</option>
                   ))}
-                  {!trackingLoading && (!tracking?.events || tracking.events.length === 0) && (
-                    <li className="shipping-timeline-empty">No shipment updates have been recorded.</li>
-                  )}
-                </ol>
-              )}
-
-              <form className="shipping-update-form" onSubmit={handleUpdateShipment}>
-                <label htmlFor="shipping-status">Update shipment status</label>
-                <div className="shipping-update-controls">
-                  <select
-                    id="shipping-status"
-                    value={statusDraft || selectedOrder.status || 'pending'}
-                    onChange={(event) => setStatusDraft(event.target.value)}
-                    disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}>
-                    {availableStatuses.map((status) => (
-                      <option key={status} value={status}>{STATUS_LABELS[status]}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={busy || trackingLoading || !statusDraft || statusDraft === selectedOrder.status || selectedOrder.status === 'cancelled'}>
-                    {busy ? 'Saving…' : 'Update Shipment'}
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </aside>
+                </select>
+              </div>
+              <div className="shipping-carrier-fields">
+                <label htmlFor="shipping-carrier-name">Carrier name</label>
+                <input
+                  id="shipping-carrier-name"
+                  type="text"
+                  value={carrierNameDraft}
+                  onChange={(event) => setCarrierNameDraft(event.target.value)}
+                  maxLength={120}
+                  autoComplete="organization"
+                  disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
+                  required={statusDraft === 'shipped'}
+                />
+                <label htmlFor="shipping-tracking-number">Tracking number</label>
+                <input
+                  id="shipping-tracking-number"
+                  type="text"
+                  inputMode="numeric"
+                  value={trackingNumberDraft}
+                  onChange={(event) => setTrackingNumberDraft(event.target.value)}
+                  maxLength={100}
+                  autoComplete="off"
+                  disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
+                  required={statusDraft === 'shipped'}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={busy || trackingLoading || !statusDraft || !shipmentChanged || selectedOrder.status === 'cancelled'}>
+                {busy ? 'Saving…' : 'Update Shipment'}
+              </button>
+            </form>
+          </aside>
+        )}
       </div>
     </section>
   );

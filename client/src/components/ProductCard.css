@@ -10,6 +10,20 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.product-card-link {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-card-link:focus-visible,
+.product-price-link:focus-visible {
+  outline: 3px solid #2d5a43;
+  outline-offset: -3px;
+}
+
 .product-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(45, 90, 67, 0.12);
@@ -73,6 +87,12 @@
   justify-content: space-between;
   align-items: center;
   margin-top: auto;
+  padding: 0 1.2rem 1.2rem;
+}
+
+.product-price-link {
+  color: inherit;
+  text-decoration: none;
 }
 
 .product-price .currency {

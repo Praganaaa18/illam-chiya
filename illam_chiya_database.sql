@@ -51,6 +51,8 @@ CREATE TABLE orders (
     shipping_address TEXT NOT NULL,
     payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
     order_status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+    carrier_name VARCHAR(120) NULL,
+    tracking_number VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (buyer_id) REFERENCES users(id)
 );
