@@ -2,6 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios';
 import './ProductManagement.css';
 
+const ProductManagement = ({ sellerId = Number(localStorage.getItem('userId')) || null }) => {
+  const [products, setProducts] = useState([]);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock_quantity: '',
+    image_url: '',
+  });
 const API_ORIGIN = 'http://localhost:5000';
 const PAGE_SIZE = 4;
 const INITIAL_FORM = {

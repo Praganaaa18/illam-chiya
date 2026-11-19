@@ -21,8 +21,21 @@ exports.createOrder = async (req, res) => {
   } = req.body;
 
   const orderItems = items || cart || [];
-  if (orderItems.length === 0) {
+  if (!Array.isArray(orderItems) || orderItems.length === 0 || orderItems.some((item) => !item || typeof item !== 'object')) {
     return res.status(400).json({ message: 'Cart is empty or no items provided.' });
+  }
+
+  const normalizedItems = orderItems.map((item) => ({
+    productId: Number(item.product_id !== undefined ? item.product_id : item.id),
+    quantity: Number(
+      item.quantity !== undefined ? item.quantity : (item.qty !== undefined ? item.qty : 1)
+    )
+  }));
+  if (normalizedItems.some((item) =>
+    !Number.isSafeInteger(item.productId) || item.productId <= 0 ||
+    !Number.isSafeInteger(item.quantity) || item.quantity <= 0
+  )) {
+    return res.status(400).json({ message: 'Each order item must have a valid product and positive integer quantity.' });
   }
 
   const rawAddress = shipping_address || delivery_address || address || '';
@@ -39,6 +52,43 @@ exports.createOrder = async (req, res) => {
     const validBuyerId = req.user.id;
     const finalAmount = total_amount || grand_total || 0;
 
+    const quantitiesByProduct = normalizedItems.reduce((quantities, item) => {
+      quantities.set(item.productId, (quantities.get(item.productId) || 0) + item.quantity);
+      return quantities;
+    }, new Map());
+    const productIds = [...quantitiesByProduct.keys()];
+    const [products] = await connection.query(
+      'SELECT id, seller_id, price, stock_quantity FROM products WHERE id IN (?) FOR UPDATE',
+      [productIds]
+    );
+
+    if (products.length !== productIds.length) {
+      throw new Error('One or more products in the order do not exist.');
+    }
+
+    const [reservations] = await connection.query(
+      `SELECT oi.product_id, SUM(oi.quantity) AS reserved_quantity
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id
+       WHERE oi.product_id IN (?) AND o.order_status IN ('pending', 'processing', 'shipped')
+       GROUP BY oi.product_id`,
+      [productIds]
+    );
+    const reservedByProduct = new Map(
+      reservations.map((reservation) => [Number(reservation.product_id), Number(reservation.reserved_quantity)])
+    );
+
+    for (const product of products) {
+      const requestedQuantity = quantitiesByProduct.get(Number(product.id));
+      const reservedQuantity = reservedByProduct.get(Number(product.id)) || 0;
+      if (Number(product.stock_quantity) - reservedQuantity < requestedQuantity) {
+        await connection.rollback();
+        return res.status(409).json({
+          message: `Insufficient available stock for product ${product.id}.`
+        });
+      }
+    }
+
     const [orderResult] = await connection.execute(
       `INSERT INTO orders (buyer_id, total_amount, shipping_address, payment_status, order_status) 
        VALUES (?, ?, ?, 'pending', 'pending')`,
@@ -47,25 +97,13 @@ exports.createOrder = async (req, res) => {
 
     const newOrderId = orderResult.insertId;
 
-    for (const item of orderItems) {
-      const productId = item.product_id || item.id;
-      const qty = item.quantity || item.qty || 1;
-      const price = item.price || 0;
-
-      let sellerId = item.seller_id;
-      if (!sellerId) {
-        const [prod] = await connection.execute('SELECT seller_id FROM products WHERE id = ?', [productId]);
-        if (prod.length > 0) {
-          sellerId = prod[0].seller_id;
-        } else {
-          throw new Error(`Product ID ${productId} does not exist in products table.`);
-        }
-      }
-
+    const productsById = new Map(products.map((product) => [Number(product.id), product]));
+    for (const item of normalizedItems) {
+      const product = productsById.get(item.productId);
       await connection.execute(
         `INSERT INTO order_items (order_id, product_id, seller_id, quantity, price) 
          VALUES (?, ?, ?, ?, ?)`,
-        [newOrderId, productId, sellerId, qty, price]
+        [newOrderId, item.productId, product.seller_id, item.quantity, product.price]
       );
     }
 
@@ -174,11 +212,78 @@ exports.updateOrderStatus = async (req, res) => {
     return res.status(400).json({ message: 'Invalid order status value.' });
   }
 
+  let connection;
   try {
-    await db.query('UPDATE orders SET order_status = ? WHERE id = ?', [newStatus, id]);
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [orders] = await connection.execute(
+      'SELECT order_status FROM orders WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    if (orders.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    const currentStatus = orders[0].order_status;
+    if (currentStatus === 'delivered' && newStatus !== 'delivered') {
+      await connection.rollback();
+      return res.status(409).json({ message: 'Delivered orders cannot be moved to another status.' });
+    }
+
+    if (currentStatus !== 'delivered' && newStatus === 'delivered') {
+      const [items] = await connection.execute(
+        `SELECT
+          oi.product_id,
+          SUM(oi.quantity) AS quantity,
+          p.stock_quantity,
+          COALESCE((
+            SELECT SUM(other_items.quantity)
+            FROM order_items other_items
+            JOIN orders other_orders ON other_orders.id = other_items.order_id
+            WHERE other_items.product_id = oi.product_id
+              AND other_orders.order_status IN ('pending', 'processing', 'shipped')
+              AND other_orders.id <> ?
+          ), 0) AS reserved_elsewhere
+         FROM order_items oi
+         JOIN products p ON p.id = oi.product_id
+         WHERE oi.order_id = ?
+         GROUP BY oi.product_id, p.stock_quantity`,
+        [id, id]
+      );
+
+      for (const item of items) {
+        if (Number(item.stock_quantity) - Number(item.reserved_elsewhere) < Number(item.quantity)) {
+          await connection.rollback();
+          return res.status(409).json({
+            message: `Insufficient available stock to deliver product ${item.product_id}.`
+          });
+        }
+
+        const [result] = await connection.execute(
+          `UPDATE products
+           SET stock_quantity = stock_quantity - ?
+           WHERE id = ? AND stock_quantity >= ?`,
+          [item.quantity, item.product_id, item.quantity]
+        );
+        if (result.affectedRows === 0) {
+          await connection.rollback();
+          return res.status(409).json({
+            message: `Insufficient stock to mark product ${item.product_id} as delivered.`
+          });
+        }
+      }
+    }
+
+    await connection.execute('UPDATE orders SET order_status = ? WHERE id = ?', [newStatus, id]);
+    await connection.commit();
     res.status(200).json({ message: 'Order status updated successfully.' });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error('Error updating status:', error);
     res.status(500).json({ message: 'Failed to update order status.' });
+  } finally {
+    if (connection) connection.release();
   }
 };
