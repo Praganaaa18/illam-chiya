@@ -1,10 +1,15 @@
 // ProductCard.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const navigate = useNavigate();
+  const [packSize, setPackSize] = useState('100 g');
+  const [quantity, setQuantity] = useState(1);
+  const stock = Math.max(0, Number(product.stock_quantity) || 0);
+  const isLowStock = stock > 0 && stock <= 10;
+  const isOutOfStock = stock === 0;
   const imageUrl = product.image_url
     ? /^https?:\/\//i.test(product.image_url)
       ? product.image_url
@@ -20,42 +25,73 @@ const ProductCard = ({ product, onAddToCart }) => {
       // If not logged in, direct to login page
       navigate('/login');
     } else {
-      // 2. If logged in, add to cart and go to cart page
-      onAddToCart(product);
-      navigate('/cart');
+      if (isOutOfStock) return;
+      onAddToCart({
+        ...product,
+        pack_size: packSize,
+      }, quantity);
     }
   };
 
   return (
     <article className="product-card">
-      <Link to={`/products/${product.id}`} className="product-card-link">
+      <Link to={`/products/${product.id}`} className="product-card-link" aria-label={`View ${product.name}`}>
         <div className="product-image-container">
-          {/* Fallback image if product image path is missing */}
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="product-image"
-          />
+          <img src={imageUrl} alt={product.name} className="product-image" />
           <span className="product-category">{product.category || 'Tea'}</span>
         </div>
-
-        <div className="product-info">
-          <span className="product-vendor">By {product.vendor_name || product.vendor || 'Local Estate'}</span>
-          <h3 className="product-title">{product.name}</h3>
-          <p className="product-description">{product.description}</p>
-        </div>
       </Link>
+
+      <div className="product-info">
+        <Link to={`/products/${product.id}`} className="product-title-link">
+          <h3 className="product-title">{product.name}</h3>
+        </Link>
+        <p className="product-description">
+          {product.description || 'Authentic Himalayan orthodox tea, hand-picked and carefully packed.'}
+        </p>
+
+        <span className="product-pack-label">Pack size</span>
+        <div className="product-pack-options" aria-label="Choose pack size">
+          {['50 g', '100 g', '250 g'].map((size) => (
+            <button
+              key={size}
+              type="button"
+              className={`product-pack-option ${packSize === size ? 'active' : ''}`}
+              onClick={() => setPackSize(size)}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="product-bottom-row">
         <Link to={`/products/${product.id}`} className="product-price-link" aria-label={`View ${product.name} details and price`}>
           <div className="product-price">
             <span className="currency">Rs.</span>
-            <span className="amount">{product.price}</span>
+            <span className="amount">{Number(product.price).toFixed(2)}</span>
             <span className="unit">/ pack</span>
           </div>
         </Link>
-        <button onClick={handleAddToCartClick} className="add-to-cart-btn">
-          Add to Cart
+        <span className={`product-stock ${isLowStock ? 'low' : isOutOfStock ? 'out' : ''}`}>
+          <span aria-hidden="true" />
+          {isOutOfStock ? 'Out of stock' : isLowStock ? 'Low stock' : 'In stock'}
+        </span>
+      </div>
+
+      <div className="product-purchase-row">
+        <div className="product-quantity" aria-label="Quantity">
+          <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity">−</button>
+          <span>{quantity}</span>
+          <button type="button" onClick={() => setQuantity((value) => Math.min(stock || 99, value + 1))} aria-label="Increase quantity">+</button>
+        </div>
+        <button
+          type="button"
+          onClick={handleAddToCartClick}
+          className="add-to-cart-btn"
+          disabled={isOutOfStock}
+        >
+          🛒 <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
         </button>
       </div>
     </article>

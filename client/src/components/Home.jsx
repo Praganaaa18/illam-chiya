@@ -1,111 +1,86 @@
 // --- Subtitle: Import React, React Router Hooks, and Components ---
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
+import Navbar from './Navbar';
 import './Home.css';
 
 const Home = () => {
   // --- Subtitle: State Variables ---
   const [products, setProducts] = useState([]);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const navigate = useNavigate();
+  const productsSectionRef = useRef(null);
 
   // --- Subtitle: Fetch Products & Calculate Cart Count on Load ---
   useEffect(() => {
-    // 1. Fetch active tea products from backend API
     fetch('http://localhost:5000/api/products')
       .then((response) => response.json())
       .then((data) => {
-        // Filter to display active listings
         setProducts(data.filter((item) => item.is_active !== false));
       })
       .catch((error) => console.error('Error connecting to backend:', error));
 
-    // 2. Load existing cart count from localStorage
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const totalItems = savedCart.reduce((acc, item) => acc + item.quantity, 0);
     setCartCount(totalItems);
   }, []);
 
-  // --- Subtitle: Navigation Handler for Cart Button ---
-  const handleCartNavigation = () => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
-
-    if (!token || userRole !== 'buyer') {
-      navigate('/login');
-    } else {
-      navigate('/cart');
+  // --- Subtitle: Search Input Handler ---
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    // Smoothly scroll to the products section when user starts typing
+    if (productsSectionRef.current && e.target.value.length === 1) {
+      productsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   // --- Subtitle: Add to Cart Action Handler ---
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, requestedQuantity = 1) => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole');
 
-    // Authentication Guard
     if (!token || userRole !== 'buyer') {
       navigate('/login');
       return;
     }
 
-    // Add item to local storage cart state
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = existingCart.findIndex((item) => item.id === product.id);
 
     if (existingItemIndex > -1) {
-      existingCart[existingItemIndex].quantity += 1;
+      existingCart[existingItemIndex].quantity += requestedQuantity;
     } else {
-      existingCart.push({ ...product, quantity: 1 });
+      existingCart.push({ ...product, quantity: requestedQuantity });
     }
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
 
-    // Update state badge counter and navigate to Cart
     const updatedCount = existingCart.reduce((acc, item) => acc + item.quantity, 0);
     setCartCount(updatedCount);
     navigate('/cart');
   };
+
+  // --- Subtitle: Filter Products by Name, Process Type, or Description ---
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (product.process_type && product.process_type.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <div>
       {/* ==========================================
           HEADER / NAVIGATION BAR
           ========================================== */}
-      <header className="navbar">
-        <div className="logo-container" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <span>🍃</span>
-          <span>ILAM CHIYA</span>
-        </div>
-
-        <nav className="nav-links">
-          <Link to="/" className="nav-link">🏠 Home</Link>
-          <button type="button" className="nav-button">🔍 Search</button>
-          
-          {/* Protected Cart Navigation Button */}
-          <button type="button" onClick={handleCartNavigation} className="nav-button">
-            🛒 Cart <span className="cart-badge">{cartCount}</span>
-          </button>
-
-          {/* Package Tracking Button connected to Orders & Shipping */}
-          <button
-            type="button"
-            onClick={() => navigate('/order-tracking')}
-            className="nav-button"
-            title="Track Package & Orders"
-            aria-label="Track Package"
-          >
-            <svg className="tracking-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-              <path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9M8 5.3l8 4.5" />
-            </svg>
-            Track Package
-          </button>
-
-          <Link to="/login" className="nav-link">👤 Log In</Link>
-        </nav>
-      </header>
+      <Navbar
+        cartCount={cartCount}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSearchClose={() => setSearchQuery('')}
+      />
 
       {/* ==========================================
           HERO BANNER SECTION
@@ -117,7 +92,12 @@ const Home = () => {
           <p className="hero-description">
             Single-origin orthodox teas, hand-picked by skilled workers and shipped directly from our Himalayan garden to your table.
           </p>
-          <button className="primary-btn">Discover Our Teas</button>
+          <button
+            className="primary-btn"
+            onClick={() => productsSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            Discover Our Teas
+          </button>
         </div>
 
         <div className="hero-badges">
@@ -139,12 +119,14 @@ const Home = () => {
       {/* ==========================================
           PRODUCTS DISPLAY SECTION
           ========================================== */}
-      <section className="products-section">
-        <h2 className="section-title">Featured Harvests</h2>
-        
+      <section className="products-section" ref={productsSectionRef}>
+        <h2 className="section-title">
+          {searchQuery ? `Search Results for "${searchQuery}"` : 'Product catalog'}
+        </h2>
+
         <div className="product-grid">
-          {products.length > 0 ? (
-            products.map((product) => (
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -152,12 +134,22 @@ const Home = () => {
               />
             ))
           ) : (
-            <p className="no-products-text">No active teas currently available.</p>
+            <p className="no-products-text">
+              {searchQuery
+                ? `No teas found matching "${searchQuery}".`
+                : 'No active teas currently available.'}
+            </p>
           )}
         </div>
 
         <div className="center-container">
-          <button className="secondary-btn">View All Teas</button>
+          {searchQuery ? (
+            <button className="secondary-btn" onClick={() => setSearchQuery('')}>
+              Show All Teas
+            </button>
+          ) : (
+            <button className="secondary-btn">View All Teas</button>
+          )}
         </div>
       </section>
 

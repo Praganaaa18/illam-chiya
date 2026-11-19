@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const db = require("./config/db");
 const { runMigrations } = require("./config/migrations");
 
@@ -47,12 +47,19 @@ async function startServer() {
     console.log("Database connected successfully!");
     connection.release();
     connection = null;
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    return app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}`)
+    );
   } catch (err) {
     if (connection) connection.release();
     console.error("Database startup error:", err);
-    process.exitCode = 1;
+    await db.end();
+    process.exit(1);
   }
 }
 
-startServer();
+module.exports = { app, startServer };
+
+if (require.main === module) {
+  startServer();
+}

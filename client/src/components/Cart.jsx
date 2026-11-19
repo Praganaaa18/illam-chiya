@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
+import Navbar from './Navbar';
 import './Cart.css';
 
 const Cart = () => {
@@ -55,8 +56,14 @@ const Cart = () => {
 
   return (
     <div className="cart-container">
+      <Navbar cartCount={cartItems.length} showSearch={false} />
       <div className="cart-header">
-        <Link to="/" className="back-link">← Continue Shopping</Link>
+        <Link to="/" className="back-link" aria-label="Back to home">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+          <span>Back to Home</span>
+        </Link>
         <h1>Your Tea Cart</h1>
       </div>
 

@@ -96,9 +96,6 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
           <h2>Billings & Payouts</h2>
           <p className="subtitle">Track Cash on Delivery collections & platform fee dues</p>
         </div>
-        <button className="print-btn" onClick={() => window.print()}>
-          🖨️ Print Summary
-        </button>
       </div>
 
       <div className="metrics-grid">
