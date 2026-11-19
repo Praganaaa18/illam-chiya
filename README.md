@@ -62,7 +62,8 @@ Git
 1. Database Setup
 
 Import illam_chiya_database.sql into your local MySQL server instance.
-Verify table setup (users, products, categories).
+Verify table setup (users, products, categories). Pending SQL migrations in `server/migrations/` are applied automatically when the backend starts.
+You can also apply them manually from the `server` directory with `npm run migrate`.
 
 2. Backend Configuration
 

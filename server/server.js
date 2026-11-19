@@ -3,6 +3,7 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 const db = require("./config/db");
+const { runMigrations } = require("./config/migrations");
 
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
@@ -37,13 +38,21 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Test DB Connection and Start Express Server
-db.getConnection()
-  .then((connection) => {
+// Run pending migrations, then test the connection and start Express.
+async function startServer() {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await runMigrations(connection);
     console.log("Database connected successfully!");
     connection.release();
+    connection = null;
     app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  })
-  .catch((err) => {
-    console.error("Database connection error:", err);
-  });
+  } catch (err) {
+    if (connection) connection.release();
+    console.error("Database startup error:", err);
+    process.exitCode = 1;
+  }
+}
+
+startServer();
