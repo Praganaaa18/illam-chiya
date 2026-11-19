@@ -8,24 +8,43 @@ const Home = () => {
   // --- Subtitle: State Variables ---
   const [products, setProducts] = useState([]);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
   const navigate = useNavigate();
+  const productsSectionRef = useRef(null);
+  const isLoggedIn = Boolean(localStorage.getItem('token'));
 
   // --- Subtitle: Fetch Products & Calculate Cart Count on Load ---
   useEffect(() => {
-    // 1. Fetch active tea products from backend API
     fetch('http://localhost:5000/api/products')
       .then((response) => response.json())
       .then((data) => {
-        // Filter to display active listings
         setProducts(data.filter((item) => item.is_active !== false));
       })
       .catch((error) => console.error('Error connecting to backend:', error));
 
-    // 2. Load existing cart count from localStorage
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const totalItems = savedCart.reduce((acc, item) => acc + item.quantity, 0);
     setCartCount(totalItems);
   }, []);
+
+  // --- Subtitle: Search Input Handler ---
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    // Smoothly scroll to the products section when user starts typing
+    if (productsSectionRef.current && e.target.value.length === 1) {
+      productsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // --- Subtitle: Logout Handler ---
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    navigate('/login');
+  };
 
   // --- Subtitle: Navigation Handler for Cart Button ---
   const handleCartNavigation = () => {
@@ -44,13 +63,11 @@ const Home = () => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole');
 
-    // Authentication Guard
     if (!token || userRole !== 'buyer') {
       navigate('/login');
       return;
     }
 
-    // Add item to local storage cart state
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = existingCart.findIndex((item) => item.id === product.id);
 
@@ -62,11 +79,17 @@ const Home = () => {
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
 
-    // Update state badge counter and navigate to Cart
     const updatedCount = existingCart.reduce((acc, item) => acc + item.quantity, 0);
     setCartCount(updatedCount);
     navigate('/cart');
   };
+
+  // --- Subtitle: Filter Products by Name, Process Type, or Description ---
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (product.process_type && product.process_type.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <div>
@@ -81,13 +104,52 @@ const Home = () => {
 
         <nav className="nav-links">
           <Link to="/" className="nav-link">🏠 Home</Link>
-          <button type="button" className="nav-button">🔍 Search</button>
-          
+
+          {/* Toggleable Search Input */}
+          {showSearch ? (
+            <div className="nav-search-box">
+              <span>🔍</span>
+              <input
+                type="text"
+                placeholder="Search orthodox, green, oolong..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                autoFocus
+              />
+              <button
+                type="button"
+                className="nav-search-close"
+                onClick={() => {
+                  setSearchQuery('');
+                  setShowSearch(false);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="nav-button"
+              onClick={() => setShowSearch(true)}
+            >
+              🔍 Search
+            </button>
+          )}
+
           {/* Protected Cart Navigation Button */}
           <button type="button" onClick={handleCartNavigation} className="nav-button">
             🛒 Cart <span className="cart-badge">{cartCount}</span>
           </button>
 
+          {/* Dynamic Log In / Log Out Button */}
+          {isLoggedIn ? (
+            <button onClick={handleLogout} className="logout-btn">
+              Logout
+            </button>
+          ) : (
+            <Link to="/login" className="nav-link">👤 Log In</Link>
+          )}
           {/* Package Tracking Button connected to Orders & Shipping */}
           <button
             type="button"
@@ -117,7 +179,12 @@ const Home = () => {
           <p className="hero-description">
             Single-origin orthodox teas, hand-picked by skilled workers and shipped directly from our Himalayan garden to your table.
           </p>
-          <button className="primary-btn">Discover Our Teas</button>
+          <button
+            className="primary-btn"
+            onClick={() => productsSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            Discover Our Teas
+          </button>
         </div>
 
         <div className="hero-badges">
@@ -139,12 +206,14 @@ const Home = () => {
       {/* ==========================================
           PRODUCTS DISPLAY SECTION
           ========================================== */}
-      <section className="products-section">
-        <h2 className="section-title">Featured Harvests</h2>
-        
+      <section className="products-section" ref={productsSectionRef}>
+        <h2 className="section-title">
+          {searchQuery ? `Search Results for "${searchQuery}"` : 'Featured Harvests'}
+        </h2>
+
         <div className="product-grid">
-          {products.length > 0 ? (
-            products.map((product) => (
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -152,12 +221,22 @@ const Home = () => {
               />
             ))
           ) : (
-            <p className="no-products-text">No active teas currently available.</p>
+            <p className="no-products-text">
+              {searchQuery
+                ? `No teas found matching "${searchQuery}".`
+                : 'No active teas currently available.'}
+            </p>
           )}
         </div>
 
         <div className="center-container">
-          <button className="secondary-btn">View All Teas</button>
+          {searchQuery ? (
+            <button className="secondary-btn" onClick={() => setSearchQuery('')}>
+              Show All Teas
+            </button>
+          ) : (
+            <button className="secondary-btn">View All Teas</button>
+          )}
         </div>
       </section>
 
