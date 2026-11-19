@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
@@ -17,12 +17,33 @@ const formatDate = (date) => (
   }) : 'Upcoming'
 );
 
+const getDeliveryEstimate = (order) => {
+  if (order.status === 'cancelled') return 'Cancelled';
+  if (order.status === 'delivered') {
+    return order.seller_updated_at ? `Delivered ${formatDate(order.seller_updated_at)}` : 'Delivered';
+  }
+  if (!order.seller_updated_at) return 'Pending seller update';
+
+  const updatedAt = new Date(order.seller_updated_at);
+  if (Number.isNaN(updatedAt.getTime())) return 'Estimate unavailable';
+
+  const earliestDate = new Date(updatedAt);
+  const latestDate = new Date(updatedAt);
+  earliestDate.setDate(earliestDate.getDate() + 5);
+  latestDate.setDate(latestDate.getDate() + 10);
+  return `${formatDate(earliestDate)} – ${formatDate(latestDate)}`;
+};
+
 const OrderTracking = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deliveryPreference, setDeliveryPreference] = useState('doorstep');
+  const [cartCount] = useState(() => {
+    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    return savedCart.reduce((total, item) => total + item.quantity, 0);
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -67,34 +88,58 @@ const OrderTracking = () => {
   const total = Number(selectedOrder?.total_price || 0);
   const shipping = Math.max(total - subtotal, 0);
 
+  const handleCartNavigation = () => {
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+    navigate(token && userRole === 'buyer' ? '/cart' : '/login');
+  };
+
   const handlePrintInvoice = () => window.print();
 
   return (
     <div className="ot-page">
-      <header className="ot-navbar">
-        <div className="ot-navbar-inner">
-          <button type="button" className="ot-brand" onClick={() => navigate('/')}>
-            <span aria-hidden="true">🍃</span>
-            <span>ILAM CHIYA</span>
-          </button>
-          <nav className="ot-nav-links" aria-label="Main navigation">
-            <button type="button" className="ot-nav-btn" onClick={() => navigate('/')}>
-              <span aria-hidden="true">⌂</span> Home
-            </button>
-            <button type="button" className="ot-nav-btn">
-              <span aria-hidden="true">⌕</span> Search
-            </button>
-            <button type="button" className="ot-nav-btn" onClick={() => navigate('/cart')}>
-              <span aria-hidden="true">🛒</span> Cart
-            </button>
-            <button type="button" className="ot-nav-btn" onClick={() => navigate('/login')}>
-              <span aria-hidden="true">♟</span> Account
-            </button>
-          </nav>
+      <header className="navbar">
+        <div className="logo-container" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          <span>🍃</span>
+          <span>ILAM CHIYA</span>
         </div>
+
+        <nav className="nav-links">
+          <Link to="/" className="nav-link">🏠 Home</Link>
+          <button type="button" className="nav-button">🔍 Search</button>
+          <button type="button" onClick={handleCartNavigation} className="nav-button">
+            🛒 Cart <span className="cart-badge">{cartCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/order-tracking')}
+            className="nav-button"
+            title="Track Package & Orders"
+            aria-label="Track Package"
+          >
+            <svg className="tracking-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
+              <path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9M8 5.3l8 4.5" />
+            </svg>
+            Track Package
+          </button>
+          <Link to="/login" className="nav-link">👤 Log In</Link>
+        </nav>
       </header>
 
       <main className="ot-container">
+        <button
+          type="button"
+          className="ot-back-button"
+          aria-label="Back to home"
+          title="Back to home"
+          onClick={() => navigate('/')}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+        </button>
+
         {loading ? (
           <p className="ot-message" role="status">Loading your orders...</p>
         ) : error ? (
@@ -173,15 +218,15 @@ const OrderTracking = () => {
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Estimated Delivery:</span>
-                    <span className="ot-meta-value">To be confirmed by the seller</span>
+                    <span className="ot-meta-value">{getDeliveryEstimate(selectedOrder)}</span>
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Carrier:</span>
-                    <span className="ot-meta-value">Assigned when shipped</span>
+                    <span className="ot-meta-value">{selectedOrder.carrier_name || 'Not assigned'}</span>
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Tracking Number:</span>
-                    <span className="ot-meta-value">ILLAM-{selectedOrder.id}</span>
+                    <span className="ot-meta-value">{selectedOrder.tracking_number || 'Not assigned'}</span>
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Delivery Address:</span>
@@ -265,9 +310,6 @@ const OrderTracking = () => {
                       <span>Hand it to me</span>
                     </label>
                   </div>
-                </section>
-                <section className="ot-additional-info">
-                  <h2>Additional Information</h2>
                 </section>
               </aside>
             </div>

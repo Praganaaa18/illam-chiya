@@ -157,7 +157,17 @@ exports.getBuyerOrders = async (req, res) => {
         o.total_amount AS total_price,
         o.shipping_address AS delivery_address,
         o.order_status AS status,
+        o.carrier_name,
+        o.tracking_number,
         o.created_at,
+        (
+          SELECT tracking_event.created_at
+          FROM order_tracking_events tracking_event
+          WHERE tracking_event.order_id = o.id
+            AND tracking_event.status NOT IN ('pending', 'cancelled')
+          ORDER BY tracking_event.created_at DESC, tracking_event.id DESC
+          LIMIT 1
+        ) AS seller_updated_at,
         COALESCE(SUM(oi.price * oi.quantity), 0) AS subtotal,
         (
           SELECT p.image_url
@@ -230,16 +240,33 @@ exports.getSellerOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
-  const newStatus = String(body.status || body.order_status || '').toLowerCase();
+  const hasStatus = body.status !== undefined || body.order_status !== undefined;
+  const requestedStatus = body.status !== undefined ? body.status : body.order_status;
+  const newStatus = hasStatus ? String(requestedStatus).toLowerCase() : null;
+  const hasCarrierName = Object.prototype.hasOwnProperty.call(body, 'carrier_name');
+  const hasTrackingNumber = Object.prototype.hasOwnProperty.call(body, 'tracking_number');
 
   if (req.user.role !== 'seller') {
     return res.status(403).json({ message: 'Seller access is required.' });
   }
 
+  if (!hasStatus && !hasCarrierName && !hasTrackingNumber) {
+    return res.status(400).json({ message: 'Provide a shipment status or carrier details to update.' });
+  }
+
   const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-  if (!validStatuses.includes(newStatus)) {
+  if (hasStatus && !validStatuses.includes(newStatus)) {
     return res.status(400).json({ message: 'Invalid order status value.' });
   }
+  if (hasCarrierName && (typeof body.carrier_name !== 'string' || body.carrier_name.trim().length > 120)) {
+    return res.status(400).json({ message: 'Carrier name must be 120 characters or fewer.' });
+  }
+  if (hasTrackingNumber && (typeof body.tracking_number !== 'string' || body.tracking_number.trim().length > 100)) {
+    return res.status(400).json({ message: 'Tracking number must be 100 characters or fewer.' });
+  }
+  const carrierName = hasCarrierName ? body.carrier_name.trim() : null;
+  const trackingNumber = hasTrackingNumber ? body.tracking_number.trim() : null;
+
   const allowedTransitions = {
     pending: ['processing', 'cancelled'],
     processing: ['shipped', 'cancelled'],
@@ -254,7 +281,7 @@ exports.updateOrderStatus = async (req, res) => {
     await connection.beginTransaction();
 
     const [orders] = await connection.execute(
-      `SELECT o.order_status
+      `SELECT o.order_status, o.carrier_name, o.tracking_number
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
        WHERE o.id = ? AND oi.seller_id = ?
@@ -267,14 +294,34 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const previousStatus = orders[0].order_status;
-    if (previousStatus === newStatus) {
+    const statusToSave = hasStatus ? newStatus : previousStatus;
+    const statusChanged = previousStatus !== statusToSave;
+    const currentCarrierName = orders[0].carrier_name || '';
+    const currentTrackingNumber = orders[0].tracking_number || '';
+    const nextCarrierName = hasCarrierName ? carrierName : currentCarrierName;
+    const nextTrackingNumber = hasTrackingNumber ? trackingNumber : currentTrackingNumber;
+
+    if (!statusChanged && !hasCarrierName && !hasTrackingNumber) {
       await connection.commit();
-      return res.status(200).json({ message: 'Shipment status is unchanged.', status: newStatus });
+      return res.status(200).json({ message: 'Shipment status is unchanged.', status: previousStatus });
     }
-    if (!allowedTransitions[previousStatus]?.includes(newStatus)) {
+
+    if (Boolean(nextCarrierName) !== Boolean(nextTrackingNumber)) {
       await connection.rollback();
       return res.status(400).json({
-        message: `Shipment cannot move from ${previousStatus} to ${newStatus}.`,
+        message: 'Enter both a carrier name and tracking number, or leave both blank.',
+      });
+    }
+    if (statusToSave === 'shipped' && (!nextCarrierName || !nextTrackingNumber)) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: 'Carrier name and tracking number are required before marking an order as shipped.',
+      });
+    }
+    if (statusChanged && !allowedTransitions[previousStatus]?.includes(statusToSave)) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `Shipment cannot move from ${previousStatus} to ${statusToSave}.`,
       });
     }
 
@@ -286,7 +333,7 @@ exports.updateOrderStatus = async (req, res) => {
       cancelled: 'Order cancelled',
     };
 
-    if (newStatus === 'delivered') {
+    if (statusToSave === 'delivered' && statusChanged) {
       const [orderProducts] = await connection.execute(
         `SELECT product_id, SUM(quantity) AS quantity
          FROM order_items
@@ -313,21 +360,39 @@ exports.updateOrderStatus = async (req, res) => {
       }
     }
 
+    const updates = [];
+    const updateValues = [];
+    if (statusChanged) {
+      updates.push('order_status = ?');
+      updateValues.push(statusToSave);
+    }
+    if (hasCarrierName) {
+      updates.push('carrier_name = ?');
+      updateValues.push(carrierName || null);
+    }
+    if (hasTrackingNumber) {
+      updates.push('tracking_number = ?');
+      updateValues.push(trackingNumber || null);
+    }
     await connection.execute(
-      'UPDATE orders SET order_status = ? WHERE id = ?',
-      [newStatus, id]
+      `UPDATE orders SET ${updates.join(', ')} WHERE id = ?`,
+      [...updateValues, id]
     );
-    await connection.execute(
-      `INSERT INTO order_tracking_events (order_id, status, description)
-       VALUES (?, ?, ?)`,
-      [id, newStatus, descriptions[newStatus]]
-    );
+    if (statusChanged) {
+      await connection.execute(
+        `INSERT INTO order_tracking_events (order_id, status, description)
+         VALUES (?, ?, ?)`,
+        [id, statusToSave, descriptions[statusToSave]]
+      );
+    }
 
     await connection.commit();
     return res.status(200).json({
-      message: 'Shipment status updated successfully.',
-      status: newStatus,
-      description: descriptions[newStatus],
+      message: statusChanged ? 'Shipment status updated successfully.' : 'Carrier details updated successfully.',
+      status: statusToSave,
+      description: descriptions[statusToSave],
+      carrier_name: nextCarrierName || null,
+      tracking_number: nextTrackingNumber || null,
       updated_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -347,7 +412,8 @@ exports.getOrderTracking = async (req, res) => {
 
   try {
     const [orders] = await db.execute(
-      `SELECT o.id, o.buyer_id, o.total_amount, o.shipping_address, o.order_status, o.created_at
+      `SELECT o.id, o.buyer_id, o.total_amount, o.shipping_address, o.order_status,
+              o.carrier_name, o.tracking_number, o.created_at
        FROM orders o
        WHERE o.id = ?`,
       [orderId]
@@ -409,6 +475,8 @@ exports.getOrderTracking = async (req, res) => {
     return res.json({
       id: order.id,
       status: order.order_status,
+      carrier_name: order.carrier_name,
+      tracking_number: order.tracking_number,
       total_amount: Number(order.total_amount),
       shipping_address: order.shipping_address,
       created_at: order.created_at,

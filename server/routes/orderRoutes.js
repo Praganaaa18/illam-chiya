@@ -3,14 +3,11 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const {
   createOrder,
+  getBuyerOrders,
   getSellerOrders,
-  updateOrderStatus,
   getOrderTracking,
+  updateOrderStatus,
 } = require('../controllers/orderController');
-
-// POST /api/orders - Create new order
-router.post('/', authMiddleware, createOrder);
-const { createOrder, getBuyerOrders, getSellerOrders, updateOrderStatus } = require('../controllers/orderController');
 
 const requireBuyer = (req, res, next) => {
   if (req.user.role !== 'buyer') {

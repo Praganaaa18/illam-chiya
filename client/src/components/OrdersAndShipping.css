@@ -81,9 +81,13 @@
 
 .shipping-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(290px, 340px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 18px;
+}
+
+.shipping-workspace.has-details {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
 }
 
 .shipping-table-card,
@@ -199,7 +203,50 @@
 }
 
 .shipping-detail-card {
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px;
+  scrollbar-gutter: stable;
+  animation: shipping-detail-enter 0.2s ease-out;
+}
+
+@keyframes shipping-detail-enter {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.shipping-detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.shipping-details-close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid #dbe4dc;
+  border-radius: 50%;
+  background: #f7faf7;
+  color: #35533e;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shipping-details-close:hover {
+  background: #eaf2ec;
 }
 
 .shipping-detail-heading {
@@ -341,11 +388,39 @@
   font-size: 0.76rem;
 }
 
-.shipping-update-controls button {
+.shipping-carrier-fields {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.shipping-carrier-fields label {
+  margin: 0;
+  color: #3c5042;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.shipping-carrier-fields input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cad7cc;
+  border-radius: 6px;
+  background: #fff;
+  color: #344a3a;
+  padding: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.shipping-update-controls button,
+.shipping-update-form > button {
+  display: block;
   border: 0;
   border-radius: 6px;
   background: #2c4c3b;
   color: #fff;
+  margin-top: 12px;
   padding: 8px 10px;
   font: inherit;
   font-size: 0.74rem;
@@ -353,7 +428,8 @@
   cursor: pointer;
 }
 
-.shipping-update-controls button:disabled {
+.shipping-update-controls button:disabled,
+.shipping-update-form > button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -418,7 +494,8 @@
 }
 
 .shipping-page button:focus-visible,
-.shipping-page select:focus-visible {
+.shipping-page select:focus-visible,
+.shipping-page input:focus-visible {
   outline: 3px solid rgba(76, 124, 89, 0.3);
   outline-offset: 2px;
 }
@@ -428,8 +505,8 @@
     grid-template-columns: 1fr;
   }
 
-  .shipping-detail-card {
-    max-width: none;
+  .shipping-workspace.has-details {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -452,5 +529,9 @@
 
   .shipping-detail-heading {
     flex-direction: column;
+  }
+
+  .shipping-detail-card {
+    max-height: calc(100vh - 24px);
   }
 }

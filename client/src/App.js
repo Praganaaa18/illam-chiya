@@ -9,12 +9,14 @@ import SellerDashboard from './components/SellerDashboard';
 import Cart from './components/Cart';
 import ConfirmOrder from './components/ConfirmOrder';
 import OrderTracking from './components/OrderTracking';
+import ProductPage from './components/ProductPage';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/products/:productId" element={<ProductPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register-buyer" element={<RegisterBuyer />} />
         <Route path="/register-seller" element={<RegisterSeller />} />
