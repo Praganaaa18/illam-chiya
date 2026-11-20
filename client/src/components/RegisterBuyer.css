@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--illam-font-body);
   padding: 1rem;
   box-sizing: border-box;
   overflow: hidden;
@@ -15,21 +15,22 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+  background: linear-gradient(rgba(24, 54, 41, 0.3), rgba(24, 54, 41, 0.3)),
               url('https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-  filter: blur(4px);
+  filter: blur(2px);
   transform: scale(1.05);
   z-index: -1;
 }
 
 .buyer-card {
-  background: rgba(246, 245, 238, 0.96);
+  background: rgba(255, 253, 248, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(8px);
-  border-radius: 20px;
+  border-radius: var(--illam-radius-card);
   padding: 1.5rem 1.8rem;
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 18px 48px rgba(18, 38, 28, 0.24);
   box-sizing: border-box;
   max-height: 92vh;
   overflow-y: auto;
@@ -49,8 +50,8 @@
 .card-title {
   text-align: center;
   font-size: 1.35rem;
-  color: #2b4c38;
-  font-family: 'Georgia', serif;
+  color: var(--illam-forest-950);
+  font-family: var(--illam-font-display);
   margin: 0 0 0.1rem 0;
 }
 
@@ -101,8 +102,8 @@
 .form-group select {
   width: 100%;
   padding: 0.45rem 0.7rem;
-  border: 1.5px solid #8fad96;
-  border-radius: 8px;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-control);
   background-color: #ffffff;
   font-size: 0.82rem;
   color: #2b4c38;

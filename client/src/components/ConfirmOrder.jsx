@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import Navbar from './Navbar';
+import Icon from './Icon';
+import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
 import './ConfirmOrder.css';
 
 const ConfirmOrder = () => {
@@ -98,8 +100,8 @@ const ConfirmOrder = () => {
     if (!shippingDetails.fullName.trim()) newErrors.fullName = 'Full Name is required';
     if (!shippingDetails.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^[0-9]{10}$/.test(shippingDetails.phone.trim())) {
-      newErrors.phone = 'Enter a valid 10-digit phone number';
+    } else if (!isValidPhoneNumber(shippingDetails.phone)) {
+      newErrors.phone = 'Enter a valid Nepal mobile number (10 digits).';
     }
     if (!shippingDetails.address.trim()) newErrors.address = 'Delivery address is required';
     if (!shippingDetails.city.trim()) newErrors.city = 'City is required';
@@ -124,7 +126,7 @@ const ConfirmOrder = () => {
         pack_size: item.pack_size || '100 g',
       })),
       shipping_address: `${shippingDetails.address}, ${shippingDetails.city}`,
-      phone: shippingDetails.phone,
+      phone: normalizePhoneNumber(shippingDetails.phone),
       recipient_name: shippingDetails.fullName,
       payment_method: 'COD',
       total_amount: grandTotal,
@@ -172,7 +174,7 @@ const ConfirmOrder = () => {
           <span>Back to Home</span>
         </Link>
         <div className="success-card">
-          <div className="success-icon">🍃</div>
+          <Icon name="leaf" className="success-icon" size={48} />
           <h2>Order Confirmed!</h2>
           <p className="order-id-text">Order ID: #{orderId}</p>
           <p className="success-description">
@@ -226,11 +228,13 @@ const ConfirmOrder = () => {
               <div className="form-group">
                 <label>Phone Number *</label>
                 <input
-                  type="text"
+                  type="tel"
                   name="phone"
                   placeholder="98XXXXXXXX"
                   value={shippingDetails.phone}
                   onChange={handleInputChange}
+                  inputMode="tel"
+                  maxLength="16"
                   className={errors.phone ? 'input-err' : ''}
                 />
                 {errors.phone && <span className="error-text">{errors.phone}</span>}
@@ -281,7 +285,7 @@ const ConfirmOrder = () => {
             <div className="payment-options">
               <div className="payment-card selected">
                 <div className="payment-info">
-                  <strong>💵 Cash on Delivery (COD)</strong>
+                  <strong><Icon name="wallet" size={17} />Cash on Delivery (COD)</strong>
                   <span>Pay with cash upon receiving your tea package at your doorstep.</span>
                 </div>
               </div>

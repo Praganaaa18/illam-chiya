@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import Navbar from './Navbar';
+import Icon from './Icon';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
@@ -234,7 +235,7 @@ const OrderTracking = () => {
                         alt=""
                       />
                     ) : (
-                      <div className="ot-package-thumb ot-package-placeholder" aria-hidden="true">🍃</div>
+                      <div className="ot-package-thumb ot-package-placeholder" aria-hidden="true"><Icon name="leaf" /></div>
                     )}
                     <div className="ot-package-name">{selectedOrder.items_summary || 'Order items'}</div>
                   </div>
@@ -292,7 +293,7 @@ const OrderTracking = () => {
 
             <section className="ot-invoice">
               <div className="ot-invoice-brand">
-                <span>🍃</span>
+                <Icon name="leaf" />
                 <div>
                   <strong>ILLAM CHIYA</strong>
                   <span>Order Invoice</span>

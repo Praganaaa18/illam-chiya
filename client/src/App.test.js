@@ -3,5 +3,5 @@ import App from './App';
 
 test('renders the Illam Chiya storefront', () => {
   render(<App />);
-  expect(screen.getByText('Featured Harvests')).toBeInTheDocument();
+  expect(screen.getByText('Products')).toBeInTheDocument();
 });

@@ -1,6 +1,7 @@
 // ProductCard.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import Icon from './Icon';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
@@ -82,7 +83,8 @@ const ProductCard = ({ product, onAddToCart }) => {
           className="add-to-cart-btn"
           disabled={isOutOfStock}
         >
-          🛒 <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
+          <Icon name="cart" size={17} />
+          <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
         </button>
       </div>
     </article>

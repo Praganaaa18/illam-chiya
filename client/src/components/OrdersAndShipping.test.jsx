@@ -51,7 +51,7 @@ test('saves carrier name and tracking number from shipment details', async () =>
   await waitFor(() => expect(carrierName).toBeEnabled());
 
   fireEvent.change(carrierName, { target: { value: 'Ilam Express' } });
-  fireEvent.change(screen.getByLabelText('Tracking number'), { target: { value: '001234567' } });
+  fireEvent.change(screen.getByLabelText('Tracking number'), { target: { value: '+977 9801234567' } });
   fireEvent.click(screen.getByRole('button', { name: 'Update Shipment' }));
 
   await waitFor(() => expect(axios.patch).toHaveBeenCalledWith(
@@ -59,10 +59,27 @@ test('saves carrier name and tracking number from shipment details', async () =>
     {
       status: 'processing',
       carrier_name: 'Ilam Express',
-      tracking_number: '001234567',
+      tracking_number: '9801234567',
     },
     expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
   ));
+});
+
+test('rejects invalid tracking numbers before saving shipment details', async () => {
+  render(<OrdersAndShipping sellerId="5" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
+  const carrierName = await screen.findByLabelText('Carrier name');
+  await waitFor(() => expect(carrierName).toBeEnabled());
+
+  fireEvent.change(carrierName, { target: { value: 'Ilam Express' } });
+  fireEvent.change(screen.getByLabelText('Tracking number'), { target: { value: '980123456' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update Shipment' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Enter a valid Nepal mobile number for the tracking number (10 digits).'
+  );
+  expect(axios.patch).not.toHaveBeenCalled();
 });
 
 test('opens shipment details beside the table and closes with Escape or X', async () => {
@@ -70,8 +87,8 @@ test('opens shipment details beside the table and closes with Escape or X', asyn
 
   const detailsButton = await screen.findByRole('button', { name: 'View tracking for order 22' });
   fireEvent.click(detailsButton);
-  let details = await screen.findByLabelText('Shipment details for order 22');
-  expect(details.closest('.shipping-workspace')).toHaveClass('has-details');
+  await screen.findByLabelText('Shipment details for order 22');
+  expect(screen.getByRole('region', { name: 'Orders and shipment workspace' })).toHaveClass('has-details');
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByLabelText('Shipment details for order 22')).not.toBeInTheDocument();
 

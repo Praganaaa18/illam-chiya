@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import Icon from './Icon';
 import './Navbar.css';
 import NotificationBell from './Notificationbell';
 
@@ -8,13 +9,17 @@ const Navbar = ({
   searchQuery = '',
   onSearchChange,
   onSearchClose,
+  searchSuggestions = { categories: [], products: [] },
+  onSearchSuggestionSelect,
   showSearch = true,
 }) => {
   const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const searchInputRef = useRef(null);
+  const searchContainerRef = useRef(null);
   const profileMenuRef = useRef(null);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
 
   const token = localStorage.getItem('token');
   const userName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'User';
@@ -33,6 +38,15 @@ const Navbar = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isProfileOpen]);
 
+  useEffect(() => {
+    if (!isSearchOpen || !isSuggestionsOpen) return undefined;
+    const handleOutsideClick = (event) => {
+      if (!searchContainerRef.current?.contains(event.target)) setIsSuggestionsOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isSearchOpen, isSuggestionsOpen]);
+
   const handleLogout = () => {
     ['token', 'userId', 'userRole', 'userName', 'userEmail', 'userPhone', 'userAddress']
       .forEach((key) => localStorage.removeItem(key));
@@ -48,43 +62,113 @@ const Navbar = ({
   const closeSearch = () => {
     onSearchClose?.();
     setIsSearchOpen(false);
+    setIsSuggestionsOpen(false);
+  };
+
+  const selectSearchSuggestion = (suggestion) => {
+    onSearchSuggestionSelect?.(suggestion);
+    setIsSuggestionsOpen(false);
   };
 
   return (
     <header className="navbar">
       <button type="button" className="logo-container" onClick={() => navigate('/')}>
-        <span aria-hidden="true">🍃</span>
-        <span>ILAM CHIYA</span>
+        <Icon name="leaf" className="brand-mark" />
+        <span>ILLAM CHIYA</span>
       </button>
 
       <nav className="nav-links">
-        <Link to="/" className="nav-link">🏠 Home</Link>
+        <Link to="/" className="nav-link"><Icon name="home" />Home</Link>
 
         {showSearch && (
           isSearchOpen ? (
-            <div className="nav-search-box">
-              <span aria-hidden="true">🔍</span>
-              <input
-                ref={searchInputRef}
-                type="search"
-                placeholder="Search orthodox, green, oolong..."
-                value={searchQuery}
-                onChange={(event) => onSearchChange?.(event)}
-              />
-              <button type="button" className="nav-search-close" onClick={closeSearch} aria-label="Close search">
-                ✕
-              </button>
+            <div className="nav-search-container" ref={searchContainerRef}>
+              <div className="nav-search-box">
+                <Icon name="search" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  aria-label="Search products and categories"
+                  placeholder="Search products or categories..."
+                  value={searchQuery}
+                  onFocus={() => setIsSuggestionsOpen(true)}
+                  onChange={(event) => {
+                    onSearchChange?.(event);
+                    setIsSuggestionsOpen(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') setIsSuggestionsOpen(false);
+                  }}
+                />
+                <button type="button" className="nav-search-close" onClick={closeSearch} aria-label="Close search">
+                  ✕
+                </button>
+              </div>
+              {isSuggestionsOpen && searchQuery.trim() && (
+                <div className="nav-search-suggestions" role="dialog" aria-label="Search suggestions">
+                  {searchSuggestions.categories.length > 0 && (
+                    <div className="nav-suggestion-section">
+                      <p className="nav-suggestion-heading">Categories</p>
+                      {searchSuggestions.categories.map((category) => (
+                        <div className="nav-suggestion-category" key={category.name}>
+                          <button
+                            type="button"
+                            className="nav-suggestion-category-name"
+                            onClick={() => selectSearchSuggestion({ type: 'category', name: category.name })}
+                          >
+                            <span>{category.name}</span>
+                            <small>Category</small>
+                          </button>
+                          {category.products.map((product) => (
+                            <button
+                              type="button"
+                              className="nav-suggestion-product"
+                              key={product.id}
+                              onClick={() => selectSearchSuggestion({ type: 'product', name: product.name })}
+                            >
+                              <span>{product.name}</span>
+                              <small>{product.pack_size || '100 g'}</small>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchSuggestions.products.length > 0 && (
+                    <div className="nav-suggestion-section">
+                      <p className="nav-suggestion-heading">Products</p>
+                      {searchSuggestions.products.map((product) => (
+                        <button
+                          type="button"
+                          className="nav-suggestion-product"
+                          key={product.id}
+                          onClick={() => selectSearchSuggestion({ type: 'product', name: product.name })}
+                        >
+                          <span>{product.name}</span>
+                          <small>{product.category || 'Tea'}</small>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchSuggestions.categories.length === 0 && searchSuggestions.products.length === 0 && (
+                    <p className="nav-suggestion-empty">No matching products or categories.</p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <button type="button" className="nav-button nav-search-trigger" onClick={() => setIsSearchOpen(true)} aria-label="Open search">
-              <span aria-hidden="true">🔍</span>
+            <button type="button" className="nav-button nav-search-trigger" onClick={() => {
+              setIsSearchOpen(true);
+              setIsSuggestionsOpen(false);
+            }} aria-label="Open search">
+              <Icon name="search" />
               <span className="nav-search-label">Search</span>
             </button>
           )
         )}
 
         <button type="button" onClick={handleCartNavigation} className="nav-button">
-          🛒 Cart <span className="cart-badge">{cartCount}</span>
+          <Icon name="cart" />Cart <span className="cart-badge">{cartCount}</span>
         </button>
         {token && localStorage.getItem('userRole') === 'buyer' && (
           <NotificationBell role="buyer" />
@@ -97,10 +181,7 @@ const Navbar = ({
           title="Track Package"
           aria-label="Track Package"
         >
-          <svg className="tracking-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-            <path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9M8 5.3l8 4.5" />
-          </svg>
+          <Icon name="package" className="tracking-icon" />
           Track Package
         </button>
 
@@ -123,7 +204,7 @@ const Navbar = ({
             )}
           </div>
         ) : (
-          <Link to="/login" className="nav-link">👤 Log In</Link>
+          <Link to="/login" className="nav-link"><Icon name="user" />Log In</Link>
         )}
       </nav>
     </header>

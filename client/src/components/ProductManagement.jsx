@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import Icon from './Icon';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -472,7 +473,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   return (
     <div className="pm-container">
       <div className="pm-header-row">
-        <h2 className="pm-title"><span aria-hidden="true">🍃</span> Product Management</h2>
+        <h2 className="pm-title"><Icon name="leaf" />Product Management</h2>
         <button type="button" className="pm-add-btn" onClick={handleOpenAddModal}>
           <span aria-hidden="true">＋</span> Add New Product
         </button>
@@ -573,7 +574,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     </td>
                     <td>
                       <div className="pm-thumbnail">
-                        <span className="pm-thumbnail-fallback" aria-hidden="true">🍃</span>
+                        <span className="pm-thumbnail-fallback" aria-hidden="true"><Icon name="leaf" /></span>
                         {imageUrl && (
                           <img src={imageUrl} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />
                         )}

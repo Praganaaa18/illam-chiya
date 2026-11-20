@@ -1,12 +1,12 @@
 .confirm-order-container {
   min-height: 100vh;
   background:
-    linear-gradient(125deg, rgba(247, 248, 243, 0.96), rgba(238, 234, 219, 0.92)),
+    linear-gradient(125deg, rgba(248, 246, 240, 0.96), rgba(239, 233, 217, 0.92)),
     url('https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=1600&auto=format&fit=crop');
   background-size: cover;
   background-position: center;
-  font-family: 'Georgia', serif;
-  color: #2d4536;
+  font-family: var(--illam-font-body);
+  color: var(--illam-ink);
   box-sizing: border-box;
 }
 
@@ -17,7 +17,7 @@
 }
 
 .back-cart-link {
-  color: #2d5a43;
+  color: var(--illam-forest-800);
   text-decoration: none;
   font-weight: 600;
   display: inline-flex;
@@ -48,9 +48,10 @@
 
 .checkout-header h1 {
   font-size: clamp(2rem, 4vw, 3.15rem);
-  color: #173a27;
+  color: var(--illam-forest-950);
   margin: 14px 0 0;
   letter-spacing: -1px;
+  font-family: var(--illam-font-display);
 }
 
 .checkout-grid {
@@ -71,9 +72,9 @@
 }
 
 .form-section {
-  background: rgba(255, 255, 255, 0.91);
-  border: 1px solid rgba(220, 215, 198, 0.95);
-  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
   padding: 24px;
   box-shadow: 0 10px 28px rgba(49, 67, 53, 0.08);
   backdrop-filter: blur(8px);
@@ -81,7 +82,7 @@
 
 .form-section h2 {
   font-size: 1.35rem;
-  color: #254f36;
+  color: var(--illam-forest-950);
   margin-top: 0;
   margin-bottom: 18px;
   padding-bottom: 12px;
@@ -110,21 +111,21 @@
 .form-group input,
 .form-group textarea {
   padding: 12px 14px;
-  border: 1.5px solid #bbc7b3;
-  border-radius: 10px;
-  background: #fbfaf6;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-control);
+  background: #fffefa;
   outline: none;
   font-family: inherit;
   font-size: 1rem;
-  color: #2d4536;
+  color: var(--illam-ink);
   box-sizing: border-box;
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
-  border-color: #2d6043;
-  box-shadow: 0 0 0 3px rgba(45, 96, 67, 0.11);
+  border-color: var(--illam-forest-600);
+  box-shadow: 0 0 0 3px rgba(74, 112, 85, 0.12);
 }
 
 .form-group input.input-err {
@@ -157,8 +158,8 @@
 }
 
 .payment-card.selected {
-  border-color: #2d5a43;
-  background-color: #dfd8c2;
+  border-color: var(--illam-forest-600);
+  background-color: var(--illam-cream);
 }
 
 .payment-info {
@@ -167,8 +168,11 @@
 }
 
 .payment-info strong {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   font-size: 0.95rem;
-  color: #2d5a43;
+  color: var(--illam-forest-800);
 }
 
 .payment-info span {
@@ -177,12 +181,12 @@
 }
 
 .place-order-btn {
-  background: linear-gradient(135deg, #2e6045, #183a29);
+  background: var(--illam-forest-800);
   color: white;
   border: none;
   min-height: 52px;
   padding: 14px 20px;
-  border-radius: 999px;
+  border-radius: var(--illam-radius-control);
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
@@ -202,9 +206,9 @@
 
 /* Order Summary Sidebar */
 .order-summary-sidebar {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(220, 215, 198, 0.95);
-  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
   padding: 24px;
   height: fit-content;
   box-shadow: 0 12px 32px rgba(49, 67, 53, 0.10);
@@ -214,7 +218,7 @@
 
 .order-summary-sidebar h2 {
   font-size: 1.35rem;
-  color: #254f36;
+  color: var(--illam-forest-950);
   margin-top: 0;
   margin-bottom: 18px;
 }
@@ -334,22 +338,25 @@
 }
 
 .success-card {
-  background-color: #f1ebd9;
-  border: 1px solid #e1d8c1;
-  border-radius: 20px;
+  background-color: var(--illam-surface);
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
   padding: 3rem 2rem;
   text-align: center;
   max-width: 480px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--illam-shadow);
 }
 
 .success-icon {
-  font-size: 3rem;
+  display: block;
+  color: var(--illam-forest-600);
   margin-bottom: 1rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .success-card h2 {
-  color: #2d5a43;
+  color: var(--illam-forest-950);
   margin: 0 0 0.5rem 0;
   font-size: 1.8rem;
 }
@@ -369,10 +376,10 @@
 .home-btn {
   display: inline-block;
   padding: 0.8rem 2rem;
-  background-color: #2d5a43;
+  background-color: var(--illam-forest-800);
   color: white;
   text-decoration: none;
-  border-radius: 25px;
+  border-radius: var(--illam-radius-control);
   font-weight: bold;
 }
 
@@ -386,9 +393,9 @@
 .track-order-btn {
   display: inline-block;
   padding: 0.8rem 2rem;
-  border: 1px solid #2d5a43;
-  border-radius: 25px;
-  color: #2d5a43;
+  border: 1px solid var(--illam-forest-800);
+  border-radius: var(--illam-radius-control);
+  color: var(--illam-forest-800);
   font-weight: bold;
   text-decoration: none;
 }

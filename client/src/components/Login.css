@@ -7,7 +7,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: 'Georgia', serif;
+  font-family: var(--illam-font-body);
   padding: 2rem 1rem;
   box-sizing: border-box;
   overflow: hidden; /* Keeps blurred edges inside the screen */
@@ -21,10 +21,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-              url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYdX1E33uLHVOEUy2ccWx5Gb_S9C4aUBXxmA&s') center/cover no-repeat;
-  filter: blur(1px); /* Adjust blur strength (e.g., 5px to 12px) */
-  transform: scale(1.05); /* Slightly scales up to prevent white edges from the blur */
+  background: linear-gradient(rgba(24, 54, 41, 0.38), rgba(24, 54, 41, 0.38)),
+              url('https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+  filter: blur(1px);
+  transform: scale(1.05);
   z-index: -1; /* Keeps background behind your content */
 }
 
@@ -36,10 +36,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #2d4536;
-  background-color: rgba(241, 235, 217, 0.85); /* Matches card theme with translucency */
+  color: var(--illam-forest-950);
+  background-color: rgba(255, 253, 248, 0.92);
   padding: 0.5rem 0.9rem;
-  border-radius: 20px;
+  border-radius: var(--illam-radius-control);
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 600;
@@ -72,16 +72,17 @@
 
 .brand-logo h1 {
   font-size: 1.6rem;
-  color: #2a3a2d;
+  color: var(--illam-forest-950);
   letter-spacing: 2px;
   margin: 0;
   font-weight: 600;
+  font-family: var(--illam-font-display);
 }
 
 .role-selector {
   margin-top: 0.6rem;
   font-size: 1rem;
-  color: #2a3a2d;
+  color: var(--illam-forest-800);
 }
 
 .role-btn {
@@ -89,7 +90,7 @@
   border: none;
   font-size: 1rem;
   font-family: inherit;
-  color: #2a3a2d;
+  color: var(--illam-forest-800);
   cursor: pointer;
   padding: 0 0.2rem;
   font-weight: 400;
@@ -103,24 +104,25 @@
 
 .divider {
   margin: 0 0.3rem;
-  color: #2a3a2d;
+  color: var(--illam-muted);
 }
 
 /* Form Card */
 .login-card {
-  background-color: #f1ebd9;
-  border-radius: 20px;
+  background-color: rgba(255, 253, 248, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: var(--illam-radius-card);
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 380px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 18px 48px rgba(18, 38, 28, 0.24);
   box-sizing: border-box;
 }
 
 .login-title {
   text-align: center;
   font-size: 1.8rem;
-  color: #2d4536;
+  color: var(--illam-forest-950);
   margin: 0 0 0.3rem 0;
   font-weight: 500;
 }
@@ -149,24 +151,24 @@
   position: relative;
   display: flex;
   align-items: center;
-  border-radius: 12px;
+  border-radius: var(--illam-radius-control);
   transition: border-color 0.2s ease;
 }
 
 .input-wrapper input {
   width: 100%;
   padding: 0.75rem 2.5rem 0.75rem 1rem;
-  border: 1.5px solid #a8ba9a;
-  border-radius: 12px;
-  background-color: #e8e3d3;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-control);
+  background-color: #fffefa;
   font-size: 0.95rem;
   outline: none;
-  color: #2d4536;
+  color: var(--illam-ink);
   box-sizing: border-box;
 }
 
 .input-wrapper input:focus {
-  border-color: #2d5a43;
+  border-color: var(--illam-forest-600);
 }
 
 /* Validation Error state for Input Wrapper */
@@ -220,17 +222,17 @@
 .login-btn {
   width: 100%;
   padding: 0.8rem;
-  background-color: #2d5a43;
+  background-color: var(--illam-forest-800);
   color: #ffffff;
   border: none;
-  border-radius: 25px;
+  border-radius: var(--illam-radius-control);
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .login-btn:hover {
-  background-color: #1f3f2f;
+  background-color: var(--illam-forest-950);
 }
 
 .login-btn:disabled {

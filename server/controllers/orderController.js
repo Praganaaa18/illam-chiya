@@ -2,6 +2,10 @@
 // SUBTITLE 1: ORDER DATABASE CONTROLLERS
 // =========================================================================
 const db = require('../config/db');
+const {
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} = require('../utils/validation');
 
 // Create a new order (Checkout)
 exports.createOrder = async (req, res) => {
@@ -48,9 +52,9 @@ exports.createOrder = async (req, res) => {
     .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const buyerName = [recipient_name, full_name]
     .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
-  const phoneNum = typeof phone === 'string' ? phone.trim() : '';
+  const phoneNum = normalizePhoneNumber(phone);
   const deliveryCity = typeof city === 'string' ? city.trim() : '';
-  if (!rawAddress || !buyerName || !/^[0-9]{10}$/.test(phoneNum)) {
+  if (!rawAddress || !buyerName || !isValidPhoneNumber(phone)) {
     return res.status(400).json({ message: 'Recipient name, a valid 10-digit phone number, and shipping address are required.' });
   }
   const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''}`;
@@ -293,11 +297,16 @@ exports.updateOrderStatus = async (req, res) => {
   if (hasCarrierName && (typeof body.carrier_name !== 'string' || body.carrier_name.trim().length > 120)) {
     return res.status(400).json({ message: 'Carrier name must be 120 characters or fewer.' });
   }
-  if (hasTrackingNumber && (typeof body.tracking_number !== 'string' || body.tracking_number.trim().length > 100)) {
-    return res.status(400).json({ message: 'Tracking number must be 100 characters or fewer.' });
+  if (hasTrackingNumber && (
+    typeof body.tracking_number !== 'string' ||
+    (body.tracking_number.trim() && !isValidPhoneNumber(body.tracking_number))
+  )) {
+    return res.status(400).json({
+      message: 'Enter a valid Nepal mobile number for the tracking number (10 digits).',
+    });
   }
   const carrierName = hasCarrierName ? body.carrier_name.trim() : null;
-  const trackingNumber = hasTrackingNumber ? body.tracking_number.trim() : null;
+  const trackingNumber = hasTrackingNumber ? normalizePhoneNumber(body.tracking_number) : null;
 
   const allowedTransitions = {
     pending: ['processing', 'cancelled'],

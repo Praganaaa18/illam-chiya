@@ -9,7 +9,7 @@ const order = {
   created_at: '2026-01-10T12:00:00.000Z',
   seller_updated_at: '2026-01-12T12:00:00.000Z',
   carrier_name: 'Ilam Express',
-  tracking_number: '001234567',
+  tracking_number: '9801234567',
   subtotal: '25',
   total_price: '145',
   delivery_address: 'Kathmandu',
@@ -54,7 +54,7 @@ test('shows seller-based delivery estimate, original tracking navigation, and ba
 
   expect(screen.getByText(estimate)).toBeInTheDocument();
   expect(screen.getByText('Ilam Express')).toBeInTheDocument();
-  expect(screen.getByText('001234567')).toBeInTheDocument();
+  expect(screen.getByText('9801234567')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Track Package' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Back to home' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Additional Information' })).not.toBeInTheDocument();

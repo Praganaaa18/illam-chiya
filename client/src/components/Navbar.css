@@ -5,8 +5,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 4rem;
-  border-bottom: 1px solid #eaeaea;
-  background: #fff;
+  border-bottom: 1px solid var(--illam-border);
+  background: var(--illam-surface);
   position: relative;
   z-index: 50;
 }
@@ -17,11 +17,17 @@
   gap: 8px;
   border: 0;
   background: transparent;
-  color: #2d3748;
-  font-family: Georgia, serif;
+  color: var(--illam-forest-950);
+  font-family: var(--illam-font-display);
   font-size: 1.2rem;
   font-weight: bold;
   cursor: pointer;
+}
+
+.logo-container .brand-mark {
+  width: 21px;
+  height: 21px;
+  color: var(--illam-forest-600);
 }
 
 .nav-links {
@@ -32,16 +38,25 @@
 
 .nav-link,
 .nav-button {
-  color: #2d3748;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--illam-ink);
   text-decoration: none;
   white-space: nowrap;
   font-weight: 500;
+  transition: color 160ms ease;
+}
+
+.nav-link:hover,
+.nav-button:hover:not(:disabled) {
+  color: var(--illam-forest-600);
 }
 
 .nav-button {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
   border: 0;
   background: transparent;
   font-size: 0.95rem;
@@ -56,15 +71,111 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0 0.65rem;
-  border: 1px solid #ccd7d0;
-  border-radius: 999px;
-  background: #f8faf8;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-control);
+  background: var(--illam-paper);
+}
+
+.nav-search-container {
+  position: relative;
+  width: clamp(220px, 22vw, 340px);
+}
+
+.nav-search-container .nav-search-box {
+  width: 100%;
+}
+
+.nav-search-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(420px, calc(100vh - 130px));
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #dfe7df;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(27, 59, 43, 0.18);
+}
+
+.nav-suggestion-section + .nav-suggestion-section {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #edf1ed;
+}
+
+.nav-suggestion-heading {
+  margin: 4px 8px 6px;
+  color: #78847b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-suggestion-category + .nav-suggestion-category {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #f0f3f0;
+}
+
+.nav-suggestion-category-name,
+.nav-suggestion-product {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #2d4536;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.nav-suggestion-category-name {
+  padding: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.nav-suggestion-product {
+  padding: 7px 8px 7px 19px;
+  color: #526356;
+  font-size: 0.8rem;
+}
+
+.nav-suggestion-category-name:hover,
+.nav-suggestion-product:hover,
+.nav-suggestion-category-name:focus-visible,
+.nav-suggestion-product:focus-visible {
+  outline: none;
+  background: #f0f6f1;
+}
+
+.nav-suggestion-category-name small,
+.nav-suggestion-product small {
+  flex: 0 0 auto;
+  color: #7d8b80;
+  font-size: 0.68rem;
+}
+
+.nav-suggestion-empty {
+  margin: 0;
+  padding: 14px 10px;
+  color: #748078;
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 .nav-search-box:focus-within {
-  border-color: #1b3b2b;
-  box-shadow: 0 0 0 3px rgba(27, 59, 43, 0.1);
-  background: #fff;
+  border-color: var(--illam-forest-600);
+  box-shadow: 0 0 0 3px rgba(74, 112, 85, 0.12);
+  background: var(--illam-surface);
 }
 
 .nav-search-box input {
@@ -89,15 +200,21 @@
   width: 1.15rem;
   height: 1.15rem;
   fill: none;
-  stroke: #1b3b2b;
+  stroke: currentColor;
   stroke-width: 1.7;
 }
 
 .cart-badge {
-  border-radius: 50%;
-  background: #eee;
-  padding: 2px 8px;
-  font-size: 0.8rem;
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--illam-cream);
+  color: var(--illam-forest-950);
+  padding: 0 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .profile-menu {
@@ -147,4 +264,16 @@
   color: #a23b3b;
   text-align: left;
   cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .nav-search-container {
+    width: 220px;
+  }
+}
+
+@media (max-width: 760px) {
+  .nav-search-container {
+    width: 100%;
+  }
 }

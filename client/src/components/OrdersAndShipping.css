@@ -13,9 +13,17 @@
 }
 
 .shipping-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   margin: 0 0 6px;
-  color: #203a2b;
+  color: var(--illam-forest-950);
   font-size: 1.55rem;
+  font-family: var(--illam-font-display);
+}
+
+.shipping-heading h2 .illam-icon {
+  color: var(--illam-forest-600);
 }
 
 .shipping-heading p {
@@ -203,12 +211,18 @@
 }
 
 .shipping-detail-card {
+  box-sizing: border-box;
+  position: sticky;
+  top: 16px;
   width: 100%;
-  max-height: calc(100vh - 48px);
+  min-height: 0;
+  max-height: min(65vh, calc(100vh - 280px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px;
   scrollbar-gutter: stable;
+  scrollbar-color: #9bac9f #f4f7f4;
+  scrollbar-width: thin;
   animation: shipping-detail-enter 0.2s ease-out;
 }
 
@@ -413,6 +427,12 @@
   font-size: 0.8rem;
 }
 
+.shipping-field-error {
+  color: #b42318;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
 .shipping-update-controls button,
 .shipping-update-form > button {
   display: block;
@@ -508,6 +528,11 @@
   .shipping-workspace.has-details {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .shipping-detail-card {
+    position: static;
+    max-height: min(65vh, calc(100vh - 220px));
+  }
 }
 
 @media (max-width: 600px) {
@@ -532,6 +557,6 @@
   }
 
   .shipping-detail-card {
-    max-height: calc(100vh - 24px);
+    max-height: min(65vh, calc(100vh - 200px));
   }
 }

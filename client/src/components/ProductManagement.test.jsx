@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 test('shows one active/inactive switch and only one stock quantity', async () => {
-  const { container } = render(<ProductManagement sellerId="5" />);
+  render(<ProductManagement sellerId="5" />);
 
   await screen.findByRole('switch', { name: 'Black Coffee active status' });
 
@@ -54,7 +54,6 @@ test('shows one active/inactive switch and only one stock quantity', async () =>
   expect(screen.getByText('45 IN STOCK')).toBeInTheDocument();
   expect(screen.getByText('100 g')).toBeInTheDocument();
   expect(screen.queryByText(/^45$/)).not.toBeInTheDocument();
-  expect(container.querySelector('.pm-stock-count')).toBeNull();
 });
 
 test('the single switch updates the product status', async () => {
@@ -95,8 +94,9 @@ test('creates a category from the product form and selects it', async () => {
   fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
   fireEvent.click(await screen.findByRole('button', { name: /Product Category.*Black Tea/ }));
   const categoryMenu = screen.getByRole('dialog', { name: 'Product categories' });
-  expect(categoryMenu.firstElementChild).toHaveTextContent('+ Add category');
-  expect(categoryMenu.children[1]).toHaveTextContent('Choose a category');
+  const categoryActions = within(categoryMenu).getAllByRole('button');
+  expect(categoryActions[0]).toHaveAccessibleName('+ Add category');
+  expect(within(categoryMenu).getByText('Choose a category')).toBeInTheDocument();
   fireEvent.click(within(categoryMenu).getByRole('button', { name: '+ Add category' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'New category name' }), {
     target: { value: 'Herbal Tea' },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { isValidEmail, isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
 import './RegisterBuyer.css';
 
 const RegisterBuyer = () => {
@@ -24,18 +25,20 @@ const RegisterBuyer = () => {
 
   // Validation rules
   const nameRegex = /^[a-zA-Z\s]*$/;
-  const phoneRegex = /^[0-9]*$/;
+  const phoneCharactersRegex = /^[0-9+()\s-]*$/;
   const addressRegex = /^[a-zA-Z0-9\s,.-]*$/;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((previous) => ({ ...previous, [name]: value }));
 
     let err = '';
     if (name === 'fullName' && !nameRegex.test(value)) {
       err = 'Special characters and numbers are not allowed in Full Name.';
-    } else if (name === 'phone' && !phoneRegex.test(value)) {
-      err = 'Special characters and letters are not allowed in Phone Number.';
+    } else if (name === 'email' && value.trim() && !isValidEmail(value)) {
+      err = 'Enter a valid email address.';
+    } else if (name === 'phone' && !phoneCharactersRegex.test(value)) {
+      err = 'Enter a valid phone number.';
     } else if (name === 'deliveryAddress' && !addressRegex.test(value)) {
       err = 'Special characters (like @, #, $, %) are not allowed in Delivery Address.';
     }
@@ -47,12 +50,35 @@ const RegisterBuyer = () => {
     e.preventDefault();
     setError('');
 
-    // Check if any field has active validation errors
-    const hasErrors = Object.values(fieldErrors).some((err) => err !== '');
-    if (hasErrors) {
+    const nextFieldErrors = {};
+    if (!formData.fullName.trim() || !nameRegex.test(formData.fullName)) {
+      nextFieldErrors.fullName = 'Enter a valid full name.';
+    }
+    if (!formData.email.trim()) {
+      nextFieldErrors.email = 'Email address is required.';
+    } else if (!isValidEmail(formData.email)) {
+      nextFieldErrors.email = 'Enter a valid email address.';
+    }
+    if (!formData.phone.trim()) {
+      nextFieldErrors.phone = 'Phone number is required.';
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      nextFieldErrors.phone = 'Enter a valid Nepal mobile number (10 digits).';
+    }
+    if (!formData.deliveryAddress.trim() || !addressRegex.test(formData.deliveryAddress)) {
+      nextFieldErrors.deliveryAddress = 'Enter a valid delivery address.';
+    }
+    setFieldErrors(nextFieldErrors);
+
+    if (Object.keys(nextFieldErrors).length > 0) {
       return setError('Please correct the invalid fields before submitting.');
     }
 
+    if (formData.password.length < 6) {
+      return setError('Password must be at least 6 characters.');
+    }
+    if (!formData.confirmPassword) {
+      return setError('Please confirm your password.');
+    }
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match.');
     }
@@ -65,8 +91,8 @@ const RegisterBuyer = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
+          email: formData.email.trim().toLowerCase(),
+          phone: normalizePhoneNumber(formData.phone),
           delivery_address: formData.deliveryAddress,
           address_type: formData.addressType,
           gender: formData.gender,
@@ -105,7 +131,7 @@ const RegisterBuyer = () => {
 
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {/* SECTION 1: Personal & Delivery Information */}
           <div className="form-section-header">
             <h3 className="section-title">Personal & Delivery Details</h3>
@@ -135,6 +161,7 @@ const RegisterBuyer = () => {
               placeholder="jane.cooper@email.com"
               required
             />
+            {fieldErrors.email && <span className="field-error-text">{fieldErrors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -144,8 +171,8 @@ const RegisterBuyer = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              pattern="[0-9]{10}"
-              maxLength="10"
+              inputMode="tel"
+              maxLength="16"
               placeholder="e.g. 9845612375"
               required
             />

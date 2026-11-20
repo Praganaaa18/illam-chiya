@@ -1,9 +1,9 @@
 .pm-container {
   padding: 24px;
-  background-color: #f3f7f5;
+  background-color: var(--illam-paper);
   min-height: 100vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #1f2937;
+  font-family: var(--illam-font-body);
+  color: var(--illam-ink);
   box-sizing: border-box;
 }
 
@@ -18,7 +18,8 @@
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #1f3a2e;
+  color: var(--illam-forest-950);
+  font-family: var(--illam-font-display);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -41,10 +42,10 @@
 }
 
 .pm-card {
-  background-color: #ffffff;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  background-color: var(--illam-surface);
+  border-radius: var(--illam-radius-card);
+  border: 1px solid var(--illam-border);
+  box-shadow: 0 4px 16px rgba(34, 49, 39, 0.06);
   overflow: hidden;
 }
 

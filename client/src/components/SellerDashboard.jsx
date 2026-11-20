@@ -4,7 +4,6 @@ import ProductManagement from './ProductManagement';
 import InventoryManagement from './InventoryManagement';
 import OrdersAndShipping from './OrdersAndShipping';
 import BillingsAndPayouts from './BillingsandPayouts';
-import FarmSettings from './FarmSettings';
 import SellerSidebar from './SellerSidebar';
 import NotificationBell from './Notificationbell';
 import './SellerDashboard.css';
@@ -18,14 +17,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const requestedTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(() => requestedTab || initialTab);
 
-  // Dummy seller state (or load from localStorage/Auth Context)
-  // const [sellerInfo] = useState({
-  //   businessName: 'Illam Premium Organic Estate',
-  //   email: 'seller@illamchiya.com',
-  //   isVerified: true,
-  //   sellerId: 1,
-  // });
-
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
@@ -36,7 +27,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const validTabs = ['overview', 'products', 'inventory', 'orders', 'billing', 'settings'];
+    const validTabs = ['overview', 'products', 'inventory', 'orders', 'billing'];
     setActiveTab(validTabs.includes(requestedTab) ? requestedTab : initialTab);
   }, [initialTab, requestedTab]);
 
@@ -104,8 +95,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
         return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
-      case 'settings':
-        return <FarmSettings sellerId={sellerInfo.sellerId} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }
@@ -133,7 +122,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
               inventory: 'Inventory Management',
               orders: 'Orders & Shipping',
               billing: 'Billings & Payouts',
-              settings: 'Farm Settings',
             }[activeTab]}</h3>
           </div>
 

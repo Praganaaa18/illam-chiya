@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { isValidEmail } from '../utils/validation';
 import './Login.css';
 
 const Login = () => {
@@ -20,11 +21,10 @@ const Login = () => {
   // Validate form inputs before sending to server
   const validateForm = () => {
     const errors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!email.trim()) {
       errors.email = 'Email address is required.';
-    } else if (!emailRegex.test(email)) {
+    } else if (!isValidEmail(email)) {
       errors.email = 'Please enter a valid email address.';
     }
 
@@ -46,7 +46,7 @@ const Login = () => {
     if (!validateForm()) {
       if (!email.trim()) {
         emailInputRef.current?.focus();
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      } else if (!isValidEmail(email)) {
         emailInputRef.current?.focus();
       } else if (!password) {
         passwordInputRef.current?.focus();
@@ -62,7 +62,7 @@ const Login = () => {
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role, rememberMe }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, role, rememberMe }),
       });
 
       const data = await response.json();
