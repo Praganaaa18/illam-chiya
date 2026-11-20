@@ -3,14 +3,14 @@
   max-width: 320px;
   width: 100%;
   justify-self: center;
-  background-color: #fffdf8;
-  border-radius: 18px;
+  background-color: var(--illam-surface);
+  border-radius: var(--illam-radius-card);
   overflow: hidden;
-  border: 1px solid #e6e1d2;
-  box-shadow: 0 7px 20px rgba(48, 65, 53, 0.08);
+  border: 1px solid var(--illam-border);
+  box-shadow: 0 4px 16px rgba(34, 49, 39, 0.06);
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .product-card-link {
@@ -23,13 +23,14 @@
 
 .product-card-link:focus-visible,
 .product-price-link:focus-visible {
-  outline: 3px solid #2d5a43;
-  outline-offset: -3px;
+  outline: 3px solid var(--illam-forest-600);
+  outline-offset: 3px;
 }
 
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(45, 90, 67, 0.12);
+.product-card:hover,
+.product-card:focus-within {
+  border-color: #c8d2c4;
+  box-shadow: 0 10px 24px rgba(34, 49, 39, 0.1);
 }
 
 .product-image-container {
@@ -82,19 +83,23 @@
 .product-title {
   font-size: 1.35rem;
   line-height: 1.1;
-  color: #2d4536;
+  color: var(--illam-forest-950);
   margin: 0 0 0.4rem 0;
-  font-family: 'Georgia', serif;
+  font-family: var(--illam-font-display);
 }
 
 .product-description {
+  display: -webkit-box;
+  overflow: hidden;
   min-height: 42px;
-  margin-bottom: 0.8rem;
   font-size: 0.86rem;
-  color: #526356;
+  color: var(--illam-muted);
   line-height: 1.4;
   margin-bottom: 1.2rem;
   flex-grow: 1;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .product-pack-label {
@@ -113,13 +118,17 @@
 }
 
 .product-pack-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 54px;
   height: 32px;
+  padding: 0 12px;
+  box-sizing: border-box;
   border: 1px solid #d9ddd5;
   border-radius: 999px;
   background: #fff;
   color: #445048;
-  cursor: pointer;
   font-family: inherit;
   font-size: 0.82rem;
   font-weight: 700;
@@ -223,12 +232,16 @@
 }
 
 .add-to-cart-btn {
-  background-color: #2d5a43;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background-color: var(--illam-forest-800);
   color: white;
   border: none;
   min-height: 44px;
   padding: 0.6rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--illam-radius-control);
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
@@ -241,5 +254,5 @@
 }
 
 .add-to-cart-btn:hover {
-  background-color: #1f3f2f;
+  background-color: var(--illam-forest-950);
 }

@@ -107,8 +107,9 @@ const ProductPage = () => {
     const existingItem = cart.find((item) => String(item.id) === String(product.id));
     if (existingItem) {
       existingItem.quantity += quantity;
+      existingItem.pack_size = product.pack_size || '100 g';
     } else {
-      cart.push({ ...product, quantity });
+      cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity });
     }
     localStorage.setItem('cart', JSON.stringify(cart));
     setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
@@ -164,7 +165,7 @@ const ProductPage = () => {
             <div className="product-info">
               <h1 className="product-title">{product.name}</h1>
               <p className="product-price">
-                Rs. {Number(product.price).toLocaleString()}
+                Rs. {Number(product.price).toLocaleString()} / {product.pack_size || '100 g'}
               </p>
 
               <div className="details-block">
@@ -173,6 +174,7 @@ const ProductPage = () => {
                   <li>Origin: {product.elevation || 'Ilam, Nepal'}</li>
                   <li>Type: {product.process_type || 'Orthodox tea'}</li>
                   <li>Category: {product.category || 'Tea'}</li>
+                  <li>Per pack: {product.pack_size || '100 g'}</li>
                   <li>Availability: {Number(product.stock_quantity) > 0 ? 'In stock' : 'Out of stock'}</li>
                 </ul>
               </div>

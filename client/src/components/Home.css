@@ -4,9 +4,9 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Georgia', serif;
-  background-color: #faf9f6;
-  color: #2d3748;
+  font-family: var(--illam-font-body);
+  background-color: var(--illam-paper);
+  color: var(--illam-ink);
 }
 
 /* ==========================================
@@ -19,8 +19,8 @@ body {
   height: 88px;
   padding: 0 4rem;
   box-sizing: border-box;
-  background-color: #ffffff;
-  border-bottom: 1px solid #eaeaea;
+  background-color: var(--illam-surface);
+  border-bottom: 1px solid var(--illam-border);
   position: relative;
   z-index: 50;
 }
@@ -29,14 +29,32 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--illam-forest-950);
+  font-family: var(--illam-font-display);
   font-size: 1.2rem;
   font-weight: bold;
+  cursor: pointer;
 }
 
 .nav-links {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+.nav-link,
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--illam-ink);
+}
+
+.nav-link:hover,
+.nav-button:hover:not(:disabled) {
+  color: var(--illam-forest-600);
 }
 
 .nav-search-box {
@@ -205,7 +223,7 @@ body {
    ========================================== */
 .hero-section {
   padding: 5rem 4rem;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)), 
+  background-image: linear-gradient(90deg, rgba(248, 246, 240, 0.94), rgba(248, 246, 240, 0.62)),
                     url('https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80');
   background-size: cover;
   background-position: center;
@@ -219,15 +237,17 @@ body {
 }
 
 .hero-subtitle {
-  letter-spacing: 2px;
+  letter-spacing: 0.12em;
   font-size: 0.8rem;
-  color: #555555;
+  color: var(--illam-forest-600);
   font-weight: bold;
   display: block;
 }
 
 .hero-title {
   font-size: 2.5rem;
+  font-family: var(--illam-font-display);
+  color: var(--illam-forest-950);
   margin: 1rem 0;
   line-height: 1.2;
 }
@@ -235,21 +255,22 @@ body {
 .hero-description {
   font-size: 1.1rem;
   color: #444444;
+  line-height: 1.55;
   margin-bottom: 2rem;
 }
 
 .primary-btn {
-  background-color: #1b3b2b;
+  background-color: var(--illam-forest-800);
   color: #ffffff;
   padding: 0.8rem 1.8rem;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--illam-radius-control);
   cursor: pointer;
   font-size: 1rem;
 }
 
 .primary-btn:hover {
-  background-color: #274d39;
+  background-color: var(--illam-forest-950);
 }
 
 /* Stat Cards / Floating Badges */
@@ -259,12 +280,13 @@ body {
 }
 
 .badge-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 253, 248, 0.94);
   padding: 1rem;
-  border-radius: 6px;
+  border: 1px solid rgba(226, 223, 212, 0.8);
+  border-radius: var(--illam-radius-card);
   text-align: center;
   min-width: 90px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 18px rgba(34, 49, 39, 0.08);
 }
 
 .badge-card strong {
@@ -298,11 +320,78 @@ body {
 }
 
 .products-section .section-title {
-  margin: 0 0 1.8rem;
+  margin: 0 0 1.5rem;
   text-align: left;
-  color: #526b5a;
-  font-size: 1.05rem;
+  color: var(--illam-forest-800);
+  font-family: var(--illam-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
   letter-spacing: 0;
+}
+
+.product-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem 1rem;
+  margin-top: 1.75rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
+  background: var(--illam-surface);
+}
+
+.product-pagination-summary {
+  margin: 0;
+  color: #68786d;
+  font-size: 0.86rem;
+}
+
+.product-pagination-controls,
+.pagination-page-list {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.product-pagination-controls button {
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-control);
+  background: var(--illam-surface);
+  color: var(--illam-forest-800);
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.product-pagination-controls button:hover:not(:disabled) {
+  border-color: #aab9a4;
+  background: #f2f4ec;
+}
+
+.product-pagination-controls .pagination-direction {
+  padding: 0 0.8rem;
+  font-size: 0.82rem;
+}
+
+.product-pagination-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.product-pagination-controls .pagination-page.active {
+  border-color: var(--illam-forest-800);
+  background: var(--illam-forest-800);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(40, 82, 58, 0.18);
+}
+
+.pagination-ellipsis {
+  padding: 0 0.15rem;
+  color: #68786d;
 }
 
 @media (max-width: 1050px) {
@@ -319,16 +408,26 @@ body {
   .products-section {
     padding: 3rem 1.25rem;
   }
+
+  .product-pagination {
+    justify-content: flex-end;
+    padding: 0.85rem;
+  }
+
+  .product-pagination-summary {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 
 .secondary-btn {
-  background-color: #ffffff;
-  border: 1px solid #1b3b2b;
-  color: #1b3b2b;
+  background-color: var(--illam-surface);
+  border: 1px solid var(--illam-forest-800);
+  color: var(--illam-forest-800);
   padding: 0.8rem 2rem;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--illam-radius-control);
 }
 
 .center-container {
@@ -340,7 +439,7 @@ body {
    FOOTER SECTION
    ========================================== */
 .footer {
-  background-color: #14291e;
+  background-color: var(--illam-forest-950);
   color: #e0e6e2;
   padding: 4rem 4rem 2rem 4rem;
 }
@@ -353,6 +452,21 @@ body {
 
 .footer-brand {
   max-width: 350px;
+}
+
+.footer-brand h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0;
+  font-family: var(--illam-font-display);
+  letter-spacing: 0.04em;
+}
+
+.footer-brand h3 .illam-icon {
+  width: 20px;
+  height: 20px;
+  color: #b7c9a9;
 }
 
 .social-links {
@@ -373,7 +487,7 @@ body {
 }
 
 .footer-bottom {
-  border-top: 1px solid #244232;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
   margin-top: 3rem;
   padding-top: 1.5rem;
   display: flex;

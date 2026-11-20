@@ -2,15 +2,15 @@
    SUBTITLE 1: MATCHA THEME COLOR PALETTE & CONTAINER
    ========================================================================== */
 :root {
-  --matcha-dark: #2c4c3b;       /* Deep Forest / Primary Sidebar */
-  --matcha-primary: #4e7c59;    /* Earthy Matcha Leaf */
-  --matcha-accent: #70a37f;     /* Soft Leaf Accent */
-  --matcha-light: #eaf2ec;      /* Active Tab & Hover Tint */
-  --matcha-bg: #f3f7f4;         /* Application Canvas Background */
-  --card-bg: #ffffff;          /* Surface Cards */
-  --text-primary: #1c2e24;     /* Deep Charcoal Green */
-  --text-muted: #5e7367;       /* Muted Labels */
-  --border-color: #dbe6dd;     /* Clean Soft Borders */
+  --matcha-dark: var(--illam-forest-950);
+  --matcha-primary: var(--illam-forest-600);
+  --matcha-accent: var(--illam-olive);
+  --matcha-light: #edf1e8;
+  --matcha-bg: var(--illam-paper);
+  --card-bg: var(--illam-surface);
+  --text-primary: var(--illam-ink);
+  --text-muted: var(--illam-muted);
+  --border-color: var(--illam-border);
 }
 
 .matcha-dashboard-container {
@@ -18,7 +18,7 @@
   height: 100vh;
   width: 100vw;
   background-color: var(--matcha-bg);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--illam-font-body);
   color: var(--text-primary);
   overflow: hidden;
 }
@@ -43,10 +43,20 @@
 }
 
 .brand-logo-section h2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   margin: 0;
   font-size: 1.4rem;
-  font-family: serif;
+  font-family: var(--illam-font-display);
   color: #f0f7f2;
+}
+
+.brand-logo-section .illam-icon {
+  width: 21px;
+  height: 21px;
+  color: #c3d2b7;
 }
 
 .seller-badge {
@@ -70,6 +80,9 @@
 }
 
 .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   background: transparent;
   border: none;
   color: #d1e0d5;
@@ -78,6 +91,7 @@
   border-radius: 8px;
   font-size: 0.88rem;
   font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -100,6 +114,10 @@
 }
 
 .logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   width: 100%;
   background-color: rgba(235, 87, 87, 0.15);
   color: #ff9b9b;

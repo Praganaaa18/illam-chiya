@@ -1,14 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import Icon from './Icon';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
 const PAGE_SIZE = 4;
+const PACK_SIZE_OPTIONS = ['50 g', '100 g', '250 g', '500 g', '1 kg'];
 const INITIAL_FORM = {
   name: '',
   description: '',
   price: '',
   stock_quantity: '',
+  category_id: '',
+  pack_size: '100 g',
   image_url: '',
   status: 'active',
 };
@@ -28,9 +32,19 @@ const getAuthConfig = () => ({
 
 const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [notice, setNotice] = useState(null);
+  const [categoryLoadError, setCategoryLoadError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [categoryMessage, setCategoryMessage] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isCustomPackSize, setIsCustomPackSize] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isCategoryBusy, setIsCategoryBusy] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [busyProductId, setBusyProductId] = useState(null);
@@ -39,6 +53,9 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const fileInputRef = useRef(null);
   const productNameRef = useRef(null);
   const modalTriggerRef = useRef(null);
+  const categoryDropdownRef = useRef(null);
+  const isCategoryDropdownOpenRef = useRef(isCategoryDropdownOpen);
+  isCategoryDropdownOpenRef.current = isCategoryDropdownOpen;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
@@ -74,6 +91,36 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  const fetchCategories = useCallback(async () => {
+    setIsLoadingCategories(true);
+    setCategoryLoadError('');
+    try {
+      const response = await axios.get(`${API_ORIGIN}/api/products/categories`, getAuthConfig());
+      if (!Array.isArray(response.data)) {
+        throw new Error('The server returned an invalid category list.');
+      }
+      setCategories(response.data);
+      setFormData((current) => {
+        const selectedCategory = response.data.find(
+          (category) => String(category.id) === String(current.category_id)
+        );
+        return {
+          ...current,
+          category_id: String(selectedCategory?.id || response.data[0]?.id || ''),
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategoryLoadError(getErrorMessage(error, 'Could not load categories.'));
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const filteredProducts = useMemo(() => products.filter((product) => {
     const name = String(product.name || '').toLocaleLowerCase();
@@ -119,6 +166,15 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setFormData((previous) => ({ ...previous, [name]: value }));
   };
 
+  const handlePackSizeChange = (event) => {
+    const value = event.target.value;
+    setIsCustomPackSize(value === 'custom');
+    setFormData((current) => ({
+      ...current,
+      pack_size: value === 'custom' ? '' : value,
+    }));
+  };
+
   const discardSelectedFile = useCallback(() => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -127,8 +183,14 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const handleOpenAddModal = (event) => {
     modalTriggerRef.current = event?.currentTarget || null;
     setNotice(null);
+    setCategoryError('');
+    setCategoryMessage('');
+    setIsAddingCategory(false);
+    setIsCategoryDropdownOpen(false);
+    setNewCategoryName('');
     setEditingProductId(null);
-    setFormData({ ...INITIAL_FORM });
+    setIsCustomPackSize(false);
+    setFormData({ ...INITIAL_FORM, category_id: String(categories[0]?.id || '') });
     discardSelectedFile();
     setIsModalOpen(true);
   };
@@ -136,12 +198,21 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const handleEditClick = (product, event) => {
     modalTriggerRef.current = event?.currentTarget || null;
     setNotice(null);
+    setCategoryError('');
+    setCategoryMessage('');
+    setIsAddingCategory(false);
+    setIsCategoryDropdownOpen(false);
+    setNewCategoryName('');
     setEditingProductId(product.id);
+    const packSize = product.pack_size || '100 g';
+    setIsCustomPackSize(!PACK_SIZE_OPTIONS.includes(packSize));
     setFormData({
       name: product.name || '',
       description: product.description || '',
       price: product.price ?? '',
       stock_quantity: product.stock_quantity ?? '',
+      category_id: String(product.category_id || categories[0]?.id || ''),
+      pack_size: packSize,
       image_url: product.image_url || '',
       status: isProductActive(product) ? 'active' : 'inactive',
     });
@@ -151,6 +222,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
 
   const resetForm = useCallback(() => {
     setFormData({ ...INITIAL_FORM });
+    setCategoryError('');
+    setCategoryMessage('');
+    setNewCategoryName('');
+    setIsAddingCategory(false);
+    setIsCategoryDropdownOpen(false);
+    setIsCustomPackSize(false);
     discardSelectedFile();
     setEditingProductId(null);
   }, [discardSelectedFile]);
@@ -165,7 +242,13 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     if (!isModalOpen) return undefined;
     const modalTrigger = modalTriggerRef.current;
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') closeModal();
+      if (event.key === 'Escape') {
+        if (isCategoryDropdownOpenRef.current) {
+          setIsCategoryDropdownOpen(false);
+          return;
+        }
+        closeModal();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     productNameRef.current?.focus();
@@ -175,12 +258,35 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     };
   }, [isModalOpen, closeModal]);
 
+  useEffect(() => {
+    if (!isCategoryDropdownOpen) return undefined;
+    const handleOutsideClick = (event) => {
+      if (!categoryDropdownRef.current?.contains(event.target)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isCategoryDropdownOpen]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const price = Number(formData.price);
     const stock = Number(formData.stock_quantity);
+    const categoryId = Number(formData.category_id);
+    const packSizeMatch = formData.pack_size.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
+    if (!packSizeMatch) {
+      setNotice({ type: 'error', message: 'Enter a pack size such as 100 g or 1 kg.' });
+      return;
+    }
+    const packSize = `${Number(packSizeMatch[1])} ${packSizeMatch[2].toLowerCase()}`;
     if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 0) {
       setNotice({ type: 'error', message: 'Enter a valid non-negative price and whole-number stock quantity.' });
+      return;
+    }
+    if (!Number.isSafeInteger(categoryId) || categoryId <= 0 ||
+        !categories.some((category) => Number(category.id) === categoryId)) {
+      setNotice({ type: 'error', message: 'Select a valid product category.' });
       return;
     }
 
@@ -201,9 +307,10 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
         description: formData.description.trim(),
         price,
         stock_quantity: stock,
+        category_id: categoryId,
+        pack_size: packSize,
         image_url: imageUrl,
         seller_id: sellerId,
-        category_id: 1,
         status: formData.status,
       };
 
@@ -222,6 +329,76 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to save product. Please try again.') });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) {
+      setCategoryError('Enter a category name.');
+      return;
+    }
+
+    setIsCategoryBusy(true);
+    setCategoryError('');
+    setCategoryMessage('');
+    try {
+      const response = await axios.post(
+        `${API_ORIGIN}/api/products/categories`,
+        { name },
+        getAuthConfig()
+      );
+      const createdCategory = response.data;
+      if (!createdCategory?.id || !createdCategory?.name) {
+        throw new Error('The server did not return the created category.');
+      }
+      setCategories((current) => [...current, createdCategory]);
+      setFormData((current) => ({ ...current, category_id: String(createdCategory.id) }));
+      setCategoryLoadError('');
+      setNewCategoryName('');
+      setIsAddingCategory(false);
+      setCategoryMessage(`${createdCategory.name} added and selected.`);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      setCategoryError(getErrorMessage(error, 'Could not add category.'));
+    } finally {
+      setIsCategoryBusy(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryToDelete) => {
+    const selectedCategory = categoryToDelete || categories.find(
+      (category) => String(category.id) === String(formData.category_id)
+    );
+    if (!selectedCategory) return;
+    if (!window.confirm(`Delete the "${selectedCategory.name}" category?`)) return;
+
+    const isSelectedCategory = String(formData.category_id) === String(selectedCategory.id);
+    setIsCategoryBusy(true);
+    setCategoryError('');
+    setCategoryMessage('');
+    try {
+      await axios.delete(
+        `${API_ORIGIN}/api/products/categories/${selectedCategory.id}`,
+        getAuthConfig()
+      );
+      const remainingCategories = categories.filter(
+        (category) => String(category.id) !== String(selectedCategory.id)
+      );
+      setCategories(remainingCategories);
+      if (isSelectedCategory) {
+        setFormData((current) => ({
+          ...current,
+          category_id: String(remainingCategories[0]?.id || ''),
+        }));
+      }
+      setIsCategoryDropdownOpen(false);
+      setCategoryMessage(`${selectedCategory.name} deleted.`);
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      setCategoryError(getErrorMessage(error, 'Could not delete category.'));
+    } finally {
+      setIsCategoryBusy(false);
     }
   };
 
@@ -289,10 +466,14 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     return <span className="pm-stock-badge in-stock">{quantity} IN STOCK</span>;
   };
 
+  const selectedCategory = categories.find(
+    (category) => String(category.id) === String(formData.category_id)
+  );
+
   return (
     <div className="pm-container">
       <div className="pm-header-row">
-        <h2 className="pm-title"><span aria-hidden="true">🍃</span> Product Management</h2>
+        <h2 className="pm-title"><Icon name="leaf" />Product Management</h2>
         <button type="button" className="pm-add-btn" onClick={handleOpenAddModal}>
           <span aria-hidden="true">＋</span> Add New Product
         </button>
@@ -351,6 +532,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                 </th>
                 <th scope="col">Thumbnail</th>
                 <th scope="col">Product Name</th>
+                <th scope="col">Category</th>
+                <th scope="col">Pack Size</th>
                 <th scope="col">Price</th>
                 <th scope="col">Stock</th>
                 <th scope="col">Status</th>
@@ -359,17 +542,17 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan="7" className="pm-empty" role="status">Loading products…</td></tr>
+                <tr><td colSpan="9" className="pm-empty" role="status">Loading products…</td></tr>
               ) : loadError ? (
                 <tr>
-                  <td colSpan="7" className="pm-empty">
+                  <td colSpan="9" className="pm-empty">
                     <span>{loadError}</span>
                     <button type="button" className="pm-retry-btn" onClick={fetchProducts}>Try again</button>
                   </td>
                 </tr>
               ) : pageProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="pm-empty">
+                  <td colSpan="9" className="pm-empty">
                     {products.length === 0 ? 'No products yet. Add your first product to get started.' : 'No products match your search or filters.'}
                   </td>
                 </tr>
@@ -391,42 +574,36 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     </td>
                     <td>
                       <div className="pm-thumbnail">
-                        <span className="pm-thumbnail-fallback" aria-hidden="true">🍃</span>
+                        <span className="pm-thumbnail-fallback" aria-hidden="true"><Icon name="leaf" /></span>
                         {imageUrl && (
                           <img src={imageUrl} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />
                         )}
                       </div>
                     </td>
                     <td className="pm-product-name">{product.name}</td>
+                    <td className="pm-product-category">{product.category || 'Uncategorized'}</td>
+                    <td className="pm-product-pack-size">{product.pack_size || '100 g'}</td>
                     <td className="pm-product-price">Rs. {Number(product.price || 0).toFixed(2)}</td>
                     <td>
                       <div className="pm-stock-cell">
                         {renderStockBadge(quantity)}
-                        <span className="pm-stock-count">{quantity}</span>
                       </div>
                     </td>
                     <td>
-                      <div className="pm-status-group" role="radiogroup" aria-label={`Status for ${product.name}`}>
-                        {['active', 'inactive'].map((status) => {
-                          const checked = status === (active ? 'active' : 'inactive');
-                          return (
-                            <label className="pm-switch-row" key={status}>
-                              <input
-                                type="radio"
-                                name={`status-${product.id}`}
-                                value={status}
-                                checked={checked}
-                                disabled={isBusy}
-                                onChange={() => handleStatusChange(product, status)}
-                              />
-                              <span className={`pm-pill ${checked ? (status === 'active' ? 'active-on' : 'inactive-on') : 'off'}`} aria-hidden="true">
-                                <span className="pm-knob" />
-                              </span>
-                              <span className="pm-switch-text">{status === 'active' ? 'Active' : 'Inactive'}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                      <label className="pm-switch-row">
+                        <input
+                          type="checkbox"
+                          role="switch"
+                          aria-label={`${product.name} active status`}
+                          checked={active}
+                          disabled={isBusy}
+                          onChange={(event) => handleStatusChange(product, event.target.checked ? 'active' : 'inactive')}
+                        />
+                        <span className={`pm-pill ${active ? 'active-on' : 'off'}`} aria-hidden="true">
+                          <span className="pm-knob" />
+                        </span>
+                        <span className="pm-switch-text">{active ? 'Active' : 'Inactive'}</span>
+                      </label>
                     </td>
                     <td>
                       <div className="pm-actions">
@@ -477,6 +654,152 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                 <div className="pm-form-group">
                   <label htmlFor="pm-product-stock">Stock Quantity *</label>
                   <input id="pm-product-stock" type="number" name="stock_quantity" min="0" step="1" placeholder="e.g., 45" value={formData.stock_quantity} onChange={handleChange} required />
+                </div>
+              </div>
+              <div className="pm-form-row pm-category-pack-row">
+                <div className="pm-form-group">
+                  <label htmlFor="pm-product-category">Product Category *</label>
+                  <div className="pm-category-control">
+                    <div className="pm-category-dropdown-wrap" ref={categoryDropdownRef}>
+                    <button
+                      type="button"
+                      id="pm-product-category"
+                      className="pm-category-trigger"
+                      aria-haspopup="dialog"
+                      aria-expanded={isCategoryDropdownOpen}
+                      aria-label={`Product Category: ${selectedCategory?.name || 'Choose a category'}`}
+                      disabled={isLoadingCategories || isCategoryBusy || isSaving}
+                      onClick={() => setIsCategoryDropdownOpen((open) => !open)}
+                    >
+                      <span>{selectedCategory?.name || 'Choose a category'}</span>
+                      <span className="pm-category-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    {isCategoryDropdownOpen && (
+                      <div className="pm-category-menu" role="dialog" aria-label="Product categories">
+                        <button
+                          type="button"
+                          className="pm-category-add-option"
+                          onClick={() => {
+                            setIsCategoryDropdownOpen(false);
+                            setIsAddingCategory(true);
+                            setCategoryError('');
+                            setCategoryMessage('');
+                          }}
+                        >
+                          + Add category
+                        </button>
+                        <div className="pm-category-menu-heading">Choose a category</div>
+                        {categories.map((category) => (
+                          <div className="pm-category-option-row" key={category.id}>
+                            <button
+                              type="button"
+                              className={`pm-category-option ${String(category.id) === String(formData.category_id) ? 'selected' : ''}`}
+                              aria-pressed={String(category.id) === String(formData.category_id)}
+                              onClick={() => {
+                                setFormData((current) => ({ ...current, category_id: String(category.id) }));
+                                setCategoryError('');
+                                setCategoryMessage('');
+                                setIsCategoryDropdownOpen(false);
+                                setIsAddingCategory(false);
+                                setNewCategoryName('');
+                              }}
+                            >
+                              {category.name}
+                            </button>
+                            <button
+                              type="button"
+                              className="pm-category-delete"
+                              aria-label={`Delete ${category.name}`}
+                              title={`Delete ${category.name}`}
+                              disabled={isCategoryBusy || isSaving}
+                              onClick={() => handleDeleteCategory(category)}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        {categories.length === 0 && (
+                          <p className="pm-category-empty">
+                            {isLoadingCategories ? 'Loading categories…' : 'No categories yet.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    </div>
+                    {isAddingCategory && (
+                      <div className="pm-category-add-row">
+                        <input
+                          type="text"
+                          aria-label="New category name"
+                          placeholder="Type a category name"
+                          value={newCategoryName}
+                          maxLength="50"
+                          disabled={isCategoryBusy || isSaving}
+                          onChange={(event) => setNewCategoryName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              handleCreateCategory();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="pm-category-save"
+                          onClick={handleCreateCategory}
+                          disabled={isCategoryBusy || isSaving || !newCategoryName.trim()}
+                        >
+                          {isCategoryBusy ? 'Adding…' : '+ Add'}
+                        </button>
+                        <button
+                          type="button"
+                          className="pm-category-cancel"
+                          onClick={() => {
+                            setIsAddingCategory(false);
+                            setNewCategoryName('');
+                            setCategoryError('');
+                          }}
+                          disabled={isCategoryBusy || isSaving}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                    {categoryError && <p className="pm-category-feedback error" role="alert">{categoryError}</p>}
+                    {categoryLoadError && <p className="pm-category-feedback error" role="alert">{categoryLoadError}</p>}
+                    {categoryMessage && <p className="pm-category-feedback success" role="status">{categoryMessage}</p>}
+                  </div>
+                </div>
+                <div className="pm-form-group">
+                  <label htmlFor="pm-pack-size">Per Pack *</label>
+                  <select
+                    id="pm-pack-size"
+                    className="pm-pack-size-select"
+                    value={isCustomPackSize ? 'custom' : formData.pack_size}
+                    onChange={handlePackSizeChange}
+                    disabled={isSaving}
+                    required
+                  >
+                    {PACK_SIZE_OPTIONS.map((packSize) => (
+                      <option key={packSize} value={packSize}>{packSize}</option>
+                    ))}
+                    <option value="custom">Custom size…</option>
+                  </select>
+                  {isCustomPackSize && (
+                    <input
+                      className="pm-pack-size-custom"
+                      type="text"
+                      aria-label="Custom pack size"
+                      placeholder="e.g., 750 g"
+                      value={formData.pack_size}
+                      maxLength="20"
+                      disabled={isSaving}
+                      onChange={handleChange}
+                      name="pack_size"
+                      required
+                    />
+                  )}
+                  <small className="pm-pack-size-hint">Displayed on the product catalog</small>
                 </div>
               </div>
               <div className="pm-form-group">

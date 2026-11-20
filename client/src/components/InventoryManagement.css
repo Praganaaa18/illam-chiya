@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1e2d24;
+  font-family: var(--illam-font-body);
+  color: var(--illam-ink);
 }
 
 /* KPI Summary Cards */
@@ -14,9 +14,9 @@
 }
 
 .inv-kpi-card {
-  background-color: #f3efe4;
-  border: 1px solid #e2dccb;
-  border-radius: 12px;
+  background-color: var(--illam-surface);
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
   padding: 18px 20px;
   display: flex;
   justify-content: space-between;
@@ -49,6 +49,10 @@
   font-size: 0.95rem;
 }
 
+.kpi-icon-box .illam-icon {
+  color: var(--illam-forest-800);
+}
+
 .kpi-icon-box.green { background-color: #d8e6dc; }
 .kpi-icon-box.amber { background-color: #f7e6c4; }
 .kpi-icon-box.gold { background-color: #f3e2c7; }
@@ -56,9 +60,9 @@
 
 /* Main Table Card */
 .inv-main-card {
-  background-color: #f5f1e6;
-  border: 1px solid #e2dccb;
-  border-radius: 14px;
+  background-color: var(--illam-surface);
+  border: 1px solid var(--illam-border);
+  border-radius: var(--illam-radius-card);
   padding: 22px;
   box-shadow: 0 4px 12px rgba(30, 45, 36, 0.04);
 }
@@ -172,6 +176,9 @@
 }
 
 .inv-prod-cat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   color: #556b5d;
   margin-top: 2px;
