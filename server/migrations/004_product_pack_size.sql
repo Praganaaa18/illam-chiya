@@ -1,0 +1,2 @@
+ALTER TABLE products
+ADD COLUMN pack_size VARCHAR(20) NOT NULL DEFAULT '100 g';

@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const financeRoutes = require("./routes/financeRoutes"); // <-- 1. IMPORT FINANCE ROUTES HERE
+const notificationRoutes = require("./routes/notificationRoutes");
 const sellerRoutes = require("./routes/sellerRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/finance", financeRoutes); // <-- 2. MOUNT FINANCE ROUTE HERE
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/inventory", inventoryRoutes);

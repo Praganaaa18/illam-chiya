@@ -67,7 +67,7 @@ exports.createOrder = async (req, res) => {
 
     for (const [productId, quantity] of [...quantitiesByProduct].sort(([left], [right]) => left - right)) {
       const [products] = await connection.execute(
-        `SELECT id, seller_id, price, stock_quantity, is_active
+        `SELECT id, seller_id, price, pack_size, stock_quantity, is_active
          FROM products
          WHERE id = ?
          FOR UPDATE`,
@@ -98,7 +98,13 @@ exports.createOrder = async (req, res) => {
 
       const price = Number(product.price);
       subtotal += price * quantity;
-      verifiedItems.push({ productId, quantity, sellerId: product.seller_id, price });
+      verifiedItems.push({
+        productId,
+        quantity,
+        sellerId: product.seller_id,
+        price,
+        packSize: product.pack_size || '100 g',
+      });
     }
 
     const deliveryCharge = 120;
@@ -123,11 +129,37 @@ exports.createOrder = async (req, res) => {
 
     for (const item of verifiedItems) {
       await connection.execute(
-        `INSERT INTO order_items (order_id, product_id, seller_id, quantity, price) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [newOrderId, item.productId, item.sellerId, item.quantity, item.price]
+        `INSERT INTO order_items (order_id, product_id, seller_id, quantity, price, pack_size)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [newOrderId, item.productId, item.sellerId, item.quantity, item.price, item.packSize]
       );
     }
+
+    const sellerIds = new Set(verifiedItems.map((item) => Number(item.sellerId)));
+    for (const sellerId of sellerIds) {
+      await connection.execute(
+        `INSERT INTO notifications
+         (recipient_id, recipient_role, title, message, link)
+         VALUES (?, 'seller', ?, ?, ?)`,
+        [
+          sellerId,
+          'New order received',
+          `Order #${newOrderId} has been placed and needs processing.`,
+          '/seller/dashboard?tab=orders',
+        ]
+      );
+    }
+    await connection.execute(
+      `INSERT INTO notifications
+       (recipient_id, recipient_role, title, message, link)
+       VALUES (?, 'buyer', ?, ?, ?)`,
+      [
+        validBuyerId,
+        'Order placed successfully',
+        `Your order #${newOrderId} has been received and is awaiting seller confirmation.`,
+        `/order-tracking?orderId=${newOrderId}`,
+      ]
+    );
 
     await connection.commit();
 
@@ -178,7 +210,7 @@ exports.getBuyerOrders = async (req, res) => {
           LIMIT 1
         ) AS product_image,
         GROUP_CONCAT(
-          CONCAT(p.name, ' (x', oi.quantity, ')')
+          CONCAT(p.name, ' (', oi.pack_size, ' x', oi.quantity, ')')
           ORDER BY p.name
           SEPARATOR ', '
         ) AS items_summary
@@ -218,7 +250,7 @@ exports.getSellerOrders = async (req, res) => {
         o.created_at,
         u.full_name AS buyer_name,
         u.phone AS phone,
-        GROUP_CONCAT(CONCAT(p.name, ' (x', oi.quantity, ')') SEPARATOR ', ') AS items_summary
+        GROUP_CONCAT(CONCAT(p.name, ' (', oi.pack_size, ' x', oi.quantity, ')') SEPARATOR ', ') AS items_summary
       FROM orders o
       JOIN users u ON o.buyer_id = u.id
       JOIN order_items oi ON o.id = oi.order_id
@@ -281,7 +313,7 @@ exports.updateOrderStatus = async (req, res) => {
     await connection.beginTransaction();
 
     const [orders] = await connection.execute(
-      `SELECT o.order_status, o.carrier_name, o.tracking_number
+      `SELECT o.buyer_id, o.order_status, o.carrier_name, o.tracking_number
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
        WHERE o.id = ? AND oi.seller_id = ?
@@ -384,6 +416,24 @@ exports.updateOrderStatus = async (req, res) => {
          VALUES (?, ?, ?)`,
         [id, statusToSave, descriptions[statusToSave]]
       );
+      const notificationTitle = statusToSave === 'shipped'
+        ? 'Your order is on the way'
+        : statusToSave === 'delivered'
+          ? 'Your order was delivered'
+          : statusToSave === 'cancelled'
+            ? 'Your order was cancelled'
+            : 'Your order was updated';
+      await connection.execute(
+        `INSERT INTO notifications
+         (recipient_id, recipient_role, title, message, link)
+         VALUES (?, 'buyer', ?, ?, ?)`,
+        [
+          orders[0].buyer_id,
+          notificationTitle,
+          `Order #${id} is now ${statusToSave}.`,
+          `/order-tracking?orderId=${id}`,
+        ]
+      );
     }
 
     await connection.commit();
@@ -442,7 +492,7 @@ exports.getOrderTracking = async (req, res) => {
     }
 
     const itemQuery = `
-      SELECT p.name, oi.quantity
+      SELECT p.name, oi.quantity, oi.pack_size
       FROM order_items oi
       JOIN products p ON p.id = oi.product_id
       WHERE oi.order_id = ?${sellerId ? ' AND oi.seller_id = ?' : ''}

@@ -14,6 +14,8 @@ const product = {
   elevation: '5,000 ft',
   process_type: 'Orthodox',
   category_id: 1,
+  category: 'Orthodox Tea',
+  pack_size: '500 g',
   is_active: 1,
 };
 
@@ -46,7 +48,7 @@ test('opening a catalog product displays its details page', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Ilam First Flush' })).toBeInTheDocument();
   expect(screen.getByText('A floral spring tea.')).toBeInTheDocument();
-  expect(screen.getByText('Rs. 550')).toBeInTheDocument();
+  expect(screen.getByText(/Rs\. 550 \/ 500 g/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /back to teas/i })).toBeInTheDocument();
   expect(global.fetch).toHaveBeenCalledWith(
     'http://localhost:5000/api/products',
@@ -61,4 +63,29 @@ test('opening a catalog product displays its details page', async () => {
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('dialog', { name: 'Ilam First Flush image viewer' })).not.toBeInTheDocument();
   expect(imageButton).toHaveFocus();
+});
+
+test('catalog cards show the seller-defined pack size and add it to the cart', () => {
+  const onAddToCart = jest.fn();
+  localStorage.setItem('token', 'buyer-token');
+  localStorage.setItem('userRole', 'buyer');
+
+  render(
+    <MemoryRouter>
+      <ProductCard product={product} onAddToCart={onAddToCart} />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByText('500 g')).toBeInTheDocument();
+  expect(screen.getByText('Per Pack Size')).toBeInTheDocument();
+  expect(screen.getByText('Orthodox Tea')).toBeInTheDocument();
+  expect(screen.queryByText('100 g')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
+  expect(onAddToCart).toHaveBeenCalledWith(
+    expect.objectContaining({ pack_size: '500 g' }),
+    1
+  );
+
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
 });

@@ -90,7 +90,7 @@ const Cart = () => {
                 />
                 <div className="cart-item-details">
                   <h3>{item.name}</h3>
-                  <p className="item-price">Rs. {item.price} / pack</p>
+                  <p className="item-price">Rs. {item.price} / {item.pack_size || '100 g'}</p>
                 </div>
 
                 <div className="qty-controls">

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import './Navbar.css';
+import NotificationBell from './Notificationbell';
 
 const Navbar = ({
   cartCount = 0,
@@ -85,6 +86,9 @@ const Navbar = ({
         <button type="button" onClick={handleCartNavigation} className="nav-button">
           🛒 Cart <span className="cart-badge">{cartCount}</span>
         </button>
+        {token && localStorage.getItem('userRole') === 'buyer' && (
+          <NotificationBell role="buyer" />
+        )}
 
         <button
           type="button"

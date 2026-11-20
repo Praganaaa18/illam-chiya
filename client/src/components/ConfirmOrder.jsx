@@ -120,7 +120,8 @@ const ConfirmOrder = () => {
       items: cartItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        pack_size: item.pack_size || '100 g',
       })),
       shipping_address: `${shippingDetails.address}, ${shippingDetails.city}`,
       phone: shippingDetails.phone,
@@ -305,7 +306,7 @@ const ConfirmOrder = () => {
                 />
                 <div className="summary-item-info">
                   <h4>{item.name}</h4>
-                  <span>Qty: {item.quantity}</span>
+                  <span>{item.pack_size || '100 g'} · Qty: {item.quantity}</span>
                 </div>
                 <span className="summary-item-price">Rs. {item.price * item.quantity}</span>
               </div>

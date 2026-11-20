@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import ProductManagement from './ProductManagement';
 import InventoryManagement from './InventoryManagement';
 import OrdersAndShipping from './OrdersAndShipping';
 import BillingsAndPayouts from './BillingsandPayouts';
 import FarmSettings from './FarmSettings';
 import SellerSidebar from './SellerSidebar';
+import NotificationBell from './Notificationbell';
 import './SellerDashboard.css';
 import axios from 'axios';
 
@@ -13,7 +14,9 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() => requestedTab || initialTab);
 
   // Dummy seller state (or load from localStorage/Auth Context)
   // const [sellerInfo] = useState({
@@ -31,6 +34,19 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   });
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const validTabs = ['overview', 'products', 'inventory', 'orders', 'billing', 'settings'];
+    setActiveTab(validTabs.includes(requestedTab) ? requestedTab : initialTab);
+  }, [initialTab, requestedTab]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    const nextParams = new URLSearchParams(searchParams);
+    if (tab === 'overview') nextParams.delete('tab');
+    else nextParams.set('tab', tab);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -102,7 +118,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
     <div className="matcha-dashboard-container">
       <SellerSidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         onLogout={handleLogout}
       />
 
@@ -122,6 +138,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
           </div>
 
           <div className="topbar-right">
+            <NotificationBell role="seller" />
             <span className="verification-pill">
               {sellerInfo.isVerified ? '✅ Verified Seller' : '⏳ Pending Verification'}
             </span>

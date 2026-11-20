@@ -1,5 +1,11 @@
 const db = require('../config/db');
 const isSeller = (req) => req.user?.role === 'seller';
+const parsePackSize = (value) => {
+    if (typeof value !== 'string') return null;
+    const match = value.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
+    if (!match) return null;
+    return `${Number(match[1])} ${match[2].toLowerCase()}`;
+};
 
 // Helper function to normalize and format image URLs for backend responses
 const formatImageUrl = (url) => {
@@ -15,7 +21,12 @@ const formatImageUrl = (url) => {
 // GET ALL PRODUCTS (Home Page / Public Catalog - Active Only)
 const getAllProducts = async (req, res) => {
     try {
-        const [products] = await db.execute(`SELECT * FROM products WHERE is_active = TRUE`);
+        const [products] = await db.execute(`
+            SELECT p.*, c.name AS category
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            WHERE p.is_active = TRUE
+        `);
         
         // Ensure image URLs are correctly formatted for the frontend
         const formattedProducts = products.map((product) => ({
@@ -40,17 +51,26 @@ const createProduct = async (req, res) => {
         name, 
         description, 
         price, 
+        pack_size,
         stock_quantity, 
         image_url, 
         elevation, 
         process_type, 
         status 
     } = req.body || {};
+    const categoryId = Number(category_id);
+    const packSize = parsePackSize(pack_size);
 
     const isActive = (status === 'inactive' || status === false || status === 0) ? 0 : 1;
     const formattedImageUrl = formatImageUrl(image_url);
     const parsedPrice = Number(price);
     const parsedStock = Number(stock_quantity);
+    if (!Number.isSafeInteger(categoryId) || categoryId <= 0) {
+        return res.status(400).json({ error: 'Select a valid product category.' });
+    }
+    if (!packSize) {
+        return res.status(400).json({ error: 'A pack size such as 100 g or 1 kg is required.' });
+    }
     if (typeof name !== 'string' || !name.trim() || price === '' || price === undefined || price === null ||
         !Number.isFinite(parsedPrice) || parsedPrice < 0 ||
         parsedPrice > 99999999.99 ||
@@ -61,17 +81,22 @@ const createProduct = async (req, res) => {
 
     const query = `
         INSERT INTO products 
-        (seller_id, category_id, name, description, price, stock_quantity, image_url, elevation, process_type, is_active) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (seller_id, category_id, name, description, price, pack_size, stock_quantity, image_url, elevation, process_type, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     try {
+        const [categories] = await db.execute('SELECT id FROM categories WHERE id = ?', [categoryId]);
+        if (categories.length === 0) {
+            return res.status(400).json({ error: 'Select a valid product category.' });
+        }
         const [result] = await db.execute(query, [
             req.user.id,
-            category_id || 1, 
+            categoryId,
             name, 
             description || '', 
             parsedPrice,
+            packSize,
             parsedStock,
             formattedImageUrl, 
             elevation || '5,000 ft', 
@@ -94,7 +119,12 @@ const getSellerProducts = async (req, res) => {
         return res.status(403).json({ error: 'You can only view your own products.' });
     }
     try {
-        const [products] = await db.execute(`SELECT * FROM products WHERE seller_id = ?`, [sellerId]);
+        const [products] = await db.execute(`
+            SELECT p.*, c.name AS category
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            WHERE p.seller_id = ?
+        `, [sellerId]);
         
         const formattedProducts = products.map((product) => ({
             ...product,
@@ -113,10 +143,17 @@ const updateProduct = async (req, res) => {
         return res.status(403).json({ error: 'Seller access is required.' });
     }
     const { id } = req.params;
-    const { name, description, price, stock_quantity, image_url, elevation, process_type, status } = req.body || {};
+    const { category_id, name, description, price, pack_size, stock_quantity, image_url, elevation, process_type, status } = req.body || {};
 
     const parsedPrice = Number(price);
     const parsedStock = Number(stock_quantity);
+    if (pack_size !== undefined && !parsePackSize(pack_size)) {
+        return res.status(400).json({ error: 'A pack size such as 100 g or 1 kg is required.' });
+    }
+    if (category_id !== undefined &&
+        (!Number.isSafeInteger(Number(category_id)) || Number(category_id) <= 0)) {
+        return res.status(400).json({ error: 'Select a valid product category.' });
+    }
     if (typeof name !== 'string' || !name.trim() || price === '' || price === undefined || price === null ||
         !Number.isFinite(parsedPrice) || parsedPrice < 0 ||
         parsedPrice > 99999999.99 ||
@@ -133,12 +170,22 @@ const updateProduct = async (req, res) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
         const [existing] = await connection.execute(
-            'SELECT id FROM products WHERE id = ? AND seller_id = ? FOR UPDATE',
+            'SELECT id, category_id, pack_size FROM products WHERE id = ? AND seller_id = ? FOR UPDATE',
             [id, req.user.id]
         );
         if (existing.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Product not found' });
+        }
+        const categoryId = category_id === undefined ? existing[0].category_id : Number(category_id);
+        const packSize = pack_size === undefined ? existing[0].pack_size : parsePackSize(pack_size);
+        const [categories] = await connection.execute(
+            'SELECT id FROM categories WHERE id = ?',
+            [categoryId]
+        );
+        if (categories.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ error: 'Select a valid product category.' });
         }
 
         const [reservedRows] = await connection.execute(
@@ -158,12 +205,14 @@ const updateProduct = async (req, res) => {
 
         await connection.execute(`
             UPDATE products
-            SET name = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, elevation = ?, process_type = ?, is_active = ?
+            SET category_id = ?, name = ?, description = ?, price = ?, pack_size = ?, stock_quantity = ?, image_url = ?, elevation = ?, process_type = ?, is_active = ?
             WHERE id = ? AND seller_id = ?
         `, [
+            categoryId,
             name, 
             description || '', 
             parsedPrice,
+            packSize,
             parsedStock,
             formattedImageUrl, 
             elevation || '5,000 ft', 
@@ -181,6 +230,93 @@ const updateProduct = async (req, res) => {
         return res.status(500).json({ error: 'Failed to update product.' });
     } finally {
         if (connection) connection.release();
+    }
+};
+
+const getCategories = async (req, res) => {
+    if (!isSeller(req)) {
+        return res.status(403).json({ error: 'Seller access is required.' });
+    }
+
+    try {
+        const [categories] = await db.execute(
+            'SELECT id, name FROM categories ORDER BY name ASC'
+        );
+        return res.json(categories);
+    } catch (err) {
+        console.error('Failed to load product categories:', err);
+        return res.status(500).json({ error: 'Failed to load categories.' });
+    }
+};
+
+const createCategory = async (req, res) => {
+    if (!isSeller(req)) {
+        return res.status(403).json({ error: 'Seller access is required.' });
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    if (!name || name.length > 50) {
+        return res.status(400).json({ error: 'A category name of 1 to 50 characters is required.' });
+    }
+
+    try {
+        const [existing] = await db.execute(
+            'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1',
+            [name]
+        );
+        if (existing.length > 0) {
+            return res.status(409).json({ error: 'A category with this name already exists.' });
+        }
+
+        const [result] = await db.execute(
+            'INSERT INTO categories (name) VALUES (?)',
+            [name]
+        );
+        return res.status(201).json({ id: result.insertId, name });
+    } catch (err) {
+        console.error('Failed to create product category:', err);
+        return res.status(500).json({ error: 'Failed to create category.' });
+    }
+};
+
+const deleteCategory = async (req, res) => {
+    if (!isSeller(req)) {
+        return res.status(403).json({ error: 'Seller access is required.' });
+    }
+
+    const categoryId = Number(req.params.categoryId);
+    if (!Number.isSafeInteger(categoryId) || categoryId <= 0) {
+        return res.status(400).json({ error: 'A valid category ID is required.' });
+    }
+
+    try {
+        const [products] = await db.execute(
+            'SELECT id FROM products WHERE category_id = ? LIMIT 1',
+            [categoryId]
+        );
+        if (products.length > 0) {
+            return res.status(409).json({
+                error: 'This category is assigned to products. Reassign or delete those products before deleting it.',
+            });
+        }
+
+        const [result] = await db.execute(
+            'DELETE FROM categories WHERE id = ?',
+            [categoryId]
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Category not found.' });
+        }
+
+        return res.json({ message: 'Category deleted successfully.', id: categoryId });
+    } catch (err) {
+        console.error('Failed to delete product category:', err);
+        if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+            return res.status(409).json({
+                error: 'This category is assigned to products. Reassign or delete those products before deleting it.',
+            });
+        }
+        return res.status(500).json({ error: 'Failed to delete category.' });
     }
 };
 
@@ -258,6 +394,9 @@ const toggleProductStatus = async (req, res) => {
 
 module.exports = {
     getAllProducts,
+    getCategories,
+    createCategory,
+    deleteCategory,
     createProduct,
     getSellerProducts,
     updateProduct,
