@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import Navbar from './Navbar';
 import './ProductPage.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -136,25 +137,7 @@ const ProductPage = () => {
   return (
     <div className="page-wrapper">
       <div className="store-container">
-        <header className="navbar">
-          <button type="button" className="brand-logo" onClick={() => navigate('/')}>
-            <span className="leaf-icon">🌿</span>
-            <span>ILAM CHIYA</span>
-          </button>
-
-          <nav className="nav-links">
-            <button type="button" className="nav-item" onClick={() => navigate('/')}>
-              <span className="nav-icon">🏠</span> Home
-            </button>
-            <button type="button" className="nav-item" onClick={() => navigate('/cart')}>
-              <span className="nav-icon">🛒</span> Cart
-              <span className="cart-badge">{cartCount}</span>
-            </button>
-            <button type="button" className="nav-item" onClick={() => navigate('/login')}>
-              <span className="nav-icon">👤</span> Account
-            </button>
-          </nav>
-        </header>
+        <Navbar cartCount={cartCount} showSearch={false} />
 
         <main className="main-content">
           <button type="button" className="back-to-products" onClick={() => navigate('/')}>

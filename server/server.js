@@ -1,8 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const db = require("./config/db");
+const { runMigrations } = require("./config/migrations");
 
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
@@ -37,19 +38,28 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Test DB Connection and Start Express Server
-db.getConnection()
-  .then((connection) => {
+// Run pending migrations, then test the connection and start Express.
+async function startServer() {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await runMigrations(connection);
     console.log("Database connected successfully!");
     connection.release();
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  })
-  .catch((err) => {
-    console.error("Database connection error:", err);
-    if (err.code === "ER_ACCESS_DENIED_ERROR") {
-      console.error(
-        "MySQL rejected the configured credentials. Check DB_USER and DB_PASSWORD in server/.env."
-      );
-    }
-    process.exitCode = 1;
-  });
+    connection = null;
+    return app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}`)
+    );
+  } catch (err) {
+    if (connection) connection.release();
+    console.error("Database startup error:", err);
+    await db.end();
+    process.exit(1);
+  }
+}
+
+module.exports = { app, startServer };
+
+if (require.main === module) {
+  startServer();
+}

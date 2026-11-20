@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 // ================= REGISTER CONTROLLER =================
 exports.register = async (req, res) => {
   // Destructure text fields from incoming FormData request
-  const { name, full_name, email, phone, address, pan_vat, password, role } = req.body;
+  const { name, full_name, email, phone, address, delivery_address, pan_vat, password, role } = req.body;
   const userFullName = full_name || name;
 
   // Retrieve file path attached by multer
@@ -24,12 +24,13 @@ exports.register = async (req, res) => {
 
     // Insert user with seller details & document path into database
     await db.query(
-      "INSERT INTO users (full_name, email, phone, address, pan_vat, document_path, password, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users (full_name, email, phone, address, delivery_address, pan_vat, document_path, password, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         userFullName,
         email,
         phone || "",
         address || null,
+        delivery_address || address || null,
         pan_vat || null,
         documentPath,
         hashedPassword,
@@ -67,9 +68,35 @@ exports.login = async (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, name: user.full_name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        address: user.delivery_address || user.address,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const [users] = await db.execute(
+      `SELECT id, full_name, email, phone, address, delivery_address
+       FROM users
+       WHERE id = ?`,
+      [req.user.id]
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User profile not found.' });
+    }
+
+    return res.status(200).json(users[0]);
+  } catch (error) {
+    console.error('Error fetching authenticated profile:', error);
+    return res.status(500).json({ message: 'Failed to fetch profile.' });
   }
 };

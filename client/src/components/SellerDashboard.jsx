@@ -5,14 +5,15 @@ import InventoryManagement from './InventoryManagement';
 import OrdersAndShipping from './OrdersAndShipping';
 import BillingsAndPayouts from './BillingsandPayouts';
 import FarmSettings from './FarmSettings';
+import SellerSidebar from './SellerSidebar';
 import './SellerDashboard.css';
 import axios from 'axios';
 
-const SellerDashboard = () => {
+const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
   // SUBTITLE 1: STATE MANAGEMENT & ROUTING
   // =========================================================================
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Dummy seller state (or load from localStorage/Auth Context)
   // const [sellerInfo] = useState({
@@ -33,6 +34,12 @@ const SellerDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userAddress');
     navigate('/login');
   };
 
@@ -48,12 +55,15 @@ const SellerDashboard = () => {
       const res = await axios.get(`http://localhost:5000/api/sellers/info/${loggedInUserId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const sellerName = res.data.business_name || res.data.full_name || '';
       setSellerInfo({
-        businessName: res.data.business_name || res.data.full_name || '',
+        businessName: sellerName,
         email: res.data.email || '',
         isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
+      if (sellerName) localStorage.setItem('userName', sellerName);
+      if (res.data.email) localStorage.setItem('userEmail', res.data.email);
     } catch (err) {
       console.error('Error fetching seller information:', err);
     }
@@ -69,7 +79,7 @@ const SellerDashboard = () => {
   const renderMainContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <OverviewSection sellerName={sellerInfo.businessName} />;
+        return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
       case 'products':
         return <ProductManagement sellerId={sellerInfo.sellerId} />;
       case 'inventory':
@@ -81,7 +91,7 @@ const SellerDashboard = () => {
       case 'settings':
         return <FarmSettings sellerId={sellerInfo.sellerId} />;
       default:
-        return <OverviewSection sellerName={sellerInfo.businessName} />;
+        return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }
   };
 
@@ -90,64 +100,25 @@ const SellerDashboard = () => {
   // =========================================================================
   return (
     <div className="matcha-dashboard-container">
-      {/* ---------------- SIDEBAR NAVIGATION ---------------- */}
-      <aside className="matcha-sidebar">
-        <div className="brand-logo-section">
-          <h2>🍵 Illam Chiya</h2>
-          <span className="seller-badge">Seller Portal</span>
-        </div>
-
-        <nav className="sidebar-nav">
-          <button
-            className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}>
-            📊 Dashboard Overview
-          </button>
-
-          <button
-            className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
-            onClick={() => setActiveTab('products')}>
-            🍃 Product Management
-          </button>
-
-          <button
-            className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
-            onClick={() => setActiveTab('inventory')}>
-            📋 Inventory Management
-          </button>
-
-          <button
-            className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}>
-            📦 Orders & Shipping
-          </button>
-
-          <button
-            className={`nav-item ${activeTab === 'billing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('billing')}>
-            💳 Billings & Payouts
-          </button>
-
-          <button
-            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}>
-            ⚙️ Farm Settings
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button onClick={handleLogout} className="logout-btn">
-            🚪 Logout
-          </button>
-        </div>
-      </aside>
+      <SellerSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={handleLogout}
+      />
 
       {/* ---------------- RIGHT CONTENT WRAPPER ---------------- */}
       <div className="matcha-main-wrapper">
         {/* TOP HEADER BAR */}
         <header className="matcha-topbar">
           <div className="topbar-left">
-            <h3>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
+            <h3>{{
+              overview: 'Dashboard Overview',
+              products: 'Product Management',
+              inventory: 'Inventory Management',
+              orders: 'Orders & Shipping',
+              billing: 'Billings & Payouts',
+              settings: 'Farm Settings',
+            }[activeTab]}</h3>
           </div>
 
           <div className="topbar-right">
@@ -173,78 +144,140 @@ const SellerDashboard = () => {
 // =========================================================================
 
 // --- View 1: Overview Section ---
-const OverviewSection = ({ sellerName }) => (
-  <div className="view-container">
-    <div className="welcome-banner">
-      <h2>Welcome back, {sellerName}!</h2>
-      <p>Here is an overview of your tea estate sales and active catalog.</p>
+const OverviewSection = ({ sellerName, sellerId }) => {
+  const [overview, setOverview] = useState({
+    deliveredRevenue: 0,
+    activeProducts: 0,
+    totalProducts: 0,
+    pendingOrders: 0,
+    lowStockCount: 0,
+    recentOrders: [],
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!sellerId) return;
+    let isMounted = true;
+
+    const loadOverview = async () => {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      try {
+        const [inventoryResponse, productsResponse, ordersResponse] = await Promise.all([
+          axios.get(`http://localhost:5000/api/inventory`, { params: { seller_id: sellerId }, headers }),
+          axios.get(`http://localhost:5000/api/products/seller/${sellerId}`, { headers }),
+          axios.get(`http://localhost:5000/api/orders`, { params: { seller_id: sellerId }, headers }),
+        ]);
+
+        const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
+        const orders = Array.isArray(ordersResponse.data) ? ordersResponse.data : [];
+        const inventory = inventoryResponse.data || {};
+        const activeProducts = products.filter((product) =>
+          product.is_active === true || product.is_active === 1 || product.is_active === '1',
+        ).length;
+        const pendingOrders = orders.filter((order) =>
+          ['pending', 'processing', 'shipped'].includes(String(order.status).toLowerCase()),
+        ).length;
+
+        if (isMounted) {
+          setOverview({
+            deliveredRevenue: Number(inventory.metrics?.deliveredRevenue) || 0,
+            activeProducts,
+            totalProducts: products.length,
+            pendingOrders,
+            lowStockCount: Number(inventory.metrics?.lowStockCount) || 0,
+            recentOrders: orders.slice(0, 5),
+          });
+        }
+      } catch (error) {
+        console.error('Unable to load seller dashboard overview:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadOverview();
+    return () => {
+      isMounted = false;
+    };
+  }, [sellerId]);
+
+  return (
+    <div className="view-container">
+      <div className="welcome-banner">
+        <h2>Welcome back, {sellerName || 'Seller'}!</h2>
+        <p>Here is an overview of your tea estate sales and active catalog.</p>
+      </div>
+
+      {loading ? (
+        <p className="metric-subtext">Loading dashboard overview...</p>
+      ) : (
+        <>
+          <div className="metrics-grid">
+            <div className="metric-card">
+              <span className="metric-title">Delivered Revenue</span>
+              <h3 className="metric-value">NPR {overview.deliveredRevenue.toLocaleString()}</h3>
+              <span className="metric-trend positive">Completed COD sales</span>
+            </div>
+
+            <div className="metric-card">
+              <span className="metric-title">Active Tea Products</span>
+              <h3 className="metric-value">{overview.activeProducts} Varieties</h3>
+              <span className="metric-subtext">{overview.totalProducts} products in catalog</span>
+            </div>
+
+            <div className="metric-card">
+              <span className="metric-title">Pending Orders</span>
+              <h3 className="metric-value">{overview.pendingOrders} Shipments</h3>
+              <span className="metric-subtext">Requires fulfillment</span>
+            </div>
+
+            <div className="metric-card">
+              <span className="metric-title">Low or Empty Stock</span>
+              <h3 className="metric-value">{overview.lowStockCount} Products</h3>
+              <span className="metric-subtext">Needs inventory review</span>
+            </div>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h4>Recent Orders</h4>
+            </div>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Buyer Name</th>
+                  <th>Tea Variant</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.recentOrders.length ? overview.recentOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>#ILLAM-{order.id}</td>
+                    <td>{order.buyer_name || 'Unknown buyer'}</td>
+                    <td>{order.items_summary || 'Tea order'}</td>
+                    <td>NPR {Number(order.total_price || 0).toLocaleString()}</td>
+                    <td>
+                      <span className={`status-badge ${String(order.status).toLowerCase() === 'delivered' ? 'completed' : 'pending'}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="5">No orders have been placed yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
-
-    {/* Metric Summary Cards */}
-    <div className="metrics-grid">
-      <div className="metric-card">
-        <span className="metric-title">Total Revenue</span>
-        <h3 className="metric-value">NPR 145,200</h3>
-        <span className="metric-trend positive">+12.5% this month</span>
-      </div>
-
-      <div className="metric-card">
-        <span className="metric-title">Active Tea Products</span>
-        <h3 className="metric-value">8 Varieties</h3>
-        <span className="metric-subtext">2 out of stock</span>
-      </div>
-
-      <div className="metric-card">
-        <span className="metric-title">Pending Orders</span>
-        <h3 className="metric-value">14 Shipments</h3>
-        <span className="metric-subtext">Requires dispatch</span>
-      </div>
-
-      <div className="metric-card">
-        <span className="metric-title">Seller Rating</span>
-        <h3 className="metric-value">4.9 / 5.0</h3>
-        <span className="metric-subtext">Based on 86 reviews</span>
-      </div>
-    </div>
-
-    {/* Recent Activity Table */}
-    <div className="dashboard-card">
-      <div className="card-header">
-        <h4>Recent Orders</h4>
-      </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Buyer Name</th>
-            <th>Tea Variant</th>
-            <th>Amount</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>#ILLAM-1092</td>
-            <td>Sujan Shrestha</td>
-            <td>First Flush Orthodox (500g)</td>
-            <td>NPR 2,400</td>
-            <td>
-              <span className="status-badge pending">Pending Dispatch</span>
-            </td>
-          </tr>
-          <tr>
-            <td>#ILLAM-1088</td>
-            <td>Anita Rai</td>
-            <td>Special White Tea (250g)</td>
-            <td>NPR 1,850</td>
-            <td>
-              <span className="status-badge completed">Delivered</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
+  );
+};
 
 export default SellerDashboard;

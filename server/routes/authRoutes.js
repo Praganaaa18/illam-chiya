@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { register, login } = require('../controllers/authController');
+const { register, login, getProfile } = require('../controllers/authController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 // ================= FILE STORAGE CONFIGURATION =================
 const uploadDir = path.join(__dirname, '../uploads');
@@ -25,5 +26,6 @@ const upload = multer({ storage });
 // 'document' matches the key name sent from RegisterSeller.jsx FormData
 router.post('/register', upload.single('document'), register);
 router.post('/login', login);
+router.get('/me', authMiddleware, getProfile);
 
 module.exports = router;

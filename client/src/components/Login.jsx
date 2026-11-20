@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import './Login.css';
 
@@ -12,6 +12,8 @@ const Login = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -42,6 +44,15 @@ const Login = () => {
 
     // Trigger validation
     if (!validateForm()) {
+      if (!email.trim()) {
+        emailInputRef.current?.focus();
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        emailInputRef.current?.focus();
+      } else if (!password) {
+        passwordInputRef.current?.focus();
+      } else if (password.length < 6) {
+        passwordInputRef.current?.focus();
+      }
       return;
     }
 
@@ -67,6 +78,10 @@ const Login = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('userRole', accountRole);
       localStorage.setItem('userId', data.user?.id);
+      localStorage.setItem('userName', data.user?.name || data.user?.email || 'User');
+      localStorage.setItem('userEmail', data.user?.email || '');
+      localStorage.setItem('userPhone', data.user?.phone || '');
+      localStorage.setItem('userAddress', data.user?.address || '');
 
       if (accountRole === 'seller') {
         navigate('/seller/dashboard');
@@ -159,6 +174,7 @@ const Login = () => {
             <label>Email Address</label>
             <div className={`input-wrapper ${validationErrors.email ? 'input-error' : ''}`}>
               <input
+                ref={emailInputRef}
                 type="email"
                 value={email}
                 onChange={(e) => {
@@ -186,6 +202,7 @@ const Login = () => {
             <label>Password</label>
             <div className={`input-wrapper ${validationErrors.password ? 'input-error' : ''}`}>
               <input
+                ref={passwordInputRef}
                 type="password"
                 value={password}
                 onChange={(e) => {

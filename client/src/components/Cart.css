@@ -5,7 +5,6 @@
     url('https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=1600&auto=format&fit=crop');
   background-size: cover;
   background-position: center;
-  padding: 42px 5%;
   font-family: 'Georgia', serif;
   color: #2d4536;
   box-sizing: border-box;
@@ -13,7 +12,8 @@
 
 .cart-header {
   max-width: 1180px;
-  margin: 0 auto 26px;
+  margin: 0 auto;
+  padding: 42px 5% 26px;
 }
 
 .back-link {
@@ -28,6 +28,26 @@
   border: 1px solid rgba(178, 180, 160, 0.55);
   border-radius: 999px;
   box-shadow: 0 5px 16px rgba(36, 57, 44, 0.06);
+}
+
+.back-link svg,
+.back-cart-link svg,
+.success-back-home svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 7px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 0.18s ease;
+}
+
+.back-link:hover svg,
+.back-cart-link:hover svg,
+.success-back-home:hover svg {
+  transform: translateX(-3px);
 }
 
 .cart-header h1 {
@@ -63,6 +83,8 @@
   gap: 28px;
   max-width: 1180px;
   margin: 0 auto;
+  padding: 0 5%;
+  box-sizing: border-box;
 }
 
 .cart-items-list {
@@ -222,10 +244,14 @@
 
 @media (max-width: 768px) {
   .cart-container {
+    padding: 0;
+  }
+  .cart-header {
     padding: 24px 16px;
   }
   .cart-grid {
     grid-template-columns: 1fr;
+    padding: 0 16px 24px;
   }
   .cart-summary-card {
     position: static;

@@ -131,6 +131,7 @@
 
 .ledger-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.9rem;

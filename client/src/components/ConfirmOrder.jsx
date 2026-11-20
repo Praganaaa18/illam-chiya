@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
+import Navbar from './Navbar';
 import './ConfirmOrder.css';
 
 const ConfirmOrder = () => {
@@ -46,6 +47,37 @@ const ConfirmOrder = () => {
     } else {
       setCartItems(savedCart);
     }
+
+    const fallbackName = localStorage.getItem('userName') || '';
+    const fallbackPhone = localStorage.getItem('userPhone') || '';
+    const fallbackAddress = localStorage.getItem('userAddress') || '';
+    setShippingDetails((current) => ({
+      ...current,
+      fullName: fallbackName,
+      phone: fallbackPhone,
+      address: fallbackAddress,
+    }));
+
+    fetch('http://localhost:5000/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Unable to load account details.');
+        const profileAddress = data.delivery_address || data.address || '';
+        setShippingDetails((current) => ({
+          ...current,
+          fullName: data.full_name || current.fullName,
+          phone: data.phone || current.phone,
+          address: profileAddress || current.address,
+        }));
+        localStorage.setItem('userName', data.full_name || '');
+        localStorage.setItem('userPhone', data.phone || '');
+        localStorage.setItem('userAddress', profileAddress || '');
+      })
+      .catch((profileError) => {
+        console.error('Unable to load checkout profile:', profileError);
+      });
   }, [navigate]);
 
   // Totals Calculation
@@ -132,6 +164,12 @@ const ConfirmOrder = () => {
   if (orderPlaced) {
     return (
       <div className="order-success-page">
+        <Link to="/" className="success-back-home" aria-label="Back to home">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+          <span>Back to Home</span>
+        </Link>
         <div className="success-card">
           <div className="success-icon">🍃</div>
           <h2>Order Confirmed!</h2>
@@ -150,9 +188,15 @@ const ConfirmOrder = () => {
 
   return (
     <div className="confirm-order-container">
+      <Navbar cartCount={cartItems.length} showSearch={false} />
       {/* Header */}
       <div className="checkout-header">
-        <Link to="/cart" className="back-cart-link">← Back to Cart</Link>
+        <Link to="/cart" className="back-cart-link" aria-label="Back to cart">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5m7 7-7-7 7-7" />
+          </svg>
+          <span>Back to Cart</span>
+        </Link>
         <h1>Confirm Your Tea Order</h1>
       </div>
 
