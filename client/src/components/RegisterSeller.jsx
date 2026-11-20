@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
+import {
+  isValidEmail,
+  isValidPanNumber,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from '../utils/validation';
 import './RegisterSeller.css';
 
 const RegisterSeller = () => {
@@ -23,20 +29,22 @@ const RegisterSeller = () => {
   const navigate = useNavigate();
 
   // Validation rules
-  const phoneRegex = /^[0-9]*$/;
+  const phoneCharactersRegex = /^[0-9+()\s-]*$/;
   const alphaNumericRegex = /^[a-zA-Z0-9\s,.-]*$/;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((previous) => ({ ...previous, [name]: value }));
 
     let err = '';
-    if (name === 'phone' && !phoneRegex.test(value)) {
-      err = 'Special characters and letters are not allowed in Contact Phone.';
+    if (name === 'email' && value.trim() && !isValidEmail(value)) {
+      err = 'Enter a valid email address.';
+    } else if (name === 'phone' && !phoneCharactersRegex.test(value)) {
+      err = 'Enter a valid phone number.';
     } else if ((name === 'businessName' || name === 'address') && !alphaNumericRegex.test(value)) {
       err = 'Special characters (like @, #, $, %) are not allowed.';
-    } else if (name === 'panVat' && !alphaNumericRegex.test(value)) {
-      err = 'Special characters are not allowed in PAN / VAT Number.';
+    } else if (name === 'panVat' && !/^[0-9]*$/.test(value)) {
+      err = 'PAN / VAT Number must contain digits only.';
     }
 
     setFieldErrors((prev) => ({ ...prev, [name]: err }));
@@ -50,12 +58,38 @@ const RegisterSeller = () => {
     e.preventDefault();
     setError('');
 
-    // Check if any field has validation errors
-    const hasErrors = Object.values(fieldErrors).some((err) => err !== '');
-    if (hasErrors) {
+    const nextFieldErrors = {};
+    if (!formData.businessName.trim() || !alphaNumericRegex.test(formData.businessName)) {
+      nextFieldErrors.businessName = 'Enter a valid business or farm name.';
+    }
+    if (!formData.email.trim()) {
+      nextFieldErrors.email = 'Email address is required.';
+    } else if (!isValidEmail(formData.email)) {
+      nextFieldErrors.email = 'Enter a valid email address.';
+    }
+    if (!formData.phone.trim()) {
+      nextFieldErrors.phone = 'Phone number is required.';
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      nextFieldErrors.phone = 'Enter a valid Nepal mobile number (10 digits).';
+    }
+    if (!formData.address.trim() || !alphaNumericRegex.test(formData.address)) {
+      nextFieldErrors.address = 'Enter a valid business address.';
+    }
+    if (!isValidPanNumber(formData.panVat)) {
+      nextFieldErrors.panVat = 'Enter a valid 9-digit PAN / VAT number.';
+    }
+    setFieldErrors(nextFieldErrors);
+
+    if (Object.keys(nextFieldErrors).length > 0) {
       return setError('Please correct the invalid fields before submitting.');
     }
 
+    if (formData.password.length < 6) {
+      return setError('Password must be at least 6 characters.');
+    }
+    if (!formData.confirmPassword) {
+      return setError('Please confirm your password.');
+    }
     if (formData.password.trim() !== formData.confirmPassword.trim()) {
       return setError('Passwords do not match.');
     }
@@ -69,10 +103,10 @@ const RegisterSeller = () => {
     try {
       const dataPayload = new FormData();
       dataPayload.append('full_name', formData.businessName);
-      dataPayload.append('email', formData.email);
-      dataPayload.append('phone', formData.phone);
+      dataPayload.append('email', formData.email.trim().toLowerCase());
+      dataPayload.append('phone', normalizePhoneNumber(formData.phone));
       dataPayload.append('address', formData.address);
-      dataPayload.append('pan_vat', formData.panVat);
+      dataPayload.append('pan_vat', formData.panVat.trim());
       dataPayload.append('password', formData.password);
       dataPayload.append('role', 'seller');
       dataPayload.append('document', documentFile);
@@ -106,7 +140,7 @@ const RegisterSeller = () => {
 
         {error && <div className="error-box">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {/* SECTION 1: Business Profile */}
           <div className="form-section-header">
             <h3 className="section-title">Business & Contact Info</h3>
@@ -137,6 +171,7 @@ const RegisterSeller = () => {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.email && <span className="field-error-text">{fieldErrors.email}</span>}
             </div>
 
             <div className="form-group">
@@ -147,7 +182,8 @@ const RegisterSeller = () => {
                 placeholder="98XXXXXXXX"
                 value={formData.phone}
                 onChange={handleChange}
-                maxLength="10"
+                inputMode="tel"
+                maxLength="16"
                 required
               />
               {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
@@ -182,6 +218,8 @@ const RegisterSeller = () => {
                 placeholder="e.g. 600123456"
                 value={formData.panVat}
                 onChange={handleChange}
+                inputMode="numeric"
+                maxLength="9"
                 required
               />
               {fieldErrors.panVat && <span className="field-error-text">{fieldErrors.panVat}</span>}

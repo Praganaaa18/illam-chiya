@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import Navbar from './Navbar';
+import Icon from './Icon';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
@@ -46,6 +47,8 @@ const OrderTracking = () => {
     return savedCart.reduce((total, item) => total + item.quantity, 0);
   });
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedOrderId = searchParams.get('orderId');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -79,6 +82,12 @@ const OrderTracking = () => {
 
     loadOrders();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!requestedOrderId) return;
+    const requestedOrder = orders.find((order) => String(order.id) === requestedOrderId);
+    if (requestedOrder) setSelectedOrderId(requestedOrder.id);
+  }, [orders, requestedOrderId]);
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
   const currentStep = selectedOrder
@@ -226,7 +235,7 @@ const OrderTracking = () => {
                         alt=""
                       />
                     ) : (
-                      <div className="ot-package-thumb ot-package-placeholder" aria-hidden="true">🍃</div>
+                      <div className="ot-package-thumb ot-package-placeholder" aria-hidden="true"><Icon name="leaf" /></div>
                     )}
                     <div className="ot-package-name">{selectedOrder.items_summary || 'Order items'}</div>
                   </div>
@@ -284,7 +293,7 @@ const OrderTracking = () => {
 
             <section className="ot-invoice">
               <div className="ot-invoice-brand">
-                <span>🍃</span>
+                <Icon name="leaf" />
                 <div>
                   <strong>ILLAM CHIYA</strong>
                   <span>Order Invoice</span>

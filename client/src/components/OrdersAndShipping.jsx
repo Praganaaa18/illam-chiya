@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
+import Icon from './Icon';
 import './OrdersAndShipping.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -41,6 +43,7 @@ const OrdersAndShipping = ({ sellerId }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [trackingError, setTrackingError] = useState('');
+  const [shipmentFormError, setShipmentFormError] = useState('');
   const [notice, setNotice] = useState('');
   const trackingRequest = useRef(0);
   const detailsTriggerRef = useRef(null);
@@ -95,6 +98,7 @@ const OrdersAndShipping = ({ sellerId }) => {
     setCarrierNameDraft('');
     setTrackingNumberDraft('');
     setTrackingError('');
+    setShipmentFormError('');
     setTrackingLoading(true);
     try {
       const response = await axios.get(`${API_ORIGIN}/api/orders/${orderId}/tracking`, {
@@ -168,7 +172,20 @@ const OrdersAndShipping = ({ sellerId }) => {
   const handleUpdateShipment = async (event) => {
     event.preventDefault();
     if (!selectedOrder || !token || !shipmentChanged) return;
+    if (statusDraft === 'shipped' && (!carrierNameDraft.trim() || !trackingNumberDraft.trim())) {
+      setShipmentFormError('Carrier name and tracking number are required before marking an order as shipped.');
+      return;
+    }
+    if (Boolean(carrierNameDraft.trim()) !== Boolean(trackingNumberDraft.trim())) {
+      setShipmentFormError('Enter both a carrier name and tracking number, or leave both blank.');
+      return;
+    }
+    if (trackingNumberDraft.trim() && !isValidPhoneNumber(trackingNumberDraft)) {
+      setShipmentFormError('Enter a valid Nepal mobile number for the tracking number (10 digits).');
+      return;
+    }
 
+    setShipmentFormError('');
     setBusy(true);
     setNotice('');
     try {
@@ -177,7 +194,7 @@ const OrdersAndShipping = ({ sellerId }) => {
         {
           status: statusDraft,
           carrier_name: carrierNameDraft.trim(),
-          tracking_number: trackingNumberDraft.trim(),
+          tracking_number: normalizePhoneNumber(trackingNumberDraft),
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -199,7 +216,7 @@ const OrdersAndShipping = ({ sellerId }) => {
     <section className="shipping-page">
       <header className="shipping-heading">
         <div>
-          <h2>📦 Orders &amp; Shipping</h2>
+          <h2><Icon name="package" />Orders &amp; Shipping</h2>
           <p>Review incoming purchases, prepare packages, and keep buyers updated as orders move.</p>
         </div>
         <button type="button" className="shipping-refresh" onClick={fetchOrders} disabled={loading}>
@@ -232,7 +249,11 @@ const OrdersAndShipping = ({ sellerId }) => {
         </div>
       )}
 
-      <div className={`shipping-workspace ${isShipmentDetailsOpen && selectedOrder ? 'has-details' : ''}`}>
+      <div
+        className={`shipping-workspace ${isShipmentDetailsOpen && selectedOrder ? 'has-details' : ''}`}
+        role="region"
+        aria-label="Orders and shipment workspace"
+      >
         <div className="shipping-table-card">
           {loading ? (
             <div className="shipping-empty" role="status">Loading orders…</div>
@@ -349,13 +370,16 @@ const OrdersAndShipping = ({ sellerId }) => {
               </ol>
             )}
 
-            <form className="shipping-update-form" onSubmit={handleUpdateShipment}>
+            <form className="shipping-update-form" onSubmit={handleUpdateShipment} noValidate>
               <label htmlFor="shipping-status">Update shipment status</label>
               <div className="shipping-update-controls">
                 <select
                   id="shipping-status"
                   value={statusDraft || selectedOrder.status || 'pending'}
-                  onChange={(event) => setStatusDraft(event.target.value)}
+                  onChange={(event) => {
+                    setStatusDraft(event.target.value);
+                    setShipmentFormError('');
+                  }}
                   disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}>
                   {availableStatuses.map((status) => (
                     <option key={status} value={status}>{STATUS_LABELS[status]}</option>
@@ -368,7 +392,10 @@ const OrdersAndShipping = ({ sellerId }) => {
                   id="shipping-carrier-name"
                   type="text"
                   value={carrierNameDraft}
-                  onChange={(event) => setCarrierNameDraft(event.target.value)}
+                  onChange={(event) => {
+                    setCarrierNameDraft(event.target.value);
+                    setShipmentFormError('');
+                  }}
                   maxLength={120}
                   autoComplete="organization"
                   disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
@@ -377,15 +404,20 @@ const OrdersAndShipping = ({ sellerId }) => {
                 <label htmlFor="shipping-tracking-number">Tracking number</label>
                 <input
                   id="shipping-tracking-number"
-                  type="text"
-                  inputMode="numeric"
+                  type="tel"
                   value={trackingNumberDraft}
-                  onChange={(event) => setTrackingNumberDraft(event.target.value)}
-                  maxLength={100}
+                  placeholder="e.g. 9801234567"
+                  onChange={(event) => {
+                    setTrackingNumberDraft(event.target.value);
+                    setShipmentFormError('');
+                  }}
+                  maxLength={16}
+                  title="Enter a valid Nepal mobile number (10 digits), optionally prefixed by +977."
                   autoComplete="off"
                   disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
                   required={statusDraft === 'shipped'}
                 />
+                {shipmentFormError && <span className="shipping-field-error" role="alert">{shipmentFormError}</span>}
               </div>
               <button
                 type="submit"

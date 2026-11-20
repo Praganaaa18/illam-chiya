@@ -34,6 +34,7 @@ CREATE TABLE products (
     name VARCHAR(150) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
+    pack_size VARCHAR(20) NOT NULL DEFAULT '100 g',
     stock_quantity INT NOT NULL DEFAULT 0,
     elevation VARCHAR(50) DEFAULT '5,000 ft',
     process_type VARCHAR(50) DEFAULT 'Orthodox',
@@ -74,9 +75,24 @@ CREATE TABLE order_items (
     seller_id INT NOT NULL,
     quantity INT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
+    pack_size VARCHAR(20) NOT NULL DEFAULT '100 g',
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (seller_id) REFERENCES users(id)
+);
+
+CREATE TABLE notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    recipient_id INT NOT NULL,
+    recipient_role ENUM('buyer', 'seller') NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message VARCHAR(500) NOT NULL,
+    link VARCHAR(255) NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_recipient (recipient_id, recipient_role, created_at),
+    CONSTRAINT fk_notifications_recipient
+        FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE reviews (

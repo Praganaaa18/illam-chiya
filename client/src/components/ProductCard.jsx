@@ -1,12 +1,13 @@
 // ProductCard.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import Icon from './Icon';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const navigate = useNavigate();
-  const [packSize, setPackSize] = useState('100 g');
   const [quantity, setQuantity] = useState(1);
+  const packSize = product.pack_size || '100 g';
   const stock = Math.max(0, Number(product.stock_quantity) || 0);
   const isLowStock = stock > 0 && stock <= 10;
   const isOutOfStock = stock === 0;
@@ -50,18 +51,9 @@ const ProductCard = ({ product, onAddToCart }) => {
           {product.description || 'Authentic Himalayan orthodox tea, hand-picked and carefully packed.'}
         </p>
 
-        <span className="product-pack-label">Pack size</span>
-        <div className="product-pack-options" aria-label="Choose pack size">
-          {['50 g', '100 g', '250 g'].map((size) => (
-            <button
-              key={size}
-              type="button"
-              className={`product-pack-option ${packSize === size ? 'active' : ''}`}
-              onClick={() => setPackSize(size)}
-            >
-              {size}
-            </button>
-          ))}
+        <span className="product-pack-label">Per Pack Size</span>
+        <div className="product-pack-options" aria-label="Pack size">
+          <span className="product-pack-option active">{packSize}</span>
         </div>
       </div>
 
@@ -70,7 +62,7 @@ const ProductCard = ({ product, onAddToCart }) => {
           <div className="product-price">
             <span className="currency">Rs.</span>
             <span className="amount">{Number(product.price).toFixed(2)}</span>
-            <span className="unit">/ pack</span>
+            <span className="unit">/ {packSize}</span>
           </div>
         </Link>
         <span className={`product-stock ${isLowStock ? 'low' : isOutOfStock ? 'out' : ''}`}>
@@ -91,7 +83,8 @@ const ProductCard = ({ product, onAddToCart }) => {
           className="add-to-cart-btn"
           disabled={isOutOfStock}
         >
-          🛒 <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
+          <Icon name="cart" size={17} />
+          <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
         </button>
       </div>
     </article>

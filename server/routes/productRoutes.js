@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { 
     getAllProducts, 
+    getCategories,
+    createCategory,
+    deleteCategory,
     createProduct, 
     getSellerProducts, 
     updateProduct, 
@@ -15,6 +18,9 @@ router.get('/', getAllProducts);
 router.post('/', authMiddleware, createProduct);
 
 // Seller Management routes
+router.get('/categories', authMiddleware, getCategories);
+router.post('/categories', authMiddleware, createCategory);
+router.delete('/categories/:categoryId', authMiddleware, deleteCategory);
 router.get('/seller/:sellerId', authMiddleware, getSellerProducts);
 router.put('/:id', authMiddleware, updateProduct);
 router.delete('/:id', authMiddleware, deleteProduct);

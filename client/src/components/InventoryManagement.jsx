@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import API from '../services/api';
+import Icon from './Icon';
 import './InventoryManagement.css';
 
 const InventoryManagement = ({ sellerId }) => {
@@ -111,7 +112,7 @@ const InventoryManagement = ({ sellerId }) => {
             <span className="kpi-title">Total Stock Value</span>
             <h3 className="kpi-value">Rs. {Number(metrics.totalStockValue).toLocaleString()}</h3>
           </div>
-          <div className="kpi-icon-box green">💵</div>
+          <div className="kpi-icon-box green"><Icon name="wallet" /></div>
         </div>
 
         <div className="inv-kpi-card">
@@ -119,7 +120,7 @@ const InventoryManagement = ({ sellerId }) => {
             <span className="kpi-title">Low Stock Alerts</span>
             <h3 className="kpi-value">{metrics.lowStockCount} Items</h3>
           </div>
-          <div className="kpi-icon-box amber">⚠️</div>
+          <div className="kpi-icon-box amber"><Icon name="alert" /></div>
         </div>
 
         <div className="inv-kpi-card">
@@ -127,7 +128,7 @@ const InventoryManagement = ({ sellerId }) => {
             <span className="kpi-title">Reserved for Active Orders</span>
             <h3 className="kpi-value">{metrics.reservedOrdersCount} Units</h3>
           </div>
-          <div className="kpi-icon-box gold">📦</div>
+          <div className="kpi-icon-box gold"><Icon name="package" /></div>
         </div>
 
         <div className="inv-kpi-card">
@@ -135,14 +136,14 @@ const InventoryManagement = ({ sellerId }) => {
             <span className="kpi-title">Delivered Stock Revenue</span>
             <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
           </div>
-          <div className="kpi-icon-box forest">🧾</div>
+          <div className="kpi-icon-box forest"><Icon name="wallet" /></div>
         </div>
       </div>
 
       <div className="inv-main-card">
         <div className="inv-toolbar">
           <div className="inv-search-box">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Icon name="search" size={16} /></span>
             <input
               type="text"
               placeholder="Search..."
@@ -210,10 +211,10 @@ const InventoryManagement = ({ sellerId }) => {
                             className="inv-thumb"
                             onError={(event) => { event.currentTarget.hidden = true; }}
                           />
-                        ) : <span className="inv-thumb-fallback" aria-hidden="true">🍃</span>}
+                        ) : <span className="inv-thumb-fallback" aria-hidden="true"><Icon name="leaf" /></span>}
                         <div>
                           <div className="inv-prod-name">{item.name}</div>
-                          <div className="inv-prod-cat">🌿 {item.category}</div>
+                          <div className="inv-prod-cat"><Icon name="leaf" size={13} /> {item.category}</div>
                         </div>
                       </div>
                     </td>

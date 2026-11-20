@@ -1,40 +1,68 @@
 const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const {
+  isValidEmail,
+  isValidPanNumber,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} = require("../utils/validation");
 
 // ================= REGISTER CONTROLLER =================
 exports.register = async (req, res) => {
   // Destructure text fields from incoming FormData request
-  const { name, full_name, email, phone, address, delivery_address, pan_vat, password, role } = req.body;
-  const userFullName = full_name || name;
+  const body = req.body || {};
+  const { name, full_name, email, phone, address, delivery_address, pan_vat, password, role } = body;
+  const rawName = full_name || name;
+  const userFullName = typeof rawName === "string" ? rawName.trim() : "";
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const accountRole = role || "buyer";
 
   // Retrieve file path attached by multer
   const documentPath = req.file ? req.file.path : null;
 
+  if (!["buyer", "seller"].includes(accountRole)) {
+    return res.status(400).json({ message: "Choose a valid buyer or seller account type." });
+  }
+  if (!userFullName) {
+    return res.status(400).json({ message: "Full name or business name is required." });
+  }
+  if (!isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ message: "Enter a valid email address." });
+  }
+  if (!isValidPhoneNumber(phone)) {
+    return res.status(400).json({ message: "Enter a valid Nepal mobile number (10 digits)." });
+  }
+  if (accountRole === "seller" && !isValidPanNumber(pan_vat)) {
+    return res.status(400).json({ message: "Enter a valid 9-digit PAN / VAT number." });
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters." });
+  }
+
   try {
     // Check if user already exists
-    const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
     if (existing.length > 0) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // Encrypt password
-    // const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedPassword = password;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert user with seller details & document path into database
     await db.query(
       "INSERT INTO users (full_name, email, phone, address, delivery_address, pan_vat, document_path, password, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         userFullName,
-        email,
-        phone || "",
+        normalizedEmail,
+        normalizedPhone,
         address || null,
         delivery_address || address || null,
-        pan_vat || null,
+        accountRole === "seller" ? pan_vat.trim() : null,
         documentPath,
         hashedPassword,
-        role || "buyer",
+        accountRole,
       ],
     );
 
@@ -47,19 +75,36 @@ exports.register = async (req, res) => {
 
 // ================= LOGIN CONTROLLER =================
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const body = req.body || {};
+  const { email, password } = body;
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+  if (!isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ message: "Enter a valid email address." });
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters." });
+  }
 
   try {
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
     if (users.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const user = users[0];
-    // await bcrypt.compare(password, user.password);
-    const isMatch = user.password == password;
+    const storedPassword = typeof user.password === "string" ? user.password : "";
+    const hasBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+    const isMatch = hasBcryptHash
+      ? await bcrypt.compare(password, storedPassword)
+      : storedPassword === password;
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (!hasBcryptHash) {
+      const upgradedPasswordHash = await bcrypt.hash(password, 10);
+      await db.query("UPDATE users SET password = ? WHERE id = ?", [upgradedPasswordHash, user.id]);
     }
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || "secretkey", {
