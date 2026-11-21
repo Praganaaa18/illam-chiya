@@ -87,6 +87,18 @@ test('shows product categories and preserves the selected category when editing'
   ));
 });
 
+test('submitting an edited product more than once sends only one update request', async () => {
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: /edit/i }));
+  const updateButton = screen.getByRole('button', { name: 'Update Product' });
+  fireEvent.click(updateButton);
+  fireEvent.click(updateButton);
+
+  await waitFor(() => expect(axios.put).toHaveBeenCalledTimes(1));
+  expect(axios.post).not.toHaveBeenCalled();
+});
+
 test('rejects a product image smaller than 100 KB', async () => {
   render(<ProductManagement sellerId="5" />);
 

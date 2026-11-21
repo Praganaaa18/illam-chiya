@@ -60,6 +60,7 @@ const ProductManagement = ({
   const productNameRef = useRef(null);
   const modalTriggerRef = useRef(null);
   const categoryDropdownRef = useRef(null);
+  const saveInFlightRef = useRef(false);
   const isCategoryDropdownOpenRef = useRef(isCategoryDropdownOpen);
   isCategoryDropdownOpenRef.current = isCategoryDropdownOpen;
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,8 +87,13 @@ const ProductManagement = ({
       if (!Array.isArray(response.data)) {
         throw new Error('The server returned an invalid product list.');
       }
-      setProducts(response.data);
-      setSelectedRows((selected) => selected.filter((id) => response.data.some((product) => product.id === id)));
+      const uniqueProducts = Array.from(
+        new Map(response.data.map((product) => [String(product.id), product])).values()
+      );
+      setProducts(uniqueProducts);
+      setSelectedRows((selected) => selected.filter((id) =>
+        uniqueProducts.some((product) => String(product.id) === String(id))
+      ));
     } catch (error) {
       console.error('Error fetching products:', error);
       if (isSellerSessionError(error)) onSellerSessionError?.();
@@ -302,6 +308,8 @@ const ProductManagement = ({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saveInFlightRef.current) return;
+
     const price = Number(formData.price);
     const stock = Number(formData.stock_quantity);
     const categoryId = Number(formData.category_id);
@@ -321,9 +329,11 @@ const ProductManagement = ({
       return;
     }
 
+    saveInFlightRef.current = true;
     setIsSaving(true);
     setNotice(null);
     try {
+      const productIdBeingEdited = editingProductId;
       let imageUrl = formData.image_url.trim();
       if (selectedFile) {
         const uploadData = new FormData();
@@ -345,21 +355,22 @@ const ProductManagement = ({
         status: formData.status,
       };
 
-      if (editingProductId) {
-        await axios.put(`${API_ORIGIN}/api/products/${editingProductId}`, productPayload, getAuthConfig());
+      if (productIdBeingEdited) {
+        await axios.put(`${API_ORIGIN}/api/products/${productIdBeingEdited}`, productPayload, getAuthConfig());
       } else {
         await axios.post(`${API_ORIGIN}/api/products`, productPayload, getAuthConfig());
       }
 
       setIsModalOpen(false);
       resetForm();
-      setNotice({ type: 'success', message: `Product ${editingProductId ? 'updated' : 'added'} successfully.` });
+      setNotice({ type: 'success', message: `Product ${productIdBeingEdited ? 'updated' : 'added'} successfully.` });
       await fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
       if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to save product. Please try again.') });
     } finally {
+      saveInFlightRef.current = false;
       setIsSaving(false);
     }
   };
