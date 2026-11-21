@@ -76,11 +76,14 @@ exports.register = async (req, res) => {
 // ================= LOGIN CONTROLLER =================
 exports.login = async (req, res) => {
   const body = req.body || {};
-  const { email, password } = body;
+  const { email, password, role: requestedRole } = body;
   const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
   if (!isValidEmail(normalizedEmail)) {
     return res.status(400).json({ message: "Enter a valid email address." });
+  }
+  if (!["buyer", "seller"].includes(requestedRole)) {
+    return res.status(400).json({ message: "Choose a valid buyer or seller portal." });
   }
   if (typeof password !== "string" || password.length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters." });
@@ -100,6 +103,10 @@ exports.login = async (req, res) => {
       : storedPassword === password;
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (user.role !== requestedRole) {
+      return res.status(403).json({ message: "This account cannot access the selected portal." });
     }
 
     if (!hasBcryptHash) {

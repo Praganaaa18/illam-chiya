@@ -22,6 +22,7 @@ const ProductPage = () => {
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const imageButtonRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [cartCount, setCartCount] = useState(() => {
@@ -68,6 +69,7 @@ const ProductPage = () => {
 
   useEffect(() => {
     setQuantity(1);
+    setIsDescriptionExpanded(false);
   }, [productId]);
 
   useEffect(() => {
@@ -171,8 +173,6 @@ const ProductPage = () => {
               <div className="details-block">
                 <h3>Product Details</h3>
                 <ul>
-                  <li>Origin: {product.elevation || 'Ilam, Nepal'}</li>
-                  <li>Type: {product.process_type || 'Orthodox tea'}</li>
                   <li>Category: {product.category || 'Tea'}</li>
                   <li>Per pack: {product.pack_size || '100 g'}</li>
                   <li>Availability: {Number(product.stock_quantity) > 0 ? 'In stock' : 'Out of stock'}</li>
@@ -220,7 +220,23 @@ const ProductPage = () => {
 
           <section className="product-description">
             <h2>Product Description</h2>
-            <p>{product.description || 'Carefully grown and crafted tea from the Ilam hills of Nepal.'}</p>
+            <button
+              type="button"
+              className="description-expand-toggle"
+              aria-expanded={isDescriptionExpanded}
+              aria-controls="product-description-copy"
+              onClick={() => setIsDescriptionExpanded((expanded) => !expanded)}
+            >
+              <span
+                id="product-description-copy"
+                className={`description-copy ${isDescriptionExpanded ? 'expanded' : ''}`}
+              >
+                {product.description || 'Carefully grown and crafted tea from the Ilam hills of Nepal.'}
+              </span>
+              <span className="description-action">
+                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+              </span>
+            </button>
           </section>
 
           <section className="recommendations-section">

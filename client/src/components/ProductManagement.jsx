@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios';
 import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
+import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
+import { isSellerSessionError } from '../utils/sellerSession';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -31,7 +33,10 @@ const getAuthConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
 });
 
-const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
+const ProductManagement = ({
+  sellerId = localStorage.getItem('userId'),
+  onSellerSessionError,
+}) => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,11 +90,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setSelectedRows((selected) => selected.filter((id) => response.data.some((product) => product.id === id)));
     } catch (error) {
       console.error('Error fetching products:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setLoadError(getErrorMessage(error, 'Could not load products. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [sellerId]);
+  }, [sellerId, onSellerSessionError]);
 
   useEffect(() => {
     fetchProducts();
@@ -115,11 +121,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       });
     } catch (error) {
       console.error('Error fetching categories:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryLoadError(getErrorMessage(error, 'Could not load categories.'));
     } finally {
       setIsLoadingCategories(false);
     }
-  }, []);
+  }, [onSellerSessionError]);
 
   useEffect(() => {
     fetchCategories();
@@ -191,6 +198,18 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
+
+  const handleImageFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && !isValidUploadSize(file.size)) {
+      discardSelectedFile();
+      setNotice({ type: 'error', message: UPLOAD_SIZE_ERROR });
+      return;
+    }
+
+    setNotice(null);
+    setSelectedFile(file);
+  };
 
   const handleOpenAddModal = (event) => {
     modalTriggerRef.current = event?.currentTarget || null;
@@ -338,6 +357,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       await fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to save product. Please try again.') });
     } finally {
       setIsSaving(false);
@@ -372,6 +392,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setCategoryMessage(`${createdCategory.name} added and selected.`);
     } catch (error) {
       console.error('Error creating category:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryError(getErrorMessage(error, 'Could not add category.'));
     } finally {
       setIsCategoryBusy(false);
@@ -408,6 +429,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setCategoryMessage(`${selectedCategory.name} deleted.`);
     } catch (error) {
       console.error('Error deleting category:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryError(getErrorMessage(error, 'Could not delete category.'));
     } finally {
       setIsCategoryBusy(false);
@@ -425,6 +447,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       await fetchProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to delete product. Please try again.') });
     } finally {
       setBusyProductId(null);
@@ -445,6 +468,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       );
     } catch (error) {
       console.error('Failed to update product status:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to update product status.') });
     } finally {
       setBusyProductId(null);
@@ -825,7 +849,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     accept="image/*"
                     aria-label="Upload product image"
                     disabled={isSaving}
-                    onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                    onChange={handleImageFileChange}
                   />
                   {selectedFile && (
                     <button
@@ -840,6 +864,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     </button>
                   )}
                 </div>
+                <small className="pm-pack-size-hint">Accepted file size: 100 KB–500 KB.</small>
               </div>
               <div className="pm-form-group">
                 <label htmlFor="pm-product-description">Description</label>

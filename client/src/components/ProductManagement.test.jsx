@@ -87,6 +87,19 @@ test('shows product categories and preserves the selected category when editing'
   ));
 });
 
+test('rejects a product image smaller than 100 KB', async () => {
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  const imageInput = await screen.findByLabelText('Upload product image');
+  fireEvent.change(imageInput, {
+    target: { files: [new File(['small'], 'small.png', { type: 'image/png' })] },
+  });
+
+  expect(screen.getByRole('alert')).toHaveTextContent('File size must be between 100 KB and 500 KB.');
+  expect(screen.queryByRole('button', { name: 'Discard selected image' })).not.toBeInTheDocument();
+});
+
 test('creates a category from the product form and selects it', async () => {
   axios.post.mockResolvedValueOnce({ data: { id: 12, name: 'Herbal Tea' } });
   render(<ProductManagement sellerId="5" />);
@@ -110,6 +123,25 @@ test('creates a category from the product form and selects it', async () => {
     { name: 'Herbal Tea' },
     expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
   );
+});
+
+test('returns to seller login when category creation reports missing seller access', async () => {
+  const onSellerSessionError = jest.fn();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  axios.post.mockRejectedValueOnce({
+    response: { status: 403, data: { error: 'Seller access is required.' } },
+  });
+  render(<ProductManagement sellerId="5" onSellerSessionError={onSellerSessionError} />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /Product Category.*Black Tea/ }));
+  fireEvent.click(screen.getByRole('button', { name: '+ Add category' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'New category name' }), {
+    target: { value: 'Herbal Tea' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+
+  await waitFor(() => expect(onSellerSessionError).toHaveBeenCalledTimes(1));
 });
 
 test('allows a custom pack size and saves its normalized value', async () => {

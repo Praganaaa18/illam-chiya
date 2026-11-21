@@ -48,12 +48,19 @@ test('opening a catalog product displays its details page', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Ilam First Flush' })).toBeInTheDocument();
   expect(screen.getByText('A floral spring tea.')).toBeInTheDocument();
+  expect(screen.queryByText(/Seller's Business Name/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Origin:/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Type:/)).not.toBeInTheDocument();
   expect(screen.getByText(/Rs\. 550 \/ 500 g/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /back to teas/i })).toBeInTheDocument();
   expect(global.fetch).toHaveBeenCalledWith(
     'http://localhost:5000/api/products',
     expect.objectContaining({ signal: expect.anything() })
   );
+  const descriptionToggle = screen.getByRole('button', { name: /read more/i });
+  expect(descriptionToggle).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(descriptionToggle);
+  expect(screen.getByRole('button', { name: /show less/i })).toHaveAttribute('aria-expanded', 'true');
 
   const imageButton = screen.getByRole('button', { name: 'View larger image of Ilam First Flush' });
   fireEvent.click(imageButton);

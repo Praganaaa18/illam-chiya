@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import ProductManagement from './ProductManagement';
 import InventoryManagement from './InventoryManagement';
@@ -9,6 +9,17 @@ import NotificationBell from './Notificationbell';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './SellerDashboard.css';
 import axios from 'axios';
+import { isSellerSessionError } from '../utils/sellerSession';
+
+const AUTH_STORAGE_KEYS = [
+  'token',
+  'userId',
+  'userRole',
+  'userName',
+  'userEmail',
+  'userPhone',
+  'userAddress',
+];
 
 const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
@@ -26,6 +37,20 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   });
 
   const navigate = useNavigate();
+  const authRedirectStarted = useRef(false);
+
+  const handleSellerSessionError = useCallback(() => {
+    if (authRedirectStarted.current) return;
+    authRedirectStarted.current = true;
+    AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    navigate('/login', {
+      replace: true,
+      state: {
+        role: 'seller',
+        message: 'Your seller session is no longer valid. Sign in again as a seller.',
+      },
+    });
+  }, [navigate]);
 
   useEffect(() => {
     const validTabs = ['overview', 'products', 'inventory', 'orders', 'billing'];
@@ -41,21 +66,15 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPhone');
-    localStorage.removeItem('userAddress');
+    AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     navigate('/login');
   };
 
   const fetchSellerInfo = useCallback(async () => {
     const loggedInUserId = localStorage.getItem('userId');
     const token = localStorage.getItem('token');
-    if (!loggedInUserId || !token) {
-      navigate('/login');
+    if (!loggedInUserId || !token || localStorage.getItem('userRole') !== 'seller') {
+      handleSellerSessionError();
       return;
     }
 
@@ -73,9 +92,13 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       if (sellerName) localStorage.setItem('userName', sellerName);
       if (res.data.email) localStorage.setItem('userEmail', res.data.email);
     } catch (err) {
+      if (isSellerSessionError(err)) {
+        handleSellerSessionError();
+        return;
+      }
       console.error('Error fetching seller information:', err);
     }
-  }, [navigate]);
+  }, [handleSellerSessionError]);
 
   useEffect(() => {
     fetchSellerInfo();
@@ -89,7 +112,12 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       case 'overview':
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
       case 'products':
-        return <ProductManagement sellerId={sellerInfo.sellerId} />;
+        return (
+          <ProductManagement
+            sellerId={sellerInfo.sellerId}
+            onSellerSessionError={handleSellerSessionError}
+          />
+        );
       case 'inventory':
         return <InventoryManagement sellerId={sellerInfo.sellerId} />;
       case 'orders':
