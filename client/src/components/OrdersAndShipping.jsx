@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
 import Icon from './Icon';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './OrdersAndShipping.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -45,6 +46,9 @@ const OrdersAndShipping = ({ sellerId }) => {
   const [trackingError, setTrackingError] = useState('');
   const [shipmentFormError, setShipmentFormError] = useState('');
   const [notice, setNotice] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortConfig, handleSort] = useTableSort('id');
   const trackingRequest = useRef(0);
   const detailsTriggerRef = useRef(null);
   const closeDetailsButtonRef = useRef(null);
@@ -154,6 +158,23 @@ const OrdersAndShipping = ({ sellerId }) => {
     }
     return orders.filter((order) => order.status === activeFilter);
   }, [activeFilter, orders]);
+  const sortedOrders = useMemo(() => sortRows(filteredOrders, sortConfig, (order, key) => {
+    const values = {
+      id: order.id,
+      buyer_name: order.buyer_name,
+      items_summary: order.items_summary,
+      total_price: order.total_price,
+      status: order.status,
+    };
+    return values[key] ?? '';
+  }), [filteredOrders, sortConfig]);
+  const orderPageCount = Math.max(1, Math.ceil(sortedOrders.length / pageSize));
+  const pagedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => setCurrentPage(1), [activeFilter, pageSize]);
+  useEffect(() => {
+    if (currentPage > orderPageCount) setCurrentPage(orderPageCount);
+  }, [currentPage, orderPageCount]);
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
   const selectedTracking = tracking && String(tracking.id) === String(selectedOrderId)
@@ -262,20 +283,21 @@ const OrdersAndShipping = ({ sellerId }) => {
               {orders.length === 0 ? 'No orders have been placed yet.' : 'No orders match this filter.'}
             </div>
           ) : (
+            <>
             <div className="shipping-table-scroll">
               <table className="shipping-table">
                 <thead>
                   <tr>
-                    <th scope="col">Order ID</th>
-                    <th scope="col">Customer</th>
-                    <th scope="col">Tea &amp; Qty</th>
-                    <th scope="col">Total</th>
-                    <th scope="col">Status</th>
+                    <SortHeader label="Order ID" column="id" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortHeader label="Customer" column="buyer_name" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortHeader label="Tea & Qty" column="items_summary" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortHeader label="Total" column="total_price" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
                     <th scope="col"><span className="shipping-visually-hidden">Details</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => (
+                  {pagedOrders.map((order) => (
                     <tr
                       key={order.id}
                       className={selectedOrderId === order.id ? 'selected' : ''}
@@ -311,6 +333,16 @@ const OrdersAndShipping = ({ sellerId }) => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={currentPage}
+              pageCount={orderPageCount}
+              total={sortedOrders.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="orders"
+            />
+            </>
           )}
         </div>
 
