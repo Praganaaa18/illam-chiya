@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import Icon from './Icon';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 10;
 const PACK_SIZE_OPTIONS = ['50 g', '100 g', '250 g', '500 g', '1 kg'];
 const INITIAL_FORM = {
   name: '',
@@ -61,6 +62,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [stockFilter, setStockFilter] = useState('all');
   const [selectedRows, setSelectedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [sortConfig, handleSort] = useTableSort('name');
   const [formData, setFormData] = useState(INITIAL_FORM);
 
   const fetchProducts = useCallback(async () => {
@@ -139,14 +142,23 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     return matchesSearch && matchesStatus && matchesStock;
   }), [products, searchQuery, statusFilter, stockFilter]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  const pageProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const firstProductNumber = filteredProducts.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
-  const lastProductNumber = Math.min(currentPage * PAGE_SIZE, filteredProducts.length);
+  const sortedProducts = useMemo(() => sortRows(filteredProducts, sortConfig, (product, key) => {
+    const values = {
+      name: product.name,
+      category: product.category,
+      pack_size: product.pack_size,
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      status: isProductActive(product) ? 'active' : 'inactive',
+    };
+    return values[key] ?? '';
+  }), [filteredProducts, sortConfig]);
+  const pageCount = Math.max(1, Math.ceil(sortedProducts.length / pageSize));
+  const pageProducts = sortedProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, stockFilter]);
+  }, [searchQuery, statusFilter, stockFilter, pageSize]);
 
   useEffect(() => {
     if (currentPage > pageCount) setCurrentPage(pageCount);
@@ -531,12 +543,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                   </label>
                 </th>
                 <th scope="col">Thumbnail</th>
-                <th scope="col">Product Name</th>
-                <th scope="col">Category</th>
-                <th scope="col">Pack Size</th>
-                <th scope="col">Price</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Status</th>
+                <SortHeader label="Product Name" column="name" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Category" column="category" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Pack Size" column="pack_size" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Price" column="price" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Stock" column="stock_quantity" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
                 <th scope="col">Actions</th>
               </tr>
             </thead>
@@ -623,14 +635,15 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
         </div>
 
         <div className="pm-card-footer">
-          <span>Showing {firstProductNumber}-{lastProductNumber} of {filteredProducts.length} products</span>
-          {pageCount > 1 && (
-            <div className="pm-pagination" aria-label="Product pages">
-              <button type="button" aria-label="Previous page" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>‹</button>
-              <span>Page {currentPage} of {pageCount}</span>
-              <button type="button" aria-label="Next page" disabled={currentPage === pageCount} onClick={() => setCurrentPage((page) => page + 1)}>›</button>
-            </div>
-          )}
+          <TablePagination
+            page={currentPage}
+            pageCount={pageCount}
+            total={sortedProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="products"
+          />
         </div>
       </section>
 

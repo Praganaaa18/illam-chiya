@@ -1,7 +1,6 @@
 .pm-container {
-  padding: 24px;
   background-color: var(--illam-paper);
-  min-height: 100vh;
+  min-height: 0;
   font-family: var(--illam-font-body);
   color: var(--illam-ink);
   box-sizing: border-box;
@@ -311,7 +310,7 @@
 }
 
 .pm-card-footer {
-  padding: 14px 24px;
+  padding: 0;
   font-size: 13px;
   color: #4b5563;
 }
@@ -763,6 +762,8 @@
 
 .pm-card-footer {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
