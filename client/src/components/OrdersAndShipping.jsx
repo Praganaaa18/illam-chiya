@@ -284,64 +284,64 @@ const OrdersAndShipping = ({ sellerId }) => {
             </div>
           ) : (
             <>
-            <div className="shipping-table-scroll">
-              <table className="shipping-table">
-                <thead>
-                  <tr>
-                    <SortHeader label="Order ID" column="id" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortHeader label="Customer" column="buyer_name" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortHeader label="Tea & Qty" column="items_summary" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortHeader label="Total" column="total_price" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
-                    <th scope="col"><span className="shipping-visually-hidden">Details</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className={selectedOrderId === order.id ? 'selected' : ''}
-                      aria-selected={selectedOrderId === order.id}>
-                      <td className="shipping-order-id">#IC-{order.id}</td>
-                      <td>
-                        <strong>{order.buyer_name || 'Buyer'}</strong>
-                        <small>{order.phone || 'Phone not provided'}</small>
-                      </td>
-                      <td className="shipping-items" title={order.items_summary}>{order.items_summary || 'Order items'}</td>
-                      <td className="shipping-total">NPR {Number(order.total_price || 0).toLocaleString()}</td>
-                      <td>
-                        <span className={`shipping-status ${order.status || 'pending'}`}>
-                          {STATUS_LABELS[order.status] || order.status || 'Pending'}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="shipping-details-button"
-                          onClick={(event) => {
-                            setNotice('');
-                            setSelectedOrderId(order.id);
-                            detailsTriggerRef.current = event.currentTarget;
-                            setIsShipmentDetailsOpen(true);
-                          }}
-                          aria-label={`View tracking for order ${order.id}`}>
-                          Details
-                        </button>
-                      </td>
+              <div className="shipping-table-scroll">
+                <table className="shipping-table">
+                  <thead>
+                    <tr>
+                      <SortHeader label="Order ID" column="id" sortConfig={sortConfig} onSort={handleSort} />
+                      <SortHeader label="Customer" column="buyer_name" sortConfig={sortConfig} onSort={handleSort} />
+                      <SortHeader label="Tea & Qty" column="items_summary" sortConfig={sortConfig} onSort={handleSort} />
+                      <SortHeader label="Total" column="total_price" sortConfig={sortConfig} onSort={handleSort} />
+                      <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
+                      <th scope="col"><span className="shipping-visually-hidden">Details</span></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <TablePagination
-              page={currentPage}
-              pageCount={orderPageCount}
-              total={sortedOrders.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-              itemLabel="orders"
-            />
+                  </thead>
+                  <tbody>
+                    {pagedOrders.map((order) => (
+                      <tr
+                        key={order.id}
+                        className={selectedOrderId === order.id ? 'selected' : ''}
+                        aria-selected={selectedOrderId === order.id}>
+                        <td className="shipping-order-id">#IC-{order.id}</td>
+                        <td>
+                          <strong>{order.buyer_name || 'Buyer'}</strong>
+                          <small>{order.phone || 'Phone not provided'}</small>
+                        </td>
+                        <td className="shipping-items" title={order.items_summary}>{order.items_summary || 'Order items'}</td>
+                        <td className="shipping-total">NPR {Number(order.total_price || 0).toLocaleString()}</td>
+                        <td>
+                          <span className={`shipping-status ${order.status || 'pending'}`}>
+                            {STATUS_LABELS[order.status] || order.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="shipping-details-button"
+                            onClick={(event) => {
+                              setNotice('');
+                              setSelectedOrderId(order.id);
+                              detailsTriggerRef.current = event.currentTarget;
+                              setIsShipmentDetailsOpen(true);
+                            }}
+                            aria-label={`View tracking for order ${order.id}`}>
+                            Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <TablePagination
+                page={currentPage}
+                pageCount={orderPageCount}
+                total={sortedOrders.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="orders"
+              />
             </>
           )}
         </div>
