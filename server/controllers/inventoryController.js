@@ -42,7 +42,7 @@ const getInventory = async (req, res) => {
       SELECT COALESCE(SUM(oi.quantity * oi.price), 0) AS delivered_revenue
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
-      WHERE oi.seller_id = ? AND o.order_status = 'delivered'
+      WHERE oi.seller_id = ? AND o.order_status IN ('delivered', 'cash_received')
     `, [sellerId]);
 
     const reservedByProduct = new Map(

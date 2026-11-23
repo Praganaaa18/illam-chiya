@@ -16,6 +16,36 @@ const createResponse = () => ({
   },
 });
 
+test('returns the seller phone number for the authenticated seller profile', async () => {
+  const originalExecute = db.execute;
+  let query = '';
+  db.execute = async (sql) => {
+    query = sql;
+    return [[{
+      id: 17,
+      full_name: 'Tea Seller',
+      email: 'seller@example.com',
+      phone: '9801234567',
+      business_name: 'Ilam Tea',
+      status: 'approved',
+    }]];
+  };
+  const response = createResponse();
+
+  try {
+    await sellerController.getSellerInfo({
+      params: { sellerId: '17' },
+      user: { id: 17, role: 'seller' },
+    }, response);
+  } finally {
+    db.execute = originalExecute;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.phone, '9801234567');
+  assert.match(query, /phone/);
+});
+
 test('lists default and seller-specific drivers for the authenticated seller', async () => {
   const originalExecute = db.execute;
   let queryValues;

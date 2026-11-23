@@ -15,6 +15,7 @@ const ConfirmOrder = () => {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [submitError, setSubmitError] = useState('');
+  const [deliveryPreference, setDeliveryPreference] = useState('doorstep');
 
   // Form details state
   const [shippingDetails, setShippingDetails] = useState({
@@ -140,6 +141,7 @@ const ConfirmOrder = () => {
       phone: normalizePhoneNumber(shippingDetails.phone),
       recipient_name: shippingDetails.fullName,
       payment_method: 'COD',
+      delivery_preference: deliveryPreference,
       total_amount: grandTotal,
       notes: shippingDetails.notes
     };
@@ -310,9 +312,25 @@ const ConfirmOrder = () => {
             </div>
           </div>
 
+          <div className="form-section">
+            <h2>2. Delivery Preference</h2>
+            <div className="form-group">
+              <label htmlFor="delivery-preference">Delivery Preference</label>
+              <select
+                id="delivery-preference"
+                name="deliveryPreference"
+                value={deliveryPreference}
+                onChange={(event) => setDeliveryPreference(event.target.value)}
+              >
+                <option value="doorstep">Leave at Doorstep</option>
+                <option value="hand-to-me">Hand it to me</option>
+              </select>
+            </div>
+          </div>
+
           {/* Locked Payment Method */}
           <div className="form-section">
-            <h2>2. Payment Method</h2>
+            <h2>3. Payment Method</h2>
             <div className="payment-options">
               <div className="payment-card selected">
                 <div className="payment-info">

@@ -90,6 +90,46 @@
   color: #a0aec0;
 }
 
+.payout-destination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: 0 0 28px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #dce8df;
+  border-left: 4px solid #2c4c3b;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.payout-destination-kicker {
+  color: #2f855a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.payout-destination h3 {
+  margin: 4px 0;
+  color: #2c4c3b;
+  font-size: 1.05rem;
+}
+
+.payout-destination p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.82rem;
+}
+
+.payout-number {
+  color: #2d3748;
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+
 .settle-btn {
   margin-top: 10px;
   background: #e53e3e;
@@ -161,7 +201,8 @@
   font-weight: 600;
 }
 
-.status-badge.delivered { background: #c6f6d5; color: #22543d; }
+.status-badge.delivered,
+.status-badge.cash_received { background: #c6f6d5; color: #22543d; }
 .status-badge.shipped { background: #feebc8; color: #744210; }
 .status-badge.processing, .status-badge.pending { background: #e2e8f0; color: #4a5568; }
 
@@ -206,3 +247,11 @@
 .cancel-btn { background: #edf2f7; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
 .submit-btn { background: #2c4c3b; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
 .success-msg { background: #c6f6d5; color: #22543d; padding: 12px; border-radius: 6px; text-align: center; font-weight: 600; }
+
+@media (max-width: 600px) {
+  .payout-destination {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
