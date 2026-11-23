@@ -94,8 +94,18 @@ const Home = () => {
       return;
     }
 
+    const stock = Math.max(0, Number(product.stock_quantity) || 0);
+    const quantity = Number(requestedQuantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > stock) {
+      return;
+    }
+
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = existingCart.findIndex((item) => item.id === product.id);
+    const existingQuantity = existingItemIndex > -1 ? Number(existingCart[existingItemIndex].quantity) || 0 : 0;
+    if (existingQuantity + quantity > stock) {
+      return;
+    }
 
     if (existingItemIndex > -1) {
       existingCart[existingItemIndex].quantity += requestedQuantity;

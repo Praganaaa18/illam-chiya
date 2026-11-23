@@ -1,4 +1,4 @@
-﻿// =========================================================================
+// =========================================================================
 // SUBTITLE 1: ORDER DATABASE CONTROLLERS
 // =========================================================================
 const db = require('../config/db');
@@ -22,6 +22,7 @@ exports.createOrder = async (req, res) => {
     delivery_address, 
     address, 
     city, 
+    delivery_preference,
     landmark,
     items, 
     cart 
@@ -59,6 +60,7 @@ exports.createOrder = async (req, res) => {
     .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const phoneNum = normalizePhoneNumber(phone);
   const deliveryCity = typeof city === 'string' ? city.trim() : '';
+  const deliveryPreference = delivery_preference || 'doorstep';
   const nearbyLandmark = typeof landmark === 'string' ? landmark.trim() : '';
   if (!rawAddress || !buyerName || !isValidPhoneNumber(phone) ||
       !nearbyLandmark || nearbyLandmark.length > 150) {
@@ -71,6 +73,9 @@ exports.createOrder = async (req, res) => {
       message: 'Special characters (like @, #, $, %) are not allowed in Delivery Address.',
     });
   }
+  if (!['doorstep', 'hand-to-me'].includes(deliveryPreference)) {
+    return res.status(400).json({ message: 'Choose a valid delivery preference.' });
+  }
   const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''} | Landmark: ${nearbyLandmark}`;
 
   let connection;
@@ -80,12 +85,33 @@ exports.createOrder = async (req, res) => {
     await connection.beginTransaction();
 
     const validBuyerId = req.user.id;
+    await connection.execute(
+      'SELECT id FROM users WHERE id = ? FOR UPDATE',
+      [validBuyerId]
+    );
+    const [suspensionRows] = await connection.execute(
+      `SELECT DATE_ADD(MAX(event.created_at), INTERVAL 7 DAY) AS suspended_until,
+              MAX(event.created_at) > DATE_SUB(NOW(), INTERVAL 7 DAY) AS suspension_active
+       FROM order_tracking_events event
+       JOIN orders cancelled_order ON cancelled_order.id = event.order_id
+       WHERE cancelled_order.buyer_id = ?
+         AND event.status = 'cancelled'`,
+      [validBuyerId]
+    );
+    if (Number(suspensionRows[0]?.suspension_active) === 1) {
+      await connection.rollback();
+      return res.status(403).json({
+        message: 'Your account is suspended from placing orders for one week after cancelling an order.',
+        suspended_until: suspensionRows[0].suspended_until,
+      });
+    }
+
     let subtotal = 0;
     const verifiedItems = [];
 
     for (const [productId, quantity] of [...quantitiesByProduct].sort(([left], [right]) => left - right)) {
       const [products] = await connection.execute(
-        `SELECT id, seller_id, price, pack_size, stock_quantity, is_active
+        `SELECT id, name, seller_id, price, pack_size, stock_quantity, is_active
          FROM products
          WHERE id = ?
          FOR UPDATE`,
@@ -133,9 +159,10 @@ exports.createOrder = async (req, res) => {
     }
 
     const [orderResult] = await connection.execute(
-      `INSERT INTO orders (buyer_id, total_amount, shipping_address, payment_status, order_status) 
-       VALUES (?, ?, ?, 'pending', 'pending')`,
-      [validBuyerId, finalAmount, fullAddress]
+      `INSERT INTO orders
+       (buyer_id, total_amount, shipping_address, payment_status, order_status, delivery_preference)
+       VALUES (?, ?, ?, 'pending', 'pending', ?)`,
+      [validBuyerId, finalAmount, fullAddress, deliveryPreference]
     );
 
     const newOrderId = orderResult.insertId;
@@ -207,9 +234,32 @@ exports.getBuyerOrders = async (req, res) => {
         o.total_amount AS total_price,
         o.shipping_address AS delivery_address,
         o.order_status AS status,
+        o.payment_status,
+        o.delivery_preference,
         o.carrier_name,
         o.tracking_number,
         o.created_at,
+        (
+          SELECT DATE_ADD(MAX(suspension_event.created_at), INTERVAL 7 DAY)
+          FROM order_tracking_events suspension_event
+          JOIN orders cancelled_order ON cancelled_order.id = suspension_event.order_id
+          WHERE cancelled_order.buyer_id = o.buyer_id
+            AND suspension_event.status = 'cancelled'
+        ) AS buyer_suspended_until,
+        (
+          SELECT GROUP_CONCAT(DISTINCT seller.phone ORDER BY seller.full_name SEPARATOR ', ')
+          FROM order_items seller_item
+          JOIN users seller ON seller.id = seller_item.seller_id
+          WHERE seller_item.order_id = o.id
+        ) AS seller_contact_numbers,
+        (
+          SELECT tracking_event.created_at
+          FROM order_tracking_events tracking_event
+          WHERE tracking_event.order_id = o.id
+            AND tracking_event.status = 'delivered'
+          ORDER BY tracking_event.created_at DESC, tracking_event.id DESC
+          LIMIT 1
+        ) AS delivered_at,
         (
           SELECT tracking_event.created_at
           FROM order_tracking_events tracking_event
@@ -265,6 +315,8 @@ exports.getSellerOrders = async (req, res) => {
         SUM(oi.quantity * oi.price) AS total_price,
         o.shipping_address AS delivery_address,
         o.order_status AS status,
+        o.delivery_preference,
+        o.payment_status,
         o.created_at,
         u.full_name AS buyer_name,
         u.phone AS phone,
@@ -286,7 +338,104 @@ exports.getSellerOrders = async (req, res) => {
   }
 };
 
-// Update order status in orders table ('pending', 'processing', 'shipped', 'delivered', 'cancelled')
+exports.cancelBuyerOrder = async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (req.user.role !== 'buyer') {
+    return res.status(403).json({ message: 'Buyer access is required.' });
+  }
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: 'Invalid order ID.' });
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [orders] = await connection.execute(
+      `SELECT order_status
+       FROM orders
+       WHERE id = ? AND buyer_id = ?
+       LIMIT 1 FOR UPDATE`,
+      [orderId, req.user.id]
+    );
+    if (orders.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+    if (!['pending', 'processing', 'shipped'].includes(orders[0].order_status)) {
+      await connection.rollback();
+      return res.status(409).json({ message: 'This order can no longer be cancelled.' });
+    }
+
+    await connection.execute(
+      `UPDATE orders
+       SET order_status = 'cancelled'
+       WHERE id = ?`,
+      [orderId]
+    );
+    await connection.execute(
+      `INSERT INTO order_tracking_events (order_id, status, description)
+       VALUES (?, 'cancelled', 'Cancelled by buyer; one-week ordering suspension')`,
+      [orderId]
+    );
+    const [suspensionRows] = await connection.execute(
+      `SELECT DATE_ADD(created_at, INTERVAL 7 DAY) AS suspended_until
+       FROM order_tracking_events
+       WHERE order_id = ? AND status = 'cancelled'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [orderId]
+    );
+    await connection.commit();
+    return res.status(200).json({
+      message: 'Order cancelled. You cannot place another order for one week.',
+      status: 'cancelled',
+      suspended_until: suspensionRows[0]?.suspended_until || null,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('Error cancelling buyer order:', error);
+    return res.status(500).json({ message: 'Failed to cancel order.' });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+exports.updateBuyerDeliveryPreference = async (req, res) => {
+  const orderId = Number(req.params.id);
+  const preference = req.body?.delivery_preference;
+  if (req.user.role !== 'buyer') {
+    return res.status(403).json({ message: 'Buyer access is required.' });
+  }
+  if (!Number.isInteger(orderId) || orderId <= 0 ||
+      !['doorstep', 'hand-to-me'].includes(preference)) {
+    return res.status(400).json({ message: 'Choose a valid delivery preference.' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `UPDATE orders
+       SET delivery_preference = ?
+       WHERE id = ? AND buyer_id = ?
+         AND order_status <> 'cancelled'`,
+      [preference, orderId, req.user.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(409).json({
+        message: 'Delivery preference cannot be changed for this order.',
+      });
+    }
+    return res.status(200).json({
+      message: 'Delivery preference updated.',
+      delivery_preference: preference,
+    });
+  } catch (error) {
+    console.error('Error updating delivery preference:', error);
+    return res.status(500).json({ message: 'Failed to update delivery preference.' });
+  }
+};
+
+// Update order status in orders table ('pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled')
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
@@ -303,7 +452,7 @@ exports.updateOrderStatus = async (req, res) => {
     return res.status(400).json({ message: 'Provide a shipment status or carrier details to update.' });
   }
 
-  const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+  const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled'];
   if (hasStatus && !validStatuses.includes(newStatus)) {
     return res.status(400).json({ message: 'Invalid order status value.' });
   }
@@ -316,7 +465,8 @@ exports.updateOrderStatus = async (req, res) => {
     pending: ['processing', 'cancelled'],
     processing: ['shipped', 'cancelled'],
     shipped: ['delivered'],
-    delivered: [],
+    delivered: ['cash_received'],
+    cash_received: [],
     cancelled: [],
   };
 
@@ -393,6 +543,7 @@ exports.updateOrderStatus = async (req, res) => {
       processing: 'Packed at Illam Estate',
       shipped: 'Dispatched from Ilam',
       delivered: 'Delivered to the buyer',
+      cash_received: 'Cash received from the buyer',
       cancelled: 'Order cancelled',
     };
 
@@ -428,6 +579,7 @@ exports.updateOrderStatus = async (req, res) => {
     if (statusChanged) {
       updates.push('order_status = ?');
       updateValues.push(statusToSave);
+      if (statusToSave === 'cash_received') updates.push("payment_status = 'paid'");
     }
     if (hasCarrierName) {
       updates.push('carrier_name = ?');
@@ -451,9 +603,11 @@ exports.updateOrderStatus = async (req, res) => {
         ? 'Your order is on the way'
         : statusToSave === 'delivered'
           ? 'Your order was delivered'
-          : statusToSave === 'cancelled'
-            ? 'Your order was cancelled'
-            : 'Your order was updated';
+          : statusToSave === 'cash_received'
+            ? 'Cash received for your order'
+            : statusToSave === 'cancelled'
+              ? 'Your order was cancelled'
+              : 'Your order was updated';
       await connection.execute(
         `INSERT INTO notifications
          (recipient_id, recipient_role, title, message, link)
@@ -461,7 +615,7 @@ exports.updateOrderStatus = async (req, res) => {
         [
           orders[0].buyer_id,
           notificationTitle,
-          `Order #${id} is now ${statusToSave}.`,
+          `Order #${id}: ${descriptions[statusToSave]}.`,
           `/order-tracking?orderId=${id}`,
         ]
       );
@@ -494,7 +648,7 @@ exports.getOrderTracking = async (req, res) => {
   try {
     const [orders] = await db.execute(
       `SELECT o.id, o.buyer_id, o.total_amount, o.shipping_address, o.order_status,
-              o.carrier_name, o.tracking_number, o.created_at
+              o.carrier_name, o.tracking_number, o.delivery_preference, o.created_at
        FROM orders o
        WHERE o.id = ?`,
       [orderId]
@@ -543,6 +697,7 @@ exports.getOrderTracking = async (req, res) => {
       processing: 'Packed at Illam Estate',
       shipped: 'Dispatched from Ilam',
       delivered: 'Delivered to the buyer',
+      cash_received: 'Cash received from the buyer',
       cancelled: 'Order cancelled',
     };
     const trackingEvents = events.length > 0
@@ -558,6 +713,7 @@ exports.getOrderTracking = async (req, res) => {
       status: order.order_status,
       carrier_name: order.carrier_name,
       tracking_number: order.tracking_number,
+      delivery_preference: order.delivery_preference,
       total_amount: Number(order.total_amount),
       shipping_address: order.shipping_address,
       created_at: order.created_at,

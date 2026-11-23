@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './BillingsandPayouts.css';
 
-const BillingsAndPayouts = ({ sellerId = 1 }) => {
+const BillingsAndPayouts = ({ sellerId = 1, esewaNumber = '' }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -34,26 +34,27 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
     fetchLedgerData();
   }, [fetchLedgerData]);
 
-  const isDelivered = (status) => status.toLowerCase() === 'delivered';
-  const isPending = (status) => ['pending', 'processing', 'shipped'].includes(status.toLowerCase());
+  const isCashReceived = (item) =>
+    ['paid', 'received'].includes(String(item.payment_status || '').toLowerCase());
 
   const totalCashCollected = transactions
-    .filter((item) => isDelivered(item.status))
+    .filter(isCashReceived)
     .reduce((sum, item) => sum + Number(item.total_amount), 0);
 
   const pendingCash = transactions
-    .filter((item) => isPending(item.status))
+    .filter((item) => !isCashReceived(item) && item.status !== 'cancelled')
     .reduce((sum, item) => sum + Number(item.total_amount), 0);
 
   const commissionFeeDue = transactions
-    .filter((item) => isDelivered(item.status))
+    .filter(isCashReceived)
     .reduce((sum, item) => sum + Number(item.total_amount) * Number(item.fee_rate), 0);
 
   const netSellerEarnings = totalCashCollected - commissionFeeDue;
 
   const filteredTransactions = transactions.filter((t) => {
     const formattedId = `ORD-${String(t.order_id).padStart(3, '0')}`;
-    const matchesFilter = statusFilter === 'All' || t.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesFilter = statusFilter === 'All' ||
+      (statusFilter === 'cash_received' ? isCashReceived(t) : t.status.toLowerCase() === statusFilter.toLowerCase());
     const matchesSearch =
       formattedId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.customer.toLowerCase().includes(searchTerm.toLowerCase());
@@ -150,6 +151,17 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
         </div>
       </div>
 
+      <section className="payout-destination" aria-labelledby="payout-destination-title">
+        <div>
+          <span className="payout-destination-kicker">Payout destination</span>
+          <h3 id="payout-destination-title">Your eSewa number</h3>
+          <p>
+            This is your registered seller phone number. Use an eSewa-linked number; payouts are not processed automatically yet.
+          </p>
+        </div>
+        <strong className="payout-number">{esewaNumber || 'Add a phone number to your seller profile'}</strong>
+      </section>
+
       <div className="table-controls">
         <h3>Cash Ledger</h3>
         <div className="control-group">
@@ -162,6 +174,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
           />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
             <option value="All">All Statuses</option>
+            <option value="cash_received">Cash Received</option>
             <option value="delivered">Delivered</option>
             <option value="shipped">Shipped</option>
             <option value="processing">Processing</option>
@@ -205,7 +218,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
                     <td className="net-text">NPR {net.toLocaleString()}</td>
                     <td>
                       <span className={`status-badge ${item.status.toLowerCase()}`}>
-                        {isDelivered(item.status) ? '● Cash Received' : `⏱ ${item.status}`}
+                        {isCashReceived(item) ? '● Cash Received' : `⏱ ${item.status}`}
                       </span>
                     </td>
                   </tr>
@@ -241,8 +254,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
             </p>
 
             <div className="payment-info-box">
-              <p>
-                <strong>Bank:</strong> Nabil Bank
+                <p><strong>Platform fee payment account</strong></p>
+                <p>
+                  <strong>Bank:</strong> Nabil Bank
               </p>
               <p>
                 <strong>Account Name:</strong> Ilam Chiya Platform Pvt. Ltd.
@@ -251,7 +265,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
                 <strong>Account No:</strong> 0120017500291
               </p>
               <p>
-                <strong>eSewa / Khalti ID:</strong> 9801234567
+                <strong>Platform eSewa / Khalti ID:</strong> 9801234567
               </p>
             </div>
 

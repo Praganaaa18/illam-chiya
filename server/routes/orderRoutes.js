@@ -7,6 +7,8 @@ const {
   getSellerOrders,
   getOrderTracking,
   updateOrderStatus,
+  cancelBuyerOrder,
+  updateBuyerDeliveryPreference,
 } = require('../controllers/orderController');
 
 const requireBuyer = (req, res, next) => {
@@ -21,6 +23,9 @@ router.post('/', authMiddleware, requireBuyer, createOrder);
 
 // GET /api/orders/mine - Fetch orders belonging to the authenticated buyer
 router.get('/mine', authMiddleware, requireBuyer, getBuyerOrders);
+
+router.post('/:id/cancel', authMiddleware, requireBuyer, cancelBuyerOrder);
+router.patch('/:id/delivery-preference', authMiddleware, requireBuyer, updateBuyerDeliveryPreference);
 
 // GET /api/orders - Fetch seller orders
 router.get('/', authMiddleware, getSellerOrders);

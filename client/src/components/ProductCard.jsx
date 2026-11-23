@@ -6,11 +6,16 @@ import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const navigate = useNavigate();
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('1');
   const packSize = product.pack_size || '100 g';
   const stock = Math.max(0, Number(product.stock_quantity) || 0);
   const isLowStock = stock > 0 && stock <= 10;
   const isOutOfStock = stock === 0;
+  const parsedQuantity = Number(quantity);
+  const isQuantityValid = quantity !== '' &&
+    Number.isInteger(parsedQuantity) &&
+    parsedQuantity >= 1 &&
+    parsedQuantity <= stock;
   const imageUrl = product.image_url
     ? /^https?:\/\//i.test(product.image_url)
       ? product.image_url
@@ -26,12 +31,28 @@ const ProductCard = ({ product, onAddToCart }) => {
       // If not logged in, direct to login page
       navigate('/login');
     } else {
-      if (isOutOfStock) return;
+      if (isOutOfStock || !isQuantityValid) return;
       onAddToCart({
         ...product,
         pack_size: packSize,
-      }, quantity);
+      }, parsedQuantity);
     }
+  };
+
+  const handleQuantityChange = (event) => {
+    const value = event.target.value;
+    if (value === '' || /^\d+$/.test(value)) {
+      setQuantity(value);
+    }
+  };
+
+  const normalizeQuantity = () => {
+    if (quantity === '') {
+      setQuantity('1');
+      return;
+    }
+    const normalized = Math.min(stock, Math.max(1, parsedQuantity));
+    setQuantity(String(Number.isFinite(normalized) ? normalized : 1));
   };
 
   return (
@@ -73,15 +94,40 @@ const ProductCard = ({ product, onAddToCart }) => {
 
       <div className="product-purchase-row">
         <div className="product-quantity" aria-label="Quantity">
-          <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity">−</button>
-          <span>{quantity}</span>
-          <button type="button" onClick={() => setQuantity((value) => Math.min(stock || 99, value + 1))} aria-label="Increase quantity">+</button>
+          <button
+            type="button"
+            onClick={() => setQuantity(String(Math.max(1, (parsedQuantity || 1) - 1)))}
+            aria-label="Decrease quantity"
+            disabled={isOutOfStock || parsedQuantity <= 1}
+          >
+            −
+          </button>
+          <input
+            type="number"
+            min="1"
+            max={stock}
+            step="1"
+            value={quantity}
+            onChange={handleQuantityChange}
+            onBlur={normalizeQuantity}
+            aria-label="Product quantity"
+            aria-invalid={!isQuantityValid}
+            disabled={isOutOfStock}
+          />
+          <button
+            type="button"
+            onClick={() => setQuantity(String(Math.min(stock || 99, (parsedQuantity || 1) + 1)))}
+            aria-label="Increase quantity"
+            disabled={isOutOfStock || parsedQuantity >= stock}
+          >
+            +
+          </button>
         </div>
         <button
           type="button"
           onClick={handleAddToCartClick}
           className="add-to-cart-btn"
-          disabled={isOutOfStock}
+          disabled={isOutOfStock || !isQuantityValid}
         >
           <Icon name="cart" size={17} />
           <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>

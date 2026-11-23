@@ -20,7 +20,7 @@ const ProductPage = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('1');
   const [isImageOpen, setIsImageOpen] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const imageButtonRef = useRef(null);
@@ -96,6 +96,11 @@ const ProductPage = () => {
       .sort((a, b) => Number(b.category_id === product.category_id) - Number(a.category_id === product.category_id))
       .slice(0, 2)
     : [];
+  const stock = product ? Math.max(0, Number(product.stock_quantity) || 0) : 0;
+  const isQuantityValid = quantity !== '' &&
+    Number.isInteger(Number(quantity)) &&
+    Number(quantity) >= 1 &&
+    Number(quantity) <= stock;
 
   const handleAdd = (destination = '/cart') => {
     const token = localStorage.getItem('token');
@@ -105,13 +110,23 @@ const ProductPage = () => {
       return;
     }
 
+    const stock = Math.max(0, Number(product.stock_quantity) || 0);
+    const parsedQuantity = Number(quantity);
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > stock) {
+      return;
+    }
+
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItem = cart.find((item) => String(item.id) === String(product.id));
+    const existingQuantity = existingItem ? Number(existingItem.quantity) || 0 : 0;
+    if (existingQuantity + parsedQuantity > stock) {
+      return;
+    }
     if (existingItem) {
-      existingItem.quantity += quantity;
+      existingItem.quantity += parsedQuantity;
       existingItem.pack_size = product.pack_size || '100 g';
     } else {
-      cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity });
+      cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity: parsedQuantity });
     }
     localStorage.setItem('cart', JSON.stringify(cart));
     setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
@@ -181,13 +196,29 @@ const ProductPage = () => {
 
               <label className="quantity-label" htmlFor="product-quantity">Quantity</label>
               <div className="quantity-selector">
-                <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
-                <span id="product-quantity" aria-live="polite">{quantity}</span>
+                <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity(String(Math.max(1, (Number(quantity) || 1) - 1)))}>−</button>
+                <input
+                  id="product-quantity"
+                  type="number"
+                  min="1"
+                  max={Number(product.stock_quantity)}
+                  step="1"
+                  value={quantity}
+                  aria-label="Product quantity"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value === '' || /^\d+$/.test(value)) setQuantity(value);
+                  }}
+                  onBlur={() => {
+                    const parsed = Number(quantity);
+                    setQuantity(String(quantity === '' ? 1 : Math.min(Number(product.stock_quantity), Math.max(1, parsed))));
+                  }}
+                />
                 <button
                   type="button"
                   aria-label="Increase quantity"
-                  onClick={() => setQuantity((q) => Math.min(Number(product.stock_quantity), q + 1))}
-                  disabled={quantity >= Number(product.stock_quantity)}
+                  onClick={() => setQuantity(String(Math.min(Number(product.stock_quantity), (Number(quantity) || 1) + 1)))}
+                  disabled={Number(quantity) >= Number(product.stock_quantity)}
                 >
                   +
                 </button>
@@ -196,10 +227,10 @@ const ProductPage = () => {
 
             <div className="purchase-panel">
               <div className="action-buttons">
-                <button type="button" className="btn-primary" onClick={() => handleAdd()} disabled={Number(product.stock_quantity) <= 0}>
+                <button type="button" className="btn-primary" onClick={() => handleAdd()} disabled={!isQuantityValid}>
                   Add to Cart
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => handleAdd('/confirm-order')} disabled={Number(product.stock_quantity) <= 0}>
+                <button type="button" className="btn-secondary" onClick={() => handleAdd('/confirm-order')} disabled={!isQuantityValid}>
                   Buy Now
                 </button>
               </div>

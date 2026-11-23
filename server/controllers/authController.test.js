@@ -114,6 +114,25 @@ test('rejects login when no buyer or seller portal is selected', async () => {
   assert.equal(response.body.message, 'Choose a valid buyer or seller portal.');
 });
 
+test('rejects admin portal login after removing the cancellation-fee review portal', async () => {
+  const originalQuery = db.query;
+  db.query = async () => {
+    throw new Error('Database should not be queried for the removed admin portal.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.login({
+      body: { email: 'admin@example.com', password: 'validpass', role: 'admin' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Choose a valid buyer or seller portal.');
+});
+
 test('stores a bcrypt hash instead of the submitted registration password', async () => {
   let insertedValues;
   const response = createResponse();

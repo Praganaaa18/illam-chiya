@@ -96,3 +96,31 @@ test('catalog cards show the seller-defined pack size and add it to the cart', (
   localStorage.removeItem('token');
   localStorage.removeItem('userRole');
 });
+
+test('catalog quantity input accepts whole numbers only within available stock', () => {
+  const onAddToCart = jest.fn();
+  localStorage.setItem('token', 'buyer-token');
+  localStorage.setItem('userRole', 'buyer');
+
+  render(
+    <MemoryRouter>
+      <ProductCard product={product} onAddToCart={onAddToCart} />
+    </MemoryRouter>
+  );
+
+  const quantityInput = screen.getByRole('spinbutton', { name: 'Product quantity' });
+  fireEvent.change(quantityInput, { target: { value: '5' } });
+  expect(quantityInput).toHaveAttribute('aria-invalid', 'true');
+  expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+
+  fireEvent.change(quantityInput, { target: { value: '3' } });
+  expect(quantityInput).toHaveAttribute('aria-invalid', 'false');
+  fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
+  expect(onAddToCart).toHaveBeenCalledWith(
+    expect.objectContaining({ pack_size: '500 g' }),
+    3
+  );
+
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+});
