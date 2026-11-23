@@ -37,12 +37,13 @@ router.get('/ledger/:sellerId', async (req, res) => {
         o.shipping_address AS address,
         SUM(oi.quantity * oi.price) AS total_amount,
         0.05 AS fee_rate,
-        o.order_status AS status
+        o.order_status AS status,
+        o.payment_status
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN users u ON o.buyer_id = u.id
       WHERE oi.seller_id = ?
-      GROUP BY o.id, o.created_at, u.full_name, o.shipping_address, o.order_status
+      GROUP BY o.id, o.created_at, u.full_name, o.shipping_address, o.order_status, o.payment_status
       ORDER BY o.created_at DESC;
     `;
 

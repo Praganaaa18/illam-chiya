@@ -73,7 +73,7 @@ const Login = () => {
       }
       const accountRole = data.user?.role;
       if (!['buyer', 'seller'].includes(accountRole)) {
-        throw new Error('This account does not have a buyer or seller portal.');
+        throw new Error('This account does not have a supported portal.');
       }
 
       localStorage.setItem('token', data.token);

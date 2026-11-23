@@ -8,8 +8,17 @@ const ORDER_STEPS = [
   { status: 'pending', title: 'Order Placed' },
   { status: 'processing', title: 'Confirmed by Seller' },
   { status: 'shipped', title: 'Processed for Shipment' },
-  { status: 'delivered', title: 'Out for Delivery' },
+  { status: 'out_for_delivery', title: 'Out for Delivery' },
+  { status: 'delivered', title: 'Delivered' },
+  { status: 'cash_received', title: 'Package Received' },
 ];
+const ORDER_STEP_INDEX = {
+  pending: 0,
+  processing: 1,
+  shipped: 2,
+  delivered: 4,
+  cash_received: 5,
+};
 
 const formatDate = (date) => (
   date ? new Date(date).toLocaleDateString(undefined, {
@@ -21,8 +30,8 @@ const formatDate = (date) => (
 
 const getDeliveryEstimate = (order) => {
   if (order.status === 'cancelled') return 'Cancelled';
-  if (order.status === 'delivered') {
-    return order.seller_updated_at ? `Delivered ${formatDate(order.seller_updated_at)}` : 'Delivered';
+  if (['delivered', 'cash_received'].includes(order.status)) {
+    return order.delivered_at ? `Delivered ${formatDate(order.delivered_at)}` : 'Delivered';
   }
   if (!order.seller_updated_at) return 'Pending seller update';
 
@@ -41,7 +50,12 @@ const OrderTracking = () => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deliveryPreference, setDeliveryPreference] = useState('doorstep');
+  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
+  const [deliveryPreferenceDraft, setDeliveryPreferenceDraft] = useState('doorstep');
+  const [isUpdatingPreference, setIsUpdatingPreference] = useState(false);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
   const [cartCount] = useState(() => {
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     return savedCart.reduce((total, item) => total + item.quantity, 0);
@@ -90,15 +104,94 @@ const OrderTracking = () => {
   }, [orders, requestedOrderId]);
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
-  const currentStep = selectedOrder
-    ? ORDER_STEPS.findIndex((step) => step.status === selectedOrder.status)
-    : -1;
+  const cashReceived = selectedOrder?.status === 'cash_received' ||
+    ['paid', 'received'].includes(String(selectedOrder?.payment_status || '').toLowerCase());
+  const statusStep = selectedOrder ? ORDER_STEP_INDEX[selectedOrder.status] ?? -1 : -1;
+  const currentStep = cashReceived && statusStep >= 0
+    ? ORDER_STEPS.length - 1
+    : statusStep;
   const orderDate = selectedOrder ? new Date(selectedOrder.created_at) : null;
   const subtotal = Number(selectedOrder?.subtotal || 0);
   const total = Number(selectedOrder?.total_price || 0);
   const shipping = Math.max(total - subtotal, 0);
+  const sellerContactNumbers = selectedOrder?.seller_contact_numbers
+    ? selectedOrder.seller_contact_numbers.split(',').map((phone) => phone.trim()).filter(Boolean)
+    : [];
+  const deliveryPreference = selectedOrder?.delivery_preference === 'hand-to-me'
+    ? 'Hand it to me'
+    : 'Leave at Doorstep';
+  const selectedOrderPreference = selectedOrder?.delivery_preference || 'doorstep';
+  const canCancelOrder = ['pending', 'processing', 'shipped'].includes(selectedOrder?.status);
+  const buyerSuspendedUntil = selectedOrder?.buyer_suspended_until;
+
+  useEffect(() => {
+    if (!selectedOrderId) return;
+    setDeliveryPreferenceDraft(selectedOrderPreference);
+  }, [selectedOrderId, selectedOrderPreference]);
 
   const handlePrintInvoice = () => window.print();
+
+  const handleUpdateDeliveryPreference = async () => {
+    if (!selectedOrder || deliveryPreferenceDraft === selectedOrder.delivery_preference) return;
+    setIsUpdatingPreference(true);
+    setActionError('');
+    setActionNotice('');
+    try {
+      const response = await fetch(`http://localhost:5000/api/orders/${selectedOrder.id}/delivery-preference`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ delivery_preference: deliveryPreferenceDraft }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Unable to update delivery preference.');
+      setOrders((current) => current.map((order) => (
+        order.id === selectedOrder.id
+          ? { ...order, delivery_preference: data.delivery_preference }
+          : order
+      )));
+      setActionNotice('Delivery preference updated.');
+    } catch (requestError) {
+      console.error('Unable to update delivery preference:', requestError);
+      setActionError(requestError.message || 'Unable to update delivery preference.');
+    } finally {
+      setIsUpdatingPreference(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder || !canCancelOrder) return;
+    if (!window.confirm('Cancel this order? You will not be able to place another order for one week.')) return;
+
+    setIsCancellingOrder(true);
+    setActionError('');
+    setActionNotice('');
+    try {
+      const response = await fetch(`http://localhost:5000/api/orders/${selectedOrder.id}/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Unable to cancel this order.');
+      setOrders((current) => current.map((order) => (
+        order.id === selectedOrder.id
+          ? {
+            ...order,
+            status: 'cancelled',
+            buyer_suspended_until: data.suspended_until,
+          }
+          : order
+      )));
+      setActionNotice(data.message);
+    } catch (requestError) {
+      console.error('Unable to cancel order:', requestError);
+      setActionError(requestError.message || 'Unable to cancel this order.');
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  };
 
   return (
     <div className="ot-page">
@@ -158,8 +251,9 @@ const OrderTracking = () => {
                   <>
                     <div className="ot-stepper">
                       {ORDER_STEPS.map((step, index) => {
-                        const isComplete = currentStep >= 0 && index < currentStep;
-                        const isCurrent = index === currentStep;
+                        const isComplete = currentStep >= 0 &&
+                          (index < currentStep || (index === currentStep && cashReceived));
+                        const isCurrent = index === currentStep && !cashReceived;
                         return (
                           <div key={step.status} className="ot-step">
                             <div className="ot-step-top">
@@ -172,18 +266,17 @@ const OrderTracking = () => {
                             </div>
                             <div className="ot-step-label">{step.title}</div>
                             <div className="ot-step-date">
-                              {index === 0 ? formatDate(selectedOrder.created_at) : isComplete ? 'Updated by seller' : 'Upcoming'}
+                              {index === 0
+                                ? formatDate(selectedOrder.created_at)
+                                : isCurrent
+                                  ? 'In progress'
+                                  : isComplete
+                                    ? 'Completed'
+                                    : 'Upcoming'}
                             </div>
                           </div>
                         );
                       })}
-                    </div>
-                    <div className="ot-upcoming-status">
-                      <span className="ot-upcoming-dot" />
-                      <div>
-                        <div className="ot-upcoming-title">Delivered</div>
-                        <div className="ot-upcoming-sub">Upcoming</div>
-                      </div>
                     </div>
                   </>
                 )}
@@ -191,7 +284,9 @@ const OrderTracking = () => {
                 <div className="ot-meta-list">
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Current Status:</span>
-                    <span className="ot-meta-value ot-status-text">{selectedOrder.status.replace(/_/g, ' ')}</span>
+                    <span className="ot-meta-value ot-status-text">
+                      {selectedOrder.status === 'cash_received' ? 'Package Received' : selectedOrder.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Estimated Delivery:</span>
@@ -208,6 +303,10 @@ const OrderTracking = () => {
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Delivery Address:</span>
                     <span className="ot-meta-value">{selectedOrder.delivery_address}</span>
+                  </div>
+                  <div className="ot-meta-row">
+                    <span className="ot-meta-label">Delivery Preference:</span>
+                    <span className="ot-meta-value">{deliveryPreference}</span>
                   </div>
                 </div>
 
@@ -259,37 +358,103 @@ const OrderTracking = () => {
                     <button type="button" className="ot-outline-btn" onClick={handlePrintInvoice}>
                       View Order Invoice
                     </button>
-                    <a className="ot-outline-btn ot-support-btn" href="mailto:support@illamchiya.com">
+                    <button
+                      type="button"
+                      className="ot-outline-btn ot-support-btn"
+                      onClick={() => setIsSupportDialogOpen(true)}
+                    >
                       Contact Support
-                    </a>
+                    </button>
+                    <button
+                      type="button"
+                      className="ot-cancel-order-btn"
+                      onClick={handleCancelOrder}
+                      disabled={!canCancelOrder || isCancellingOrder}
+                      title={canCancelOrder ? 'Cancel this order' : 'Only orders that have not been delivered can be cancelled.'}
+                    >
+                      {isCancellingOrder ? 'Cancelling…' : 'Cancel Order'}
+                    </button>
+                    <small className="ot-cancel-order-hint">
+                      {canCancelOrder
+                        ? 'Cancelling an order pauses new orders for one week.'
+                        : 'Orders can only be cancelled before delivery.'}
+                    </small>
                   </div>
 
+                  {buyerSuspendedUntil && new Date(buyerSuspendedUntil).getTime() > Date.now() && (
+                    <p className="ot-suspension-notice" role="status">
+                      Ordering is temporarily paused until {new Date(buyerSuspendedUntil).toLocaleString()}.
+                    </p>
+                  )}
+
                   <div className="ot-preferences">
-                    <h3 className="ot-pref-title">Delivery Preferences</h3>
-                    <label className="ot-radio-label">
-                      <input
-                        type="radio"
-                        name="deliveryPreference"
-                        value="doorstep"
-                        checked={deliveryPreference === 'doorstep'}
-                        onChange={() => setDeliveryPreference('doorstep')}
-                      />
-                      <span>Leave at Doorstep</span>
-                    </label>
-                    <label className="ot-radio-label">
-                      <input
-                        type="radio"
-                        name="deliveryPreference"
-                        value="hand-to-me"
-                        checked={deliveryPreference === 'hand-to-me'}
-                        onChange={() => setDeliveryPreference('hand-to-me')}
-                      />
-                      <span>Hand it to me</span>
-                    </label>
+                    <h3 className="ot-pref-title">Delivery Preference</h3>
+                    <div className="ot-preference-controls">
+                      <select
+                        aria-label="Delivery Preference"
+                        value={deliveryPreferenceDraft}
+                        onChange={(event) => {
+                          setDeliveryPreferenceDraft(event.target.value);
+                          setActionError('');
+                          setActionNotice('');
+                        }}
+                        disabled={isUpdatingPreference || selectedOrder.status === 'cancelled'}
+                      >
+                        <option value="doorstep">Leave at Doorstep</option>
+                        <option value="hand-to-me">Hand it to me</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="ot-small-action"
+                        onClick={handleUpdateDeliveryPreference}
+                        disabled={
+                          isUpdatingPreference ||
+                          deliveryPreferenceDraft === selectedOrder.delivery_preference ||
+                          selectedOrder.status === 'cancelled'
+                        }
+                      >
+                        {isUpdatingPreference ? 'Saving…' : 'Save preference'}
+                      </button>
+                    </div>
                   </div>
+
+                  {actionError && <p className="ot-action-feedback error" role="alert">{actionError}</p>}
+                  {actionNotice && <p className="ot-action-feedback success" role="status">{actionNotice}</p>}
                 </section>
               </aside>
             </div>
+
+            {isSupportDialogOpen && (
+              <div className="ot-dialog-backdrop" onClick={() => setIsSupportDialogOpen(false)}>
+                <section
+                  className="ot-support-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="ot-support-title"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="ot-support-close"
+                    aria-label="Close contact support"
+                    onClick={() => setIsSupportDialogOpen(false)}
+                  >
+                    ×
+                  </button>
+                  <h2 id="ot-support-title">Contact Support</h2>
+                  <p>Call this number:</p>
+                  {sellerContactNumbers.length > 0 ? (
+                    <div className="ot-support-numbers">
+                      {sellerContactNumbers.map((phone) => (
+                        <a key={phone} href={`tel:${phone}`}>{phone}</a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p role="status">Seller contact number is unavailable.</p>
+                  )}
+                </section>
+              </div>
+            )}
 
             <section className="ot-invoice">
               <div className="ot-invoice-brand">

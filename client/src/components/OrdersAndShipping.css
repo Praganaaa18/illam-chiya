@@ -196,7 +196,8 @@
   color: #315b88;
 }
 
-.shipping-status.delivered {
+.shipping-status.delivered,
+.shipping-status.cash_received {
   background: #d9eddf;
   color: #326447;
 }
@@ -208,6 +209,26 @@
 
 .shipping-details-button {
   padding: 6px 9px;
+}
+
+.shipping-delivery-preference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 11px 12px;
+  border: 1px solid #dce8dd;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f7faf6, #eef5ef);
+  color: #526457;
+  font-size: 0.8rem;
+}
+
+.shipping-delivery-preference strong {
+  color: #2c4c3b;
+  font-size: 0.84rem;
+  text-align: right;
 }
 
 .shipping-detail-card {

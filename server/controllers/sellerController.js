@@ -10,7 +10,7 @@ const getSellerInfo = async (req, res) => {
 
   try {
     const [sellerInfo] = await db.execute(
-      `SELECT id, full_name, email, business_name, status
+      `SELECT id, full_name, email, phone, business_name, status
        FROM users
        WHERE id = ? AND role = 'seller'`,
       [req.user.id]

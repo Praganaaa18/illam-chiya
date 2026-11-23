@@ -32,6 +32,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
+    phone: '',
     isVerified: false,
     sellerId: localStorage.getItem('userId') || null,
   });
@@ -86,6 +87,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       setSellerInfo({
         businessName: sellerName,
         email: res.data.email || '',
+        phone: res.data.phone || '',
         isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
@@ -123,7 +125,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       case 'orders':
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
-        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
+        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} esewaNumber={sellerInfo.phone} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }
@@ -316,7 +318,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
                     <td>{order.items_summary || 'Tea order'}</td>
                     <td>NPR {Number(order.total_price || 0).toLocaleString()}</td>
                     <td>
-                      <span className={`status-badge ${String(order.status).toLowerCase() === 'delivered' ? 'completed' : 'pending'}`}>
+                      <span className={`status-badge ${['delivered', 'cash_received'].includes(String(order.status).toLowerCase()) ? 'completed' : 'pending'}`}>
                         {order.status}
                       </span>
                     </td>

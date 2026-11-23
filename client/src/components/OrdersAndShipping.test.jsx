@@ -14,6 +14,7 @@ const order = {
   buyer_name: 'Buyer Name',
   phone: '9800000000',
   delivery_address: 'Ilam',
+  delivery_preference: 'doorstep',
   created_at: '2026-02-01T10:00:00.000Z',
   total_price: 500,
   items_summary: 'Tea (x1)',
@@ -80,6 +81,40 @@ test('rejects invalid tracking numbers before saving shipment details', async ()
     'Enter a valid Nepal mobile number for the tracking number (10 digits).'
   );
   expect(axios.patch).not.toHaveBeenCalled();
+});
+
+test('offers Cash Received after Delivered in shipment details', async () => {
+  const deliveredOrder = {
+    ...order,
+    status: 'delivered',
+    delivery_preference: 'hand-to-me',
+  };
+  const deliveredTracking = { ...tracking, status: 'delivered' };
+  axios.get.mockImplementation((url) => (
+    url.endsWith('/api/orders')
+      ? Promise.resolve({ data: [deliveredOrder] })
+      : Promise.resolve({ data: deliveredTracking })
+  ));
+
+  render(<OrdersAndShipping sellerId="5" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
+
+  const statusSelect = await screen.findByLabelText('Update shipment status');
+  await waitFor(() => expect(statusSelect).toBeEnabled());
+  expect(screen.getByRole('option', { name: 'Cash Received' })).toBeInTheDocument();
+  expect(screen.getByText('Buyer delivery preference')).toBeInTheDocument();
+  expect(screen.getByText('Hand it to me')).toBeInTheDocument();
+
+  fireEvent.change(statusSelect, { target: { value: 'cash_received' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update Shipment' }));
+
+  await waitFor(() => expect(axios.patch).toHaveBeenCalledTimes(1));
+  expect(axios.patch.mock.calls[0][0]).toBe('http://localhost:5000/api/orders/22/status');
+  expect(axios.patch.mock.calls[0][1]).toEqual({
+    status: 'cash_received',
+    carrier_name: '',
+    tracking_number: '',
+  });
 });
 
 test('opens shipment details beside the table and closes with Escape or X', async () => {

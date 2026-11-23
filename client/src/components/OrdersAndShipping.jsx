@@ -11,13 +11,15 @@ const STATUS_LABELS = {
   processing: 'Packing',
   shipped: 'Dispatched',
   delivered: 'Delivered',
+  cash_received: 'Cash Received',
   cancelled: 'Cancelled',
 };
 const STATUS_TRANSITIONS = {
   pending: ['processing', 'cancelled'],
   processing: ['shipped', 'cancelled'],
   shipped: ['delivered'],
-  delivered: [],
+  delivered: ['cash_received'],
+  cash_received: [],
   cancelled: [],
 };
 
@@ -154,8 +156,9 @@ const OrdersAndShipping = ({ sellerId }) => {
   const filteredOrders = useMemo(() => {
     if (activeFilter === 'all') return orders;
     if (activeFilter === 'pending') {
-      return orders.filter((order) => ['pending', 'processing', 'shipped'].includes(order.status));
+      return orders.filter((order) => ['pending', 'processing', 'shipped', 'delivered'].includes(order.status));
     }
+    if (activeFilter === 'cash_received') return orders.filter((order) => order.status === 'cash_received');
     return orders.filter((order) => order.status === activeFilter);
   }, [activeFilter, orders]);
   const sortedOrders = useMemo(() => sortRows(filteredOrders, sortConfig, (order, key) => {
@@ -248,8 +251,9 @@ const OrdersAndShipping = ({ sellerId }) => {
       <nav className="shipping-filters" aria-label="Filter orders">
         {[
           { id: 'all', label: 'All Orders', count: orders.length },
-          { id: 'pending', label: 'In Progress', count: orders.filter((order) => ['pending', 'processing', 'shipped'].includes(order.status)).length },
+          { id: 'pending', label: 'In Progress', count: orders.filter((order) => ['pending', 'processing', 'shipped', 'delivered'].includes(order.status)).length },
           { id: 'delivered', label: 'Delivered', count: orders.filter((order) => order.status === 'delivered').length },
+          { id: 'cash_received', label: 'Cash Received', count: orders.filter((order) => order.status === 'cash_received').length },
         ].map((filter) => (
           <button
             type="button"
@@ -375,6 +379,17 @@ const OrdersAndShipping = ({ sellerId }) => {
               <span>{selectedOrder.phone || 'Phone not provided'}</span>
               <span>{selectedOrder.delivery_address || 'Delivery address not provided'}</span>
               <span>Placed {formatDate(selectedOrder.created_at)}</span>
+            </div>
+
+            <div className="shipping-delivery-preference">
+              <span>Buyer delivery preference</span>
+              <strong>
+                {selectedOrder.delivery_preference === 'hand-to-me'
+                  ? 'Hand it to me'
+                  : selectedOrder.delivery_preference === 'doorstep'
+                    ? 'Leave at Doorstep'
+                    : 'Not specified'}
+              </strong>
             </div>
 
             <h4 className="shipping-timeline-title">Tracking updates</h4>

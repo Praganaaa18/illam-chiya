@@ -194,7 +194,7 @@ const RegisterSeller = () => {
             </div>
 
             <div className="form-group">
-              <label>Contact Phone</label>
+              <label>Contact Phone / eSewa Payout Number</label>
               <input
                 type="tel"
                 name="phone"
@@ -206,6 +206,7 @@ const RegisterSeller = () => {
                 required
               />
               {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
+              <small className="field-help-text">Use the mobile number registered to your eSewa account.</small>
             </div>
           </div>
 

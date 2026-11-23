@@ -109,7 +109,8 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   padding: 12px 14px;
   border: 1px solid var(--illam-border);
   border-radius: var(--illam-radius-control);
@@ -123,7 +124,8 @@
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   border-color: var(--illam-forest-600);
   box-shadow: 0 0 0 3px rgba(74, 112, 85, 0.12);
 }
