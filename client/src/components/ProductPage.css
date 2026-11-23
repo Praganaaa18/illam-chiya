@@ -401,11 +401,47 @@
   margin-bottom: 10px;
 }
 
-.page-wrapper .product-description p {
+.page-wrapper .description-expand-toggle {
+  display: block;
+  width: 100%;
+  max-width: 920px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.page-wrapper .description-expand-toggle:focus-visible {
+  outline: 3px solid #6f9c69;
+  outline-offset: 4px;
+}
+
+.page-wrapper .description-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   font-size: 0.9rem;
   line-height: 1.65;
   color: #333632;
-  max-width: 920px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.page-wrapper .description-copy.expanded {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.page-wrapper .description-action {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--green-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .recommendations-section {

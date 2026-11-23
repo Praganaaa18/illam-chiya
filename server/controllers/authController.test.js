@@ -95,6 +95,25 @@ test('rejects malformed login emails before querying the database', async () => 
   assert.equal(response.body.message, 'Enter a valid email address.');
 });
 
+test('rejects login when no buyer or seller portal is selected', async () => {
+  const originalQuery = db.query;
+  db.query = async () => {
+    throw new Error('Database should not be queried without a valid portal.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.login({
+      body: { email: 'buyer@example.com', password: 'validpass' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Choose a valid buyer or seller portal.');
+});
+
 test('stores a bcrypt hash instead of the submitted registration password', async () => {
   let insertedValues;
   const response = createResponse();
@@ -137,7 +156,7 @@ test('authenticates users with bcrypt password hashes', async () => {
     }], []];
   }, async () => {
     await authController.login({
-      body: { email: 'buyer@example.com', password: 'validpass' },
+      body: { email: 'buyer@example.com', password: 'validpass', role: 'buyer' },
     }, response);
   });
 
@@ -146,6 +165,31 @@ test('authenticates users with bcrypt password hashes', async () => {
   assert.equal(response.body.user.id, 8);
   assert.equal(queryCount, 1);
 });
+
+for (const { accountRole, requestedRole } of [
+  { accountRole: 'seller', requestedRole: 'buyer' },
+  { accountRole: 'buyer', requestedRole: 'seller' },
+]) {
+  test(`rejects ${accountRole} credentials in the ${requestedRole} portal`, async () => {
+    const response = createResponse();
+
+    await withQueryStub(async () => [[{
+      id: 12,
+      full_name: 'Tea Account',
+      email: 'account@example.com',
+      password: 'validpass',
+      role: accountRole,
+    }], []], async () => {
+      await authController.login({
+        body: { email: 'account@example.com', password: 'validpass', role: requestedRole },
+      }, response);
+    });
+
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.body.message, 'This account cannot access the selected portal.');
+    assert.equal(response.body.token, undefined);
+  });
+}
 
 test('upgrades a valid legacy plaintext password after login', async () => {
   let upgradedValues;
@@ -165,7 +209,7 @@ test('upgrades a valid legacy plaintext password after login', async () => {
     return [{ affectedRows: 1 }, []];
   }, async () => {
     await authController.login({
-      body: { email: 'legacy@example.com', password: 'validpass' },
+      body: { email: 'legacy@example.com', password: 'validpass', role: 'buyer' },
     }, response);
   });
 

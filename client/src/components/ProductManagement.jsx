@@ -1,11 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import Icon from './Icon';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
+import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
+import { isSellerSessionError } from '../utils/sellerSession';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 10;
 const PACK_SIZE_OPTIONS = ['50 g', '100 g', '250 g', '500 g', '1 kg'];
+const PACK_SIZE_ERROR = 'Enter a size from 1 to 99999 g, or a size such as 1 kg.';
+const normalizePackSize = (value) => {
+  const match = value.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
+  return match ? `${Number(match[1])} ${match[2].toLowerCase()}` : '';
+};
 const INITIAL_FORM = {
   name: '',
   description: '',
@@ -30,7 +38,10 @@ const getAuthConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
 });
 
-const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
+const ProductManagement = ({
+  sellerId = localStorage.getItem('userId'),
+  onSellerSessionError,
+}) => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +54,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isCustomPackSize, setIsCustomPackSize] = useState(false);
+  const [customPackSizeError, setCustomPackSizeError] = useState('');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isCategoryBusy, setIsCategoryBusy] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,6 +66,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const productNameRef = useRef(null);
   const modalTriggerRef = useRef(null);
   const categoryDropdownRef = useRef(null);
+  const saveInFlightRef = useRef(false);
   const isCategoryDropdownOpenRef = useRef(isCategoryDropdownOpen);
   isCategoryDropdownOpenRef.current = isCategoryDropdownOpen;
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +74,8 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const [stockFilter, setStockFilter] = useState('all');
   const [selectedRows, setSelectedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [sortConfig, handleSort] = useTableSort('name');
   const [formData, setFormData] = useState(INITIAL_FORM);
 
   const fetchProducts = useCallback(async () => {
@@ -78,15 +93,21 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       if (!Array.isArray(response.data)) {
         throw new Error('The server returned an invalid product list.');
       }
-      setProducts(response.data);
-      setSelectedRows((selected) => selected.filter((id) => response.data.some((product) => product.id === id)));
+      const uniqueProducts = Array.from(
+        new Map(response.data.map((product) => [String(product.id), product])).values()
+      );
+      setProducts(uniqueProducts);
+      setSelectedRows((selected) => selected.filter((id) =>
+        uniqueProducts.some((product) => String(product.id) === String(id))
+      ));
     } catch (error) {
       console.error('Error fetching products:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setLoadError(getErrorMessage(error, 'Could not load products. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [sellerId]);
+  }, [sellerId, onSellerSessionError]);
 
   useEffect(() => {
     fetchProducts();
@@ -112,11 +133,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       });
     } catch (error) {
       console.error('Error fetching categories:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryLoadError(getErrorMessage(error, 'Could not load categories.'));
     } finally {
       setIsLoadingCategories(false);
     }
-  }, []);
+  }, [onSellerSessionError]);
 
   useEffect(() => {
     fetchCategories();
@@ -139,14 +161,23 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     return matchesSearch && matchesStatus && matchesStock;
   }), [products, searchQuery, statusFilter, stockFilter]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  const pageProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const firstProductNumber = filteredProducts.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
-  const lastProductNumber = Math.min(currentPage * PAGE_SIZE, filteredProducts.length);
+  const sortedProducts = useMemo(() => sortRows(filteredProducts, sortConfig, (product, key) => {
+    const values = {
+      name: product.name,
+      category: product.category,
+      pack_size: product.pack_size,
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      status: isProductActive(product) ? 'active' : 'inactive',
+    };
+    return values[key] ?? '';
+  }), [filteredProducts, sortConfig]);
+  const pageCount = Math.max(1, Math.ceil(sortedProducts.length / pageSize));
+  const pageProducts = sortedProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, stockFilter]);
+  }, [searchQuery, statusFilter, stockFilter, pageSize]);
 
   useEffect(() => {
     if (currentPage > pageCount) setCurrentPage(pageCount);
@@ -164,21 +195,64 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
+    if (name === 'pack_size') setCustomPackSizeError('');
   };
 
   const handlePackSizeChange = (event) => {
     const value = event.target.value;
     setIsCustomPackSize(value === 'custom');
+    setCustomPackSizeError('');
     setFormData((current) => ({
       ...current,
       pack_size: value === 'custom' ? '' : value,
     }));
   };
 
+  const handleCustomPackSizeKeyDown = (event) => {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    const enteredValue = formData.pack_size.trim();
+    const valueWithUnit = /^\d+$/.test(enteredValue) ? `${enteredValue} g` : enteredValue;
+    const packSize = normalizePackSize(valueWithUnit);
+    if (!packSize) {
+      setCustomPackSizeError(PACK_SIZE_ERROR);
+      return;
+    }
+
+    setFormData((current) => ({ ...current, pack_size: packSize }));
+    setIsCustomPackSize(false);
+    setCustomPackSizeError('');
+    setNotice(null);
+  };
+
+  const validateCustomPackSize = () => {
+    const packSize = normalizePackSize(formData.pack_size);
+    if (!packSize) {
+      setCustomPackSizeError(PACK_SIZE_ERROR);
+      return '';
+    }
+
+    setCustomPackSizeError('');
+    return packSize;
+  };
+
   const discardSelectedFile = useCallback(() => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
+
+  const handleImageFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && !isValidUploadSize(file.size)) {
+      discardSelectedFile();
+      setNotice({ type: 'error', message: UPLOAD_SIZE_ERROR });
+      return;
+    }
+
+    setNotice(null);
+    setSelectedFile(file);
+  };
 
   const handleOpenAddModal = (event) => {
     modalTriggerRef.current = event?.currentTarget || null;
@@ -190,6 +264,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setNewCategoryName('');
     setEditingProductId(null);
     setIsCustomPackSize(false);
+    setCustomPackSizeError('');
     setFormData({ ...INITIAL_FORM, category_id: String(categories[0]?.id || '') });
     discardSelectedFile();
     setIsModalOpen(true);
@@ -206,6 +281,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setEditingProductId(product.id);
     const packSize = product.pack_size || '100 g';
     setIsCustomPackSize(!PACK_SIZE_OPTIONS.includes(packSize));
+    setCustomPackSizeError('');
     setFormData({
       name: product.name || '',
       description: product.description || '',
@@ -228,6 +304,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
     setIsAddingCategory(false);
     setIsCategoryDropdownOpen(false);
     setIsCustomPackSize(false);
+    setCustomPackSizeError('');
     discardSelectedFile();
     setEditingProductId(null);
   }, [discardSelectedFile]);
@@ -271,15 +348,20 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saveInFlightRef.current) return;
+
     const price = Number(formData.price);
     const stock = Number(formData.stock_quantity);
     const categoryId = Number(formData.category_id);
-    const packSizeMatch = formData.pack_size.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
-    if (!packSizeMatch) {
-      setNotice({ type: 'error', message: 'Enter a pack size such as 100 g or 1 kg.' });
+    const packSize = normalizePackSize(formData.pack_size);
+    if (!packSize) {
+      if (isCustomPackSize) {
+        validateCustomPackSize();
+      } else {
+        setNotice({ type: 'error', message: PACK_SIZE_ERROR });
+      }
       return;
     }
-    const packSize = `${Number(packSizeMatch[1])} ${packSizeMatch[2].toLowerCase()}`;
     if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 0) {
       setNotice({ type: 'error', message: 'Enter a valid non-negative price and whole-number stock quantity.' });
       return;
@@ -290,9 +372,11 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       return;
     }
 
+    saveInFlightRef.current = true;
     setIsSaving(true);
     setNotice(null);
     try {
+      const productIdBeingEdited = editingProductId;
       let imageUrl = formData.image_url.trim();
       if (selectedFile) {
         const uploadData = new FormData();
@@ -314,20 +398,22 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
         status: formData.status,
       };
 
-      if (editingProductId) {
-        await axios.put(`${API_ORIGIN}/api/products/${editingProductId}`, productPayload, getAuthConfig());
+      if (productIdBeingEdited) {
+        await axios.put(`${API_ORIGIN}/api/products/${productIdBeingEdited}`, productPayload, getAuthConfig());
       } else {
         await axios.post(`${API_ORIGIN}/api/products`, productPayload, getAuthConfig());
       }
 
       setIsModalOpen(false);
       resetForm();
-      setNotice({ type: 'success', message: `Product ${editingProductId ? 'updated' : 'added'} successfully.` });
+      setNotice({ type: 'success', message: `Product ${productIdBeingEdited ? 'updated' : 'added'} successfully.` });
       await fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to save product. Please try again.') });
     } finally {
+      saveInFlightRef.current = false;
       setIsSaving(false);
     }
   };
@@ -360,6 +446,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setCategoryMessage(`${createdCategory.name} added and selected.`);
     } catch (error) {
       console.error('Error creating category:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryError(getErrorMessage(error, 'Could not add category.'));
     } finally {
       setIsCategoryBusy(false);
@@ -396,6 +483,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       setCategoryMessage(`${selectedCategory.name} deleted.`);
     } catch (error) {
       console.error('Error deleting category:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setCategoryError(getErrorMessage(error, 'Could not delete category.'));
     } finally {
       setIsCategoryBusy(false);
@@ -413,6 +501,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       await fetchProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to delete product. Please try again.') });
     } finally {
       setBusyProductId(null);
@@ -433,6 +522,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
       );
     } catch (error) {
       console.error('Failed to update product status:', error);
+      if (isSellerSessionError(error)) onSellerSessionError?.();
       setNotice({ type: 'error', message: getErrorMessage(error, 'Failed to update product status.') });
     } finally {
       setBusyProductId(null);
@@ -531,12 +621,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                   </label>
                 </th>
                 <th scope="col">Thumbnail</th>
-                <th scope="col">Product Name</th>
-                <th scope="col">Category</th>
-                <th scope="col">Pack Size</th>
-                <th scope="col">Price</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Status</th>
+                <SortHeader label="Product Name" column="name" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Category" column="category" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Pack Size" column="pack_size" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Price" column="price" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Stock" column="stock_quantity" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
                 <th scope="col">Actions</th>
               </tr>
             </thead>
@@ -623,14 +713,15 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
         </div>
 
         <div className="pm-card-footer">
-          <span>Showing {firstProductNumber}-{lastProductNumber} of {filteredProducts.length} products</span>
-          {pageCount > 1 && (
-            <div className="pm-pagination" aria-label="Product pages">
-              <button type="button" aria-label="Previous page" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>‹</button>
-              <span>Page {currentPage} of {pageCount}</span>
-              <button type="button" aria-label="Next page" disabled={currentPage === pageCount} onClick={() => setCurrentPage((page) => page + 1)}>›</button>
-            </div>
-          )}
+          <TablePagination
+            page={currentPage}
+            pageCount={pageCount}
+            total={sortedProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="products"
+          />
         </div>
       </section>
 
@@ -780,7 +871,12 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     disabled={isSaving}
                     required
                   >
-                    {PACK_SIZE_OPTIONS.map((packSize) => (
+                    {[
+                      ...PACK_SIZE_OPTIONS,
+                      ...(formData.pack_size && !PACK_SIZE_OPTIONS.includes(formData.pack_size) && !isCustomPackSize
+                        ? [formData.pack_size]
+                        : []),
+                    ].map((packSize) => (
                       <option key={packSize} value={packSize}>{packSize}</option>
                     ))}
                     <option value="custom">Custom size…</option>
@@ -795,9 +891,20 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                       maxLength="20"
                       disabled={isSaving}
                       onChange={handleChange}
+                      onKeyDown={handleCustomPackSizeKeyDown}
+                      onBlur={() => {
+                        if (formData.pack_size.trim()) validateCustomPackSize();
+                      }}
+                      aria-invalid={Boolean(customPackSizeError)}
+                      aria-describedby={customPackSizeError ? 'pm-pack-size-error' : undefined}
                       name="pack_size"
                       required
                     />
+                  )}
+                  {isCustomPackSize && customPackSizeError && (
+                    <small id="pm-pack-size-error" className="pm-pack-size-hint pm-pack-size-error" role="alert">
+                      {customPackSizeError}
+                    </small>
                   )}
                   <small className="pm-pack-size-hint">Displayed on the product catalog</small>
                 </div>
@@ -812,7 +919,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     accept="image/*"
                     aria-label="Upload product image"
                     disabled={isSaving}
-                    onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                    onChange={handleImageFileChange}
                   />
                   {selectedFile && (
                     <button
@@ -827,6 +934,7 @@ const ProductManagement = ({ sellerId = localStorage.getItem('userId') }) => {
                     </button>
                   )}
                 </div>
+                <small className="pm-pack-size-hint">Accepted file size: 100 KB–500 KB.</small>
               </div>
               <div className="pm-form-group">
                 <label htmlFor="pm-product-description">Description</label>

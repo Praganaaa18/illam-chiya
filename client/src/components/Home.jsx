@@ -112,9 +112,12 @@ const Home = () => {
 
   // --- Subtitle: Filter Products by Name, Process Type, or Description ---
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+  const normalizedCategory = selectedCategory === 'all'
+    ? ''
+    : selectedCategory.trim().toLocaleLowerCase();
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === 'all' ||
-      String(product.category || '').toLocaleLowerCase() === selectedCategory.toLocaleLowerCase();
+    const matchesCategory = !normalizedCategory ||
+      String(product.category || '').toLocaleLowerCase().includes(normalizedCategory);
     const matchesSearch = !normalizedSearch || [
       product.name,
       product.category,
@@ -192,11 +195,33 @@ const Home = () => {
           PRODUCTS DISPLAY SECTION
           ========================================== */}
       <section className="products-section" ref={productsSectionRef}>
-            <h2 className="section-title">Products</h2>
+        <div className="products-heading-row">
+          <h2 className="section-title">Products</h2>
+          <div className="category-filter">
+            <label htmlFor="product-category-filter">Category</label>
+            <input
+              type="search"
+              id="product-category-filter"
+              list="product-category-options"
+              placeholder="All categories"
+              value={selectedCategory === 'all' ? '' : selectedCategory}
+              aria-label="Filter products by category"
+              onChange={(event) => {
+                setSelectedCategory(event.target.value || 'all');
+                setCurrentPage(1);
+              }}
+            />
+            <datalist id="product-category-options">
+              {categories.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
+          </div>
+        </div>
 
         <div className="product-grid">
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((product) => (
+          {paginatedProducts.length > 0 ? (
+            paginatedProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}

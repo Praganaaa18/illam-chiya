@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './BillingsandPayouts.css';
 
 const BillingsAndPayouts = ({ sellerId = 1 }) => {
@@ -10,6 +11,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
   const [proofFile, setProofFile] = useState(null);
   const [settleMessage, setSettleMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortConfig, handleSort] = useTableSort('order_id');
 
   const fetchLedgerData = useCallback(async () => {
     try {
@@ -55,6 +59,26 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
       t.customer.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+  const sortedTransactions = useMemo(() => sortRows(filteredTransactions, sortConfig, (item, key) => {
+    const values = {
+      date: item.date,
+      order_id: item.order_id,
+      customer: item.customer,
+      address: item.address,
+      total_amount: item.total_amount,
+      fee: Number(item.total_amount) * Number(item.fee_rate),
+      net: Number(item.total_amount) * (1 - Number(item.fee_rate)),
+      status: item.status,
+    };
+    return values[key] ?? '';
+  }), [filteredTransactions, sortConfig]);
+  const financePageCount = Math.max(1, Math.ceil(sortedTransactions.length / pageSize));
+  const pagedTransactions = sortedTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => setCurrentPage(1), [statusFilter, searchTerm, pageSize]);
+  useEffect(() => {
+    if (currentPage > financePageCount) setCurrentPage(financePageCount);
+  }, [currentPage, financePageCount]);
 
   const handleSettleSubmit = async (e) => {
     e.preventDefault();
@@ -150,19 +174,19 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
         <table className="ledger-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Address</th>
-              <th>Cash Total</th>
-              <th>Fee (5%)</th>
-              <th>Net Earnings</th>
-              <th>Status</th>
+              <SortHeader label="Date" column="date" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Order ID" column="order_id" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Customer" column="customer" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Address" column="address" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Cash Total" column="total_amount" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Fee (5%)" column="fee" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Net Earnings" column="net" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
             {filteredTransactions.length > 0 ? (
-              filteredTransactions.map((item) => {
+              pagedTransactions.map((item) => {
                 const total = Number(item.total_amount);
                 const fee = total * Number(item.fee_rate);
                 const net = total - fee;
@@ -196,6 +220,15 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
             )}
           </tbody>
         </table>
+        <TablePagination
+          page={currentPage}
+          pageCount={financePageCount}
+          total={sortedTransactions.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="transactions"
+        />
       </div>
 
       {showSettleModal && (

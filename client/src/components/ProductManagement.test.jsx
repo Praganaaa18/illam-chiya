@@ -87,6 +87,31 @@ test('shows product categories and preserves the selected category when editing'
   ));
 });
 
+test('submitting an edited product more than once sends only one update request', async () => {
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: /edit/i }));
+  const updateButton = screen.getByRole('button', { name: 'Update Product' });
+  fireEvent.click(updateButton);
+  fireEvent.click(updateButton);
+
+  await waitFor(() => expect(axios.put).toHaveBeenCalledTimes(1));
+  expect(axios.post).not.toHaveBeenCalled();
+});
+
+test('rejects a product image smaller than 100 KB', async () => {
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  const imageInput = await screen.findByLabelText('Upload product image');
+  fireEvent.change(imageInput, {
+    target: { files: [new File(['small'], 'small.png', { type: 'image/png' })] },
+  });
+
+  expect(screen.getByRole('alert')).toHaveTextContent('File size must be between 100 KB and 500 KB.');
+  expect(screen.queryByRole('button', { name: 'Discard selected image' })).not.toBeInTheDocument();
+});
+
 test('creates a category from the product form and selects it', async () => {
   axios.post.mockResolvedValueOnce({ data: { id: 12, name: 'Herbal Tea' } });
   render(<ProductManagement sellerId="5" />);
@@ -112,15 +137,40 @@ test('creates a category from the product form and selects it', async () => {
   );
 });
 
-test('allows a custom pack size and saves its normalized value', async () => {
+test('returns to seller login when category creation reports missing seller access', async () => {
+  const onSellerSessionError = jest.fn();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  axios.post.mockRejectedValueOnce({
+    response: { status: 403, data: { error: 'Seller access is required.' } },
+  });
+  render(<ProductManagement sellerId="5" onSellerSessionError={onSellerSessionError} />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /Product Category.*Black Tea/ }));
+  fireEvent.click(screen.getByRole('button', { name: '+ Add category' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'New category name' }), {
+    target: { value: 'Herbal Tea' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+
+  await waitFor(() => expect(onSellerSessionError).toHaveBeenCalledTimes(1));
+});
+
+test('commits a numeric custom pack size on Enter and saves its normalized value', async () => {
   render(<ProductManagement sellerId="5" />);
 
   fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
   await screen.findByLabelText('Per Pack *');
   fireEvent.change(screen.getByLabelText('Per Pack *'), { target: { value: 'custom' } });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Custom pack size' }), {
-    target: { value: '750g' },
+  const customPackSizeInput = screen.getByRole('textbox', { name: 'Custom pack size' });
+  fireEvent.change(customPackSizeInput, {
+    target: { value: '750' },
   });
+  expect(fireEvent.keyDown(customPackSizeInput, { key: 'Enter', code: 'Enter' })).toBe(false);
+  expect(screen.queryByRole('textbox', { name: 'Custom pack size' })).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Per Pack *')).toHaveValue('750 g');
+  expect(screen.getByRole('option', { name: '750 g' })).toBeInTheDocument();
+
   fireEvent.change(screen.getByLabelText('Product Name *'), { target: { value: 'Custom Pack Tea' } });
   fireEvent.change(screen.getByLabelText('Price (Rs.) *'), { target: { value: '800' } });
   fireEvent.change(screen.getByLabelText('Stock Quantity *'), { target: { value: '10' } });
@@ -131,6 +181,23 @@ test('allows a custom pack size and saves its normalized value', async () => {
     expect.objectContaining({ pack_size: '750 g', category_id: 7 }),
     expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
   ));
+});
+
+test('shows validation feedback and keeps invalid custom pack sizes editable', async () => {
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  fireEvent.change(await screen.findByLabelText('Per Pack *'), { target: { value: 'custom' } });
+  const customPackSizeInput = screen.getByRole('textbox', { name: 'Custom pack size' });
+  fireEvent.change(customPackSizeInput, { target: { value: '0' } });
+  fireEvent.keyDown(customPackSizeInput, { key: 'Enter', code: 'Enter' });
+
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Enter a size from 1 to 99999 g, or a size such as 1 kg.'
+  );
+  expect(screen.getByRole('textbox', { name: 'Custom pack size' })).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Custom pack size' })).toHaveAttribute('aria-invalid', 'true');
+  expect(axios.post).not.toHaveBeenCalled();
 });
 
 test('surfaces the server error when deleting a category that is still assigned', async () => {

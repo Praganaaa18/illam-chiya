@@ -1,7 +1,6 @@
 .pm-container {
-  padding: 24px;
   background-color: var(--illam-paper);
-  min-height: 100vh;
+  min-height: 0;
   font-family: var(--illam-font-body);
   color: var(--illam-ink);
   box-sizing: border-box;
@@ -310,12 +309,6 @@
   color: #6b7280;
 }
 
-.pm-card-footer {
-  padding: 14px 24px;
-  font-size: 13px;
-  color: #4b5563;
-}
-
 /* Modal styles */
 .pm-modal-overlay {
   position: fixed;
@@ -555,6 +548,10 @@
   font-size: 11px;
 }
 
+.pm-pack-size-error {
+  color: #a33030;
+}
+
 .pm-category-feedback {
   margin: 0;
   font-size: 12px;
@@ -763,32 +760,21 @@
 
 .pm-card-footer {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.pm-pagination {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  font-size: 13px;
   color: #4b5563;
 }
 
-.pm-pagination button,
 .pm-retry-btn {
   border: 1px solid #d1d5db;
   border-radius: 5px;
   background: #ffffff;
   color: #374151;
   cursor: pointer;
-}
-
-.pm-pagination button {
-  width: 30px;
-  height: 30px;
-  font-size: 19px;
-  line-height: 1;
 }
 
 .pm-pagination button:disabled,
@@ -882,7 +868,6 @@
   .pm-card-footer {
     align-items: flex-start;
     flex-direction: column;
-    padding: 12px 16px;
   }
 
   .pm-modal-form {

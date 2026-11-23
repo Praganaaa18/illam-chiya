@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { isValidEmail } from '../utils/validation';
 import Icon from './Icon';
 import './Login.css';
 
 const Login = () => {
-  const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
+  const location = useLocation();
+  const [role, setRole] = useState(() => (location.state?.role === 'seller' ? 'seller' : 'buyer'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -13,7 +14,7 @@ const Login = () => {
 
   // Field validation errors & general submission errors
   const [validationErrors, setValidationErrors] = useState({});
-  const [error, setError] = useState('');
+  const [error, setError] = useState(location.state?.message || '');
   const [loading, setLoading] = useState(false);
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
