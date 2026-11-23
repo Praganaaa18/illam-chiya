@@ -16,6 +16,34 @@ const createResponse = () => ({
   },
 });
 
+test('requires a nearby landmark when creating an order', async () => {
+  const originalGetConnection = db.getConnection;
+  db.getConnection = async () => {
+    throw new Error('Database should not be queried when the landmark is missing.');
+  };
+  const response = createResponse();
+
+  try {
+    await orderController.createOrder({
+      user: { id: 8, role: 'buyer' },
+      body: {
+        items: [{ product_id: 1, quantity: 1 }],
+        recipient_name: 'Buyer Name',
+        phone: '9800000000',
+        shipping_address: 'Ilam, Kathmandu',
+      },
+    }, response);
+  } finally {
+    db.getConnection = originalGetConnection;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(
+    response.body.message,
+    'Recipient name, a valid 10-digit phone number, shipping address, and nearby landmark are required.'
+  );
+});
+
 test('rejects carrier values that are not available drivers', async () => {
   const originalGetConnection = db.getConnection;
   const connection = {

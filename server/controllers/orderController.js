@@ -22,6 +22,7 @@ exports.createOrder = async (req, res) => {
     delivery_address, 
     address, 
     city, 
+    landmark,
     items, 
     cart 
   } = body;
@@ -58,10 +59,14 @@ exports.createOrder = async (req, res) => {
     .find((value) => typeof value === 'string' && value.trim())?.trim() || '';
   const phoneNum = normalizePhoneNumber(phone);
   const deliveryCity = typeof city === 'string' ? city.trim() : '';
-  if (!rawAddress || !buyerName || !isValidPhoneNumber(phone)) {
-    return res.status(400).json({ message: 'Recipient name, a valid 10-digit phone number, and shipping address are required.' });
+  const nearbyLandmark = typeof landmark === 'string' ? landmark.trim() : '';
+  if (!rawAddress || !buyerName || !isValidPhoneNumber(phone) ||
+      !nearbyLandmark || nearbyLandmark.length > 150) {
+    return res.status(400).json({
+      message: 'Recipient name, a valid 10-digit phone number, shipping address, and nearby landmark are required.',
+    });
   }
-  const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''}`;
+  const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''} | Landmark: ${nearbyLandmark}`;
 
   let connection;
 

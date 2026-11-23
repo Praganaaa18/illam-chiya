@@ -14,7 +14,7 @@ const order = {
   status: 'processing',
   buyer_name: 'Buyer Name',
   phone: '9800000000',
-  delivery_address: 'Ilam',
+  delivery_address: 'Recipient: Buyer Name | Phone: 9800000000 | Address: Ilam, Kathmandu | Landmark: Near the main temple',
   created_at: '2026-02-01T10:00:00.000Z',
   total_price: 500,
   items_summary: 'Tea (x1)',
@@ -51,6 +51,18 @@ test('selecting a driver generates and saves an order-specific tracking number',
   render(<OrdersAndShipping sellerId="5" />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
+  expect(screen.getByText(/Landmark: Near the main temple/)).toBeInTheDocument();
+  const placedDate = new Date(order.created_at);
+  const estimatedDate = new Date(order.created_at);
+  estimatedDate.setDate(estimatedDate.getDate() + 10);
+  const dateOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  };
+  expect(screen.getByText(
+    `${placedDate.toLocaleDateString(undefined, dateOptions)} – ${estimatedDate.toLocaleDateString(undefined, dateOptions)}`
+  )).toBeInTheDocument();
   const carrierName = await screen.findByLabelText('Carrier name');
   await waitFor(() => expect(carrierName).toBeEnabled());
 
