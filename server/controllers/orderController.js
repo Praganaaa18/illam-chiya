@@ -68,6 +68,11 @@ exports.createOrder = async (req, res) => {
       message: 'Recipient name, a valid 10-digit phone number, shipping address, and nearby landmark are required.',
     });
   }
+  if (!/^[a-zA-Z0-9\s,.-]+$/.test(rawAddress)) {
+    return res.status(400).json({
+      message: 'Special characters (like @, #, $, %) are not allowed in Delivery Address.',
+    });
+  }
   if (!['doorstep', 'hand-to-me'].includes(deliveryPreference)) {
     return res.status(400).json({ message: 'Choose a valid delivery preference.' });
   }
