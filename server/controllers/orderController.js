@@ -255,6 +255,16 @@ exports.getBuyerOrders = async (req, res) => {
           WHERE seller_item.order_id = o.id
         ) AS seller_contact_numbers,
         (
+          SELECT GROUP_CONCAT(
+            DISTINCT COALESCE(NULLIF(TRIM(seller.business_name), ''), seller.full_name)
+            ORDER BY seller.full_name
+            SEPARATOR ', '
+          )
+          FROM order_items seller_item
+          JOIN users seller ON seller.id = seller_item.seller_id
+          WHERE seller_item.order_id = o.id
+        ) AS seller_brand_names,
+        (
           SELECT tracking_event.created_at
           FROM order_tracking_events tracking_event
           WHERE tracking_event.order_id = o.id

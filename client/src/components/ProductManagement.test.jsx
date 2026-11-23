@@ -112,6 +112,26 @@ test('rejects a product image smaller than 100 KB', async () => {
   expect(screen.queryByRole('button', { name: 'Discard selected image' })).not.toBeInTheDocument();
 });
 
+test('shows product save errors inside the add product dialog', async () => {
+  axios.post.mockRejectedValueOnce({
+    response: { data: { error: 'Product could not be saved.' } },
+  });
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  render(<ProductManagement sellerId="5" />);
+
+  fireEvent.click(screen.getByRole('button', { name: /add new product/i }));
+  fireEvent.change(await screen.findByLabelText('Product Name *'), {
+    target: { value: 'New Tea' },
+  });
+  fireEvent.change(screen.getByLabelText('Price (Rs.) *'), { target: { value: '125' } });
+  fireEvent.change(screen.getByLabelText('Stock Quantity *'), { target: { value: '5' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save Product' }));
+
+  const dialog = screen.getByRole('dialog', { name: 'Add New Product' });
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Product could not be saved.');
+  expect(within(dialog).getByRole('button', { name: 'Dismiss message' })).toBeInTheDocument();
+});
+
 test('creates a category from the product form and selects it', async () => {
   axios.post.mockResolvedValueOnce({ data: { id: 12, name: 'Herbal Tea' } });
   render(<ProductManagement sellerId="5" />);

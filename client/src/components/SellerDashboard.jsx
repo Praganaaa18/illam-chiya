@@ -33,7 +33,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
-    phone: '',
     sellerId: localStorage.getItem('userId') || null,
   });
 
@@ -89,7 +88,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       setSellerInfo({
         businessName: sellerName,
         email: res.data.email || '',
-        phone: res.data.phone || '',
         sellerId: res.data.id || null,
       });
       if (sellerName) localStorage.setItem('userName', sellerName);
@@ -126,7 +124,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       case 'orders':
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
-        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} esewaNumber={sellerInfo.phone} />;
+        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }

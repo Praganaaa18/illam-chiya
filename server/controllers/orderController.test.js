@@ -73,6 +73,32 @@ test('rejects special characters in the delivery address', async () => {
   );
 });
 
+test('includes seller brand names in buyer order results', async () => {
+  const originalQuery = db.query;
+  let executedQuery = '';
+  db.query = async (query, values) => {
+    executedQuery = query;
+    assert.deepEqual(values, [8]);
+    return [[{ id: 22, seller_brand_names: 'Ilam Tea Estate' }]];
+  };
+  const response = createResponse();
+
+  try {
+    await orderController.getBuyerOrders({
+      user: { id: 8, role: 'buyer' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body[0].seller_brand_names, 'Ilam Tea Estate');
+  assert.match(
+    executedQuery,
+    /COALESCE\(NULLIF\(TRIM\(seller\.business_name\), ''\), seller\.full_name\)/
+  );
+});
+
 test('returns the initial order_placed shipment milestone', async () => {
   const originalExecute = db.execute;
   const queries = [];

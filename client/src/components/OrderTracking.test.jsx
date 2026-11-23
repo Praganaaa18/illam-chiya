@@ -13,6 +13,7 @@ const order = {
   payment_status: 'pending',
   delivery_preference: 'hand-to-me',
   seller_contact_numbers: '9812345678',
+  seller_brand_names: 'Ilam Tea Estate',
   subtotal: '25',
   total_price: '145',
   delivery_address: 'Kathmandu',
@@ -68,6 +69,8 @@ test('shows a 10-day delivery estimate from order placement and tracking details
   expect(screen.getByRole('button', { name: 'Cancel Order' })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: 'Contact Support' }));
   expect(screen.getByRole('dialog', { name: 'Contact Support' })).toBeInTheDocument();
+  expect(screen.getByText('Seller\'s Brand Name:')).toBeInTheDocument();
+  expect(screen.getByText('Ilam Tea Estate')).toBeInTheDocument();
   expect(screen.getByText('Call this number:')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '9812345678' })).toHaveAttribute('href', 'tel:9812345678');
   fireEvent.click(screen.getByRole('button', { name: 'Close contact support' }));

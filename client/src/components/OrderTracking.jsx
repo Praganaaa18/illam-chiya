@@ -450,6 +450,13 @@ const OrderTracking = () => {
                     ×
                   </button>
                   <h2 id="ot-support-title">Contact Support</h2>
+                  {selectedOrder.seller_brand_names ? (
+                    <p>
+                      <strong>Seller&apos;s Brand Name:</strong> {selectedOrder.seller_brand_names}
+                    </p>
+                  ) : (
+                    <p role="status">Seller&apos;s brand name is unavailable.</p>
+                  )}
                   <p>Call this number:</p>
                   {sellerContactNumbers.length > 0 ? (
                     <div className="ot-support-numbers">

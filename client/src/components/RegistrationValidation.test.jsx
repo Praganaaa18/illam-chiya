@@ -43,6 +43,44 @@ test('blocks seller registration with a non-nine-digit PAN', async () => {
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
+test('keeps the email and contact fields side by side without the eSewa hint', () => {
+  render(
+    <MemoryRouter>
+      <RegisterSeller />
+    </MemoryRouter>
+  );
+
+  const phoneInput = screen.getByLabelText('Contact Number');
+  const emailInput = screen.getByLabelText('Email Address');
+
+  expect(screen.queryByText('Use the number linked to your eSewa account.')).not.toBeInTheDocument();
+  expect(phoneInput.closest('.form-row')).toBe(emailInput.closest('.form-row'));
+});
+
+test.each([
+  ['buyer', RegisterBuyer, '••••••••••••'],
+  ['seller', RegisterSeller, '••••••••'],
+])('%s registration shows password mismatch feedback', (role, RegistrationPage, passwordPlaceholder) => {
+  render(
+    <MemoryRouter>
+      <RegistrationPage />
+    </MemoryRouter>
+  );
+
+  const [passwordInput, confirmPasswordInput] = screen.getAllByPlaceholderText(passwordPlaceholder);
+  fireEvent.change(passwordInput, { target: { value: 'secret123' } });
+  fireEvent.change(confirmPasswordInput, { target: { value: 'different123' } });
+
+  const mismatchMessage = screen.getByRole('alert');
+  expect(mismatchMessage).toHaveTextContent('Passwords do not match.');
+  expect(confirmPasswordInput.closest('.form-row').previousElementSibling).toBe(mismatchMessage);
+  expect(confirmPasswordInput).toHaveAttribute('aria-invalid', 'true');
+
+  fireEvent.change(confirmPasswordInput, { target: { value: 'secret123' } });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(confirmPasswordInput).toHaveAttribute('aria-invalid', 'false');
+});
+
 test.each([
   ['buyer', RegisterBuyer, 'Show password', 'Hide password'],
   ['seller', RegisterSeller, 'Show password', 'Hide password'],
