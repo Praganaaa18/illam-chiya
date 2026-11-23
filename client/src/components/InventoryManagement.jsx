@@ -18,6 +18,7 @@ const InventoryManagement = ({ sellerId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
   const [isRestocking, setIsRestocking] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -111,6 +112,10 @@ const InventoryManagement = ({ sellerId }) => {
   }), [filteredItems, sortConfig]);
   const pageCount = Math.max(1, Math.ceil(sortedItems.length / pageSize));
   const pagedItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const lowStockItems = items.filter((item) => {
+    const availableStock = Number(item.available_stock);
+    return Number.isFinite(availableStock) && availableStock <= 10;
+  });
 
   useEffect(() => setCurrentPage(1), [searchTerm, statusFilter, categoryFilter, pageSize]);
   useEffect(() => {
@@ -156,12 +161,42 @@ const InventoryManagement = ({ sellerId }) => {
 
         <div className="inv-kpi-card">
           <div className="kpi-content">
-            <span className="kpi-title">Delivered Stock Revenue</span>
+            <span className="kpi-title"> Stock Revenue</span>
             <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
           </div>
           <div className="kpi-icon-box forest"><Icon name="wallet" /></div>
         </div>
       </div>
+
+      {lowStockItems.length > 0 ? (
+        !isLowStockAlertDismissed && (
+          <section className="inv-stock-alert has-low-stock" role="alert" aria-live="polite">
+            <div className="inv-stock-alert-heading">
+              <strong>Low Stock Alert</strong>
+              <button
+                type="button"
+                className="inv-stock-alert-dismiss"
+                aria-label="Dismiss low stock alert"
+                onClick={() => setIsLowStockAlertDismissed(true)}
+              >
+                ×
+              </button>
+            </div>
+            <ul>
+              {lowStockItems.map((item) => (
+                <li key={item.id}>
+                  {item.name}: {item.available_stock} {Number(item.available_stock) === 1 ? 'unit' : 'units'} available
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      ) : (
+        <section className="inv-stock-alert" role="status" aria-live="polite">
+          <strong>Low Stock Alert</strong>
+          <p>No products have 10 or fewer available units.</p>
+        </section>
+      )}
 
       <div className="inv-main-card">
         <div className="inv-toolbar">

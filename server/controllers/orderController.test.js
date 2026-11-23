@@ -16,21 +16,21 @@ const createResponse = () => ({
   },
 });
 
-test('rejects shipment tracking values that are not valid Nepal phone numbers', async () => {
+test('requires a nearby landmark when creating an order', async () => {
   const originalGetConnection = db.getConnection;
   db.getConnection = async () => {
-    throw new Error('Database should not be queried for invalid tracking input.');
+    throw new Error('Database should not be queried when the landmark is missing.');
   };
   const response = createResponse();
 
   try {
-    await orderController.updateOrderStatus({
-      params: { id: '22' },
-      user: { id: 5, role: 'seller' },
+    await orderController.createOrder({
+      user: { id: 8, role: 'buyer' },
       body: {
-        status: 'processing',
-        carrier_name: 'Ilam Express',
-        tracking_number: '1Z-ABC-123',
+        items: [{ product_id: 1, quantity: 1 }],
+        recipient_name: 'Buyer Name',
+        phone: '9800000000',
+        shipping_address: 'Ilam, Kathmandu',
       },
     }, response);
   } finally {
@@ -40,8 +40,90 @@ test('rejects shipment tracking values that are not valid Nepal phone numbers', 
   assert.equal(response.statusCode, 400);
   assert.equal(
     response.body.message,
-    'Enter a valid Nepal mobile number for the tracking number (10 digits).'
+    'Recipient name, a valid 10-digit phone number, shipping address, and nearby landmark are required.'
   );
+});
+
+test('rejects carrier values that are not available drivers', async () => {
+  const originalGetConnection = db.getConnection;
+  const connection = {
+    beginTransaction: async () => {},
+    execute: async (query) => {
+      if (query.includes('SELECT o.id, o.buyer_id')) {
+        return [[{
+          id: 22,
+          buyer_id: 8,
+          order_status: 'processing',
+          carrier_name: null,
+          tracking_number: null,
+        }]];
+      }
+      if (query.includes('FROM seller_drivers')) return [[]];
+      return [{}];
+    },
+    rollback: async () => {},
+    release: () => {},
+  };
+  db.getConnection = async () => connection;
+  const response = createResponse();
+
+  try {
+    await orderController.updateOrderStatus({
+      params: { id: '22' },
+      user: { id: 5, role: 'seller' },
+      body: {
+        status: 'processing',
+        carrier_name: 'Ilam Express',
+      },
+    }, response);
+  } finally {
+    db.getConnection = originalGetConnection;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Select an available driver.');
+});
+
+test('generates and persists a tracking number with the selected driver', async () => {
+  const originalGetConnection = db.getConnection;
+  const updateCalls = [];
+  const connection = {
+    beginTransaction: async () => {},
+    execute: async (query, values) => {
+      if (query.includes('SELECT o.id, o.buyer_id')) {
+        return [[{
+          id: 22,
+          buyer_id: 8,
+          order_status: 'processing',
+          carrier_name: null,
+          tracking_number: null,
+        }]];
+      }
+      if (query.includes('FROM seller_drivers')) return [[{ id: 18 }]];
+      if (query.includes('UPDATE orders SET')) updateCalls.push({ query, values });
+      return [{}];
+    },
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+  };
+  db.getConnection = async () => connection;
+  const response = createResponse();
+
+  try {
+    await orderController.updateOrderStatus({
+      params: { id: '22' },
+      user: { id: 5, role: 'seller' },
+      body: { status: 'processing', carrier_name: 'Custom Driver' },
+    }, response);
+  } finally {
+    db.getConnection = originalGetConnection;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.carrier_name, 'Custom Driver');
+  assert.equal(response.body.tracking_number, 'IC-ORD-000022');
+  assert.deepEqual(updateCalls[0].values, ['Custom Driver', 'IC-ORD-000022', '22']);
 });
 
 test('rejects invalid delivery preferences before creating an order', async () => {
@@ -59,6 +141,7 @@ test('rejects invalid delivery preferences before creating an order', async () =
         recipient_name: 'Buyer Name',
         phone: '9812345678',
         shipping_address: 'Kathmandu',
+        landmark: 'Near the main temple',
         delivery_preference: 'leave-at-gate',
       },
     }, response);
@@ -77,8 +160,9 @@ test('records cash received only after delivery and marks payment as paid', asyn
     beginTransaction: async () => {},
     execute: async (query) => {
       executedQueries.push(query);
-      if (query.includes('SELECT o.buyer_id, o.order_status')) {
+      if (query.includes('SELECT o.id, o.buyer_id, o.order_status')) {
         return [[{
+          id: 22,
           buyer_id: 8,
           order_status: 'delivered',
           carrier_name: 'Ilam Express',
@@ -179,6 +263,7 @@ test('blocks new buyer orders for one week after a cancellation', async () => {
         recipient_name: 'Buyer Name',
         phone: '9812345678',
         shipping_address: 'Kathmandu',
+        landmark: 'Near the main temple',
       },
     }, response);
   } finally {

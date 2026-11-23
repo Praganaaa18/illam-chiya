@@ -172,6 +172,12 @@
   user-select: none;
 }
 
+.eye-btn:focus-visible {
+  outline: 2px solid #3b7a57;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 .eye-btn:hover {
   color: #1e3d29;
 }

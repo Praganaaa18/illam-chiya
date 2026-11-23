@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
+import { formatDeliveryDateRange } from '../utils/delivery';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
@@ -33,16 +34,7 @@ const getDeliveryEstimate = (order) => {
   if (['delivered', 'cash_received'].includes(order.status)) {
     return order.delivered_at ? `Delivered ${formatDate(order.delivered_at)}` : 'Delivered';
   }
-  if (!order.seller_updated_at) return 'Pending seller update';
-
-  const updatedAt = new Date(order.seller_updated_at);
-  if (Number.isNaN(updatedAt.getTime())) return 'Estimate unavailable';
-
-  const earliestDate = new Date(updatedAt);
-  const latestDate = new Date(updatedAt);
-  earliestDate.setDate(earliestDate.getDate() + 5);
-  latestDate.setDate(latestDate.getDate() + 10);
-  return `${formatDate(earliestDate)} – ${formatDate(latestDate)}`;
+  return formatDeliveryDateRange(order.created_at);
 };
 
 const OrderTracking = () => {
@@ -289,8 +281,15 @@ const OrderTracking = () => {
                     </span>
                   </div>
                   <div className="ot-meta-row">
-                    <span className="ot-meta-label">Estimated Delivery:</span>
-                    <span className="ot-meta-value">{getDeliveryEstimate(selectedOrder)}</span>
+                    <span className="ot-meta-label">Delivery Date Range:</span>
+                    <span className="ot-meta-value">
+                      {getDeliveryEstimate(selectedOrder)}
+                      {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
+                        <span className="ot-delivery-note">
+                          Delivery takes 10 days after shipment confirmation from seller.
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Carrier:</span>

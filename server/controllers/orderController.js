@@ -1,7 +1,11 @@
-﻿// =========================================================================
+// =========================================================================
 // SUBTITLE 1: ORDER DATABASE CONTROLLERS
 // =========================================================================
 const db = require('../config/db');
+const DEFAULT_DRIVERS = require('../utils/drivers');
+
+const generateTrackingNumber = (orderId) =>
+  `IC-ORD-${String(Number(orderId)).padStart(6, '0')}`;
 const {
   isValidPhoneNumber,
   normalizePhoneNumber,
@@ -19,6 +23,7 @@ exports.createOrder = async (req, res) => {
     address, 
     city, 
     delivery_preference,
+    landmark,
     items, 
     cart 
   } = body;
@@ -56,13 +61,17 @@ exports.createOrder = async (req, res) => {
   const phoneNum = normalizePhoneNumber(phone);
   const deliveryCity = typeof city === 'string' ? city.trim() : '';
   const deliveryPreference = delivery_preference || 'doorstep';
-  if (!rawAddress || !buyerName || !isValidPhoneNumber(phone)) {
-    return res.status(400).json({ message: 'Recipient name, a valid 10-digit phone number, and shipping address are required.' });
+  const nearbyLandmark = typeof landmark === 'string' ? landmark.trim() : '';
+  if (!rawAddress || !buyerName || !isValidPhoneNumber(phone) ||
+      !nearbyLandmark || nearbyLandmark.length > 150) {
+    return res.status(400).json({
+      message: 'Recipient name, a valid 10-digit phone number, shipping address, and nearby landmark are required.',
+    });
   }
   if (!['doorstep', 'hand-to-me'].includes(deliveryPreference)) {
     return res.status(400).json({ message: 'Choose a valid delivery preference.' });
   }
-  const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''}`;
+  const fullAddress = `Recipient: ${buyerName} | Phone: ${phoneNum} | Address: ${rawAddress}${deliveryCity ? `, ${deliveryCity}` : ''} | Landmark: ${nearbyLandmark}`;
 
   let connection;
 
@@ -97,7 +106,7 @@ exports.createOrder = async (req, res) => {
 
     for (const [productId, quantity] of [...quantitiesByProduct].sort(([left], [right]) => left - right)) {
       const [products] = await connection.execute(
-        `SELECT id, seller_id, price, pack_size, stock_quantity, is_active
+        `SELECT id, name, seller_id, price, pack_size, stock_quantity, is_active
          FROM products
          WHERE id = ?
          FOR UPDATE`,
@@ -411,9 +420,6 @@ exports.updateBuyerDeliveryPreference = async (req, res) => {
         message: 'Delivery preference cannot be changed for this order.',
       });
     }
-    if (result.affectedRows === 0) {
-      return res.status(409).json({ message: 'Delivery preference can no longer be changed for this order.' });
-    }
     return res.status(200).json({
       message: 'Delivery preference updated.',
       delivery_preference: preference,
@@ -432,13 +438,12 @@ exports.updateOrderStatus = async (req, res) => {
   const requestedStatus = body.status !== undefined ? body.status : body.order_status;
   const newStatus = hasStatus ? String(requestedStatus).toLowerCase() : null;
   const hasCarrierName = Object.prototype.hasOwnProperty.call(body, 'carrier_name');
-  const hasTrackingNumber = Object.prototype.hasOwnProperty.call(body, 'tracking_number');
 
   if (req.user.role !== 'seller') {
     return res.status(403).json({ message: 'Seller access is required.' });
   }
 
-  if (!hasStatus && !hasCarrierName && !hasTrackingNumber) {
+  if (!hasStatus && !hasCarrierName) {
     return res.status(400).json({ message: 'Provide a shipment status or carrier details to update.' });
   }
 
@@ -449,16 +454,7 @@ exports.updateOrderStatus = async (req, res) => {
   if (hasCarrierName && (typeof body.carrier_name !== 'string' || body.carrier_name.trim().length > 120)) {
     return res.status(400).json({ message: 'Carrier name must be 120 characters or fewer.' });
   }
-  if (hasTrackingNumber && (
-    typeof body.tracking_number !== 'string' ||
-    (body.tracking_number.trim() && !isValidPhoneNumber(body.tracking_number))
-  )) {
-    return res.status(400).json({
-      message: 'Enter a valid Nepal mobile number for the tracking number (10 digits).',
-    });
-  }
   const carrierName = hasCarrierName ? body.carrier_name.trim() : null;
-  const trackingNumber = hasTrackingNumber ? normalizePhoneNumber(body.tracking_number) : null;
 
   const allowedTransitions = {
     pending: ['processing', 'cancelled'],
@@ -475,7 +471,7 @@ exports.updateOrderStatus = async (req, res) => {
     await connection.beginTransaction();
 
     const [orders] = await connection.execute(
-      `SELECT o.buyer_id, o.order_status, o.carrier_name, o.tracking_number
+      `SELECT o.id, o.buyer_id, o.order_status, o.carrier_name, o.tracking_number
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
        WHERE o.id = ? AND oi.seller_id = ?
@@ -493,9 +489,27 @@ exports.updateOrderStatus = async (req, res) => {
     const currentCarrierName = orders[0].carrier_name || '';
     const currentTrackingNumber = orders[0].tracking_number || '';
     const nextCarrierName = hasCarrierName ? carrierName : currentCarrierName;
-    const nextTrackingNumber = hasTrackingNumber ? trackingNumber : currentTrackingNumber;
+    if (hasCarrierName && nextCarrierName &&
+        !DEFAULT_DRIVERS.includes(nextCarrierName) &&
+        nextCarrierName !== currentCarrierName) {
+      const [drivers] = await connection.execute(
+        'SELECT id FROM seller_drivers WHERE seller_id = ? AND driver_name = ?',
+        [req.user.id, nextCarrierName]
+      );
+      if (drivers.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'Select an available driver.' });
+      }
+    }
+    let nextTrackingNumber = currentTrackingNumber;
+    if (hasCarrierName) {
+      if (!nextCarrierName) nextTrackingNumber = '';
+      else if (nextCarrierName !== currentCarrierName || !currentTrackingNumber) {
+        nextTrackingNumber = generateTrackingNumber(orders[0].id);
+      }
+    }
 
-    if (!statusChanged && !hasCarrierName && !hasTrackingNumber) {
+    if (!statusChanged && !hasCarrierName) {
       await connection.commit();
       return res.status(200).json({ message: 'Shipment status is unchanged.', status: previousStatus });
     }
@@ -566,9 +580,9 @@ exports.updateOrderStatus = async (req, res) => {
       updates.push('carrier_name = ?');
       updateValues.push(carrierName || null);
     }
-    if (hasTrackingNumber) {
+    if (hasCarrierName) {
       updates.push('tracking_number = ?');
-      updateValues.push(trackingNumber || null);
+      updateValues.push(nextTrackingNumber || null);
     }
     await connection.execute(
       `UPDATE orders SET ${updates.join(', ')} WHERE id = ?`,
@@ -580,15 +594,15 @@ exports.updateOrderStatus = async (req, res) => {
          VALUES (?, ?, ?)`,
         [id, statusToSave, descriptions[statusToSave]]
       );
-        const notificationTitle = statusToSave === 'shipped'
+      const notificationTitle = statusToSave === 'shipped'
         ? 'Your order is on the way'
         : statusToSave === 'delivered'
           ? 'Your order was delivered'
           : statusToSave === 'cash_received'
             ? 'Cash received for your order'
-              : statusToSave === 'cancelled'
-                ? 'Your order was cancelled'
-                : 'Your order was updated';
+            : statusToSave === 'cancelled'
+              ? 'Your order was cancelled'
+              : 'Your order was updated';
       await connection.execute(
         `INSERT INTO notifications
          (recipient_id, recipient_role, title, message, link)

@@ -33,7 +33,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
     businessName: '',
     email: '',
     phone: '',
-    isVerified: false,
     sellerId: localStorage.getItem('userId') || null,
   });
 
@@ -88,7 +87,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
         businessName: sellerName,
         email: res.data.email || '',
         phone: res.data.phone || '',
-        isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
       if (sellerName) localStorage.setItem('userName', sellerName);
@@ -158,9 +156,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
 
           <div className="topbar-right">
             <NotificationBell role="seller" />
-            <span className="verification-pill">
-              {sellerInfo.isVerified ? '✅ Verified Seller' : '⏳ Pending Verification'}
-            </span>
             <div className="user-profile-chip">
               <div className="avatar-circle">{sellerInfo.businessName.charAt(0)}</div>
               <span className="profile-name">{sellerInfo.businessName}</span>
@@ -187,9 +182,11 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     totalProducts: 0,
     pendingOrders: 0,
     lowStockCount: 0,
+    lowStockProducts: [],
     recentOrders: [],
   });
   const [loading, setLoading] = useState(true);
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortConfig, handleSort] = useTableSort('id');
@@ -211,6 +208,11 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
         const orders = Array.isArray(ordersResponse.data) ? ordersResponse.data : [];
         const inventory = inventoryResponse.data || {};
+        const lowStockProducts = (Array.isArray(inventory.items) ? inventory.items : [])
+          .filter((item) => {
+            const stock = Number(item.available_stock ?? item.current_stock);
+            return Number.isFinite(stock) && stock <= 10;
+          });
         const activeProducts = products.filter((product) =>
           product.is_active === true || product.is_active === 1 || product.is_active === '1',
         ).length;
@@ -225,6 +227,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
             totalProducts: products.length,
             pendingOrders,
             lowStockCount: Number(inventory.metrics?.lowStockCount) || 0,
+            lowStockProducts,
             recentOrders: orders,
           });
         }
@@ -265,6 +268,29 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         <h2>Welcome back, {sellerName || 'Seller'}!</h2>
         <p>Here is an overview of your tea estate sales and active catalog.</p>
       </div>
+
+      {!loading && !isLowStockAlertDismissed && overview.lowStockProducts.length > 0 && (
+        <div className="low-stock-alert" role="alert">
+          <div className="low-stock-alert-heading">
+            <strong>Low Stock Alert</strong>
+            <button
+              type="button"
+              className="low-stock-alert-dismiss"
+              aria-label="Dismiss low stock alert"
+              onClick={() => setIsLowStockAlertDismissed(true)}
+            >
+              ×
+            </button>
+          </div>
+          <ul>
+            {overview.lowStockProducts.map((product) => (
+              <li key={product.id}>
+                {product.name}: {product.available_stock ?? product.current_stock} {Number(product.available_stock ?? product.current_stock) === 1 ? 'unit' : 'units'} remaining
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading ? (
         <p className="metric-subtext">Loading dashboard overview...</p>

@@ -214,6 +214,12 @@
   overflow-wrap: anywhere;
 }
 
+.ot-delivery-note {
+  margin-left: 8px;
+  color: #646963;
+  font-size: 12px;
+}
+
 .ot-status-text {
   text-transform: capitalize;
 }
