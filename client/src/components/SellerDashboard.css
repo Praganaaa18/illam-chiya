@@ -408,3 +408,135 @@
 .primary-matcha-btn:hover {
   background-color: var(--matcha-dark);
 }
+
+@media (max-width: 900px) {
+  .matcha-dashboard-container {
+    height: auto;
+    min-height: 100dvh;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .matcha-sidebar {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 12px 16px;
+  }
+
+  .brand-logo-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    gap: 6px;
+    margin: 10px -4px 0;
+    overflow-x: auto;
+    padding: 0 4px 4px;
+    scrollbar-width: thin;
+  }
+
+  .matcha-sidebar .nav-item {
+    width: auto;
+    min-width: max-content;
+    flex: 0 0 auto;
+    padding: 10px 12px;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 0;
+  }
+
+  .matcha-sidebar .logout-btn {
+    width: auto;
+    padding: 8px 12px;
+  }
+
+  .matcha-main-wrapper {
+    width: 100%;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .matcha-topbar {
+    position: static;
+    padding: 0 20px;
+  }
+
+  .matcha-content-area {
+    padding: 22px 20px;
+  }
+
+  .dashboard-card {
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .data-table {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 560px) {
+  .matcha-sidebar {
+    padding: 10px 12px;
+  }
+
+  .brand-logo-section {
+    align-items: flex-start;
+  }
+
+  .brand-logo-section h2 {
+    font-size: 1.15rem;
+  }
+
+  .matcha-sidebar .nav-item {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .matcha-topbar {
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .topbar-left h3 {
+    font-size: 1rem;
+  }
+
+  .topbar-right {
+    gap: 10px;
+  }
+
+  .profile-name {
+    max-width: 125px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .matcha-content-area {
+    padding: 16px 12px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+    gap: 12px;
+  }
+
+  .dashboard-card {
+    padding: 14px;
+  }
+}

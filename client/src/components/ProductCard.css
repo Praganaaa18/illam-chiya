@@ -113,6 +113,7 @@
 
 .product-pack-options {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -288,4 +289,33 @@
 
 .add-to-cart-btn:hover {
   background-color: var(--illam-forest-950);
+}
+
+@media (max-width: 420px) {
+  .product-info {
+    padding: 0.85rem 0.9rem 0.75rem;
+  }
+
+  .product-title {
+    font-size: 1.15rem;
+  }
+
+  .product-bottom-row {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0 0.9rem 0.75rem;
+  }
+
+  .product-purchase-row {
+    grid-template-columns: minmax(100px, 0.8fr) minmax(0, 1.2fr);
+    gap: 8px;
+    margin-right: 0.9rem;
+    margin-left: 0.9rem;
+  }
+
+  .add-to-cart-btn {
+    padding-right: 0.6rem;
+    padding-left: 0.6rem;
+    font-size: 0.82rem;
+  }
 }

@@ -589,6 +589,28 @@
   }
 }
 
+@media (max-width: 380px) {
+  .ot-title-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ot-order-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .ot-meta-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .ot-delivery-note {
+    display: block;
+    margin: 4px 0 0;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;

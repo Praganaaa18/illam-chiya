@@ -50,27 +50,24 @@ const ConfirmOrder = () => {
     let checkoutItems;
     try {
       savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!Array.isArray(savedCart)) throw new Error('Saved cart is not a list.');
       checkoutItems = JSON.parse(localStorage.getItem('checkoutItems') || '[]');
+      if (!Array.isArray(checkoutItems)) throw new Error('Saved checkout items are not a list.');
     } catch (error) {
       console.error('Unable to read saved cart:', error);
-      const remainingCart = JSON.parse(localStorage.getItem('cart') || '[]')
-        .filter((cartItem) =>
-          !cartItems.some((checkoutItem) => String(checkoutItem.id) === String(cartItem.id))
-        );
-      if (remainingCart.length > 0) {
-        localStorage.setItem('cart', JSON.stringify(remainingCart));
+      if (Array.isArray(savedCart) && savedCart.length > 0) {
+        localStorage.setItem('cart', JSON.stringify(savedCart));
       } else {
         localStorage.removeItem('cart');
       }
       localStorage.removeItem('checkoutItems');
-      localStorage.removeItem('checkoutItems');
       setSubmitError('Your saved cart could not be read. Please add your items again.');
       return;
     }
-    const selectedCartItems = Array.isArray(checkoutItems) && checkoutItems.length > 0
+    const selectedCartItems = checkoutItems.length > 0
       ? checkoutItems
       : savedCart;
-    if (!Array.isArray(selectedCartItems) || selectedCartItems.length === 0) {
+    if (selectedCartItems.length === 0) {
       navigate('/cart');
     } else {
       setCartItems(selectedCartItems);

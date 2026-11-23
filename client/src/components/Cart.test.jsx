@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import Cart from './Cart';
 
+jest.mock('./Notificationbell', () => () => null);
+
 const cartItems = [
   { id: 1, name: 'Milk Tea', price: 25, quantity: 2, pack_size: '100 g', stock_quantity: 10 },
   { id: 2, name: 'Oolong Tea', price: 450, quantity: 3, pack_size: '180 g', stock_quantity: 10 },

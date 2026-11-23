@@ -313,12 +313,16 @@ const OrdersAndShipping = ({ sellerId }) => {
     setBusy(true);
     setNotice('');
     try {
+      const updatePayload = {
+        status: statusDraft,
+        carrier_name: carrierNameDraft.trim(),
+      };
+      if (statusDraft === 'cash_received') {
+        updatePayload.tracking_number = trackingNumberDraft.trim();
+      }
       await axios.patch(
         `${API_ORIGIN}/api/orders/${selectedOrder.id}/status`,
-        {
-          status: statusDraft,
-          carrier_name: carrierNameDraft.trim(),
-        },
+        updatePayload,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setNotice(statusChanged

@@ -623,3 +623,36 @@
     max-height: min(65vh, calc(100vh - 200px));
   }
 }
+
+@media (max-width: 480px) {
+  .shipping-page {
+    gap: 14px;
+  }
+
+  .shipping-heading h2 {
+    font-size: 1.3rem;
+  }
+
+  .shipping-filters {
+    margin-right: -12px;
+    padding-bottom: 8px;
+  }
+
+  .shipping-table th,
+  .shipping-table td {
+    padding: 10px 9px;
+  }
+
+  .shipping-detail-card {
+    padding: 14px;
+  }
+
+  .shipping-delivery-preference {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shipping-delivery-preference strong {
+    text-align: left;
+  }
+}
