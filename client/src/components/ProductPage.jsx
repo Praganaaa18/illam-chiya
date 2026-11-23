@@ -129,6 +129,13 @@ const ProductPage = () => {
       cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity: parsedQuantity });
     }
     localStorage.setItem('cart', JSON.stringify(cart));
+    if (destination === '/confirm-order') {
+      localStorage.setItem('checkoutItems', JSON.stringify([{
+        ...product,
+        pack_size: product.pack_size || '100 g',
+        quantity: parsedQuantity,
+      }]));
+    }
     setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
     navigate(destination);
   };
