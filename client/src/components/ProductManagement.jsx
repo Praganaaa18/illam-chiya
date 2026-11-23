@@ -4,6 +4,7 @@ import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
 import { isSellerSessionError } from '../utils/sellerSession';
+import { getAuthToken } from '../utils/authStorage';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -35,7 +36,7 @@ const getErrorMessage = (error, fallback) =>
   error.response?.data?.error || error.response?.data?.message || error.message || fallback;
 
 const getAuthConfig = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+  headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
 });
 
 const ProductManagement = ({

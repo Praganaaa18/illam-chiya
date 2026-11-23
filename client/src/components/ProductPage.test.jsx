@@ -30,6 +30,7 @@ afterEach(() => {
 });
 
 test('opening a catalog product displays its details page', async () => {
+  localStorage.removeItem('cart');
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => [product],
@@ -48,6 +49,7 @@ test('opening a catalog product displays its details page', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Ilam First Flush' })).toBeInTheDocument();
   expect(screen.getByText('A floral spring tea.')).toBeInTheDocument();
+  expect(screen.getByText('Available Stock: 4')).toBeInTheDocument();
   expect(screen.queryByText(/Seller's Business Name/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Origin:/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Type:/)).not.toBeInTheDocument();
@@ -72,10 +74,35 @@ test('opening a catalog product displays its details page', async () => {
   expect(imageButton).toHaveFocus();
 });
 
+test('product details cap selection to the remaining stock and disable increase at the limit', async () => {
+  localStorage.setItem('cart', JSON.stringify([{ ...product, quantity: 3 }]));
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [product],
+  });
+
+  render(
+    <MemoryRouter initialEntries={['/products/42']}>
+      <Routes>
+        <Route path="/products/:productId" element={<ProductPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByText('Available Stock: 1')).toBeInTheDocument();
+  const quantityInput = screen.getByRole('spinbutton', { name: 'Product quantity' });
+  fireEvent.change(quantityInput, { target: { value: '9' } });
+
+  expect(quantityInput).toHaveAttribute('max', '1');
+  expect(quantityInput).toHaveValue(1);
+  expect(screen.getByRole('button', { name: 'Increase quantity' })).toBeDisabled();
+});
+
 test('catalog cards show the seller-defined pack size and add it to the cart', () => {
   const onAddToCart = jest.fn();
   localStorage.setItem('token', 'buyer-token');
   localStorage.setItem('userRole', 'buyer');
+  localStorage.removeItem('cart');
 
   render(
     <MemoryRouter>
@@ -97,10 +124,11 @@ test('catalog cards show the seller-defined pack size and add it to the cart', (
   localStorage.removeItem('userRole');
 });
 
-test('catalog quantity input accepts whole numbers only within available stock', () => {
+test('catalog quantity input is capped at stock remaining after cart quantity', () => {
   const onAddToCart = jest.fn();
   localStorage.setItem('token', 'buyer-token');
   localStorage.setItem('userRole', 'buyer');
+  localStorage.setItem('cart', JSON.stringify([{ ...product, quantity: 3 }]));
 
   render(
     <MemoryRouter>
@@ -110,15 +138,14 @@ test('catalog quantity input accepts whole numbers only within available stock',
 
   const quantityInput = screen.getByRole('spinbutton', { name: 'Product quantity' });
   fireEvent.change(quantityInput, { target: { value: '5' } });
-  expect(quantityInput).toHaveAttribute('aria-invalid', 'true');
-  expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
-
-  fireEvent.change(quantityInput, { target: { value: '3' } });
+  expect(quantityInput).toHaveAttribute('max', '1');
+  expect(quantityInput).toHaveValue(1);
   expect(quantityInput).toHaveAttribute('aria-invalid', 'false');
+  expect(screen.getByRole('button', { name: 'Increase quantity' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
   expect(onAddToCart).toHaveBeenCalledWith(
     expect.objectContaining({ pack_size: '500 g' }),
-    3
+    1
   );
 
   localStorage.removeItem('token');

@@ -95,7 +95,8 @@ exports.createOrder = async (req, res) => {
        FROM order_tracking_events event
        JOIN orders cancelled_order ON cancelled_order.id = event.order_id
        WHERE cancelled_order.buyer_id = ?
-         AND event.status = 'cancelled'`,
+         AND event.status = 'cancelled'
+         AND event.description = 'Cancelled by buyer; one-week ordering suspension'`,
       [validBuyerId]
     );
     if (Number(suspensionRows[0]?.suspension_active) === 1) {
@@ -128,7 +129,7 @@ exports.createOrder = async (req, res) => {
          FROM order_items oi
          JOIN orders o ON o.id = oi.order_id
          WHERE oi.product_id = ?
-           AND o.order_status IN ('pending', 'processing', 'shipped')`,
+           AND o.order_status IN ('order_placed', 'pending', 'processing', 'shipped')`,
         [productId]
       );
       const availableStock = Number(product.stock_quantity) -
@@ -161,14 +162,14 @@ exports.createOrder = async (req, res) => {
     const [orderResult] = await connection.execute(
       `INSERT INTO orders
        (buyer_id, total_amount, shipping_address, payment_status, order_status, delivery_preference)
-       VALUES (?, ?, ?, 'pending', 'pending', ?)`,
+       VALUES (?, ?, ?, 'pending', 'order_placed', ?)`,
       [validBuyerId, finalAmount, fullAddress, deliveryPreference]
     );
 
     const newOrderId = orderResult.insertId;
     await connection.execute(
       `INSERT INTO order_tracking_events (order_id, status, description)
-       VALUES (?, 'pending', 'Order confirmed')`,
+       VALUES (?, 'order_placed', 'Order Placed')`,
       [newOrderId]
     );
 
@@ -245,6 +246,7 @@ exports.getBuyerOrders = async (req, res) => {
           JOIN orders cancelled_order ON cancelled_order.id = suspension_event.order_id
           WHERE cancelled_order.buyer_id = o.buyer_id
             AND suspension_event.status = 'cancelled'
+            AND suspension_event.description = 'Cancelled by buyer; one-week ordering suspension'
         ) AS buyer_suspended_until,
         (
           SELECT GROUP_CONCAT(DISTINCT seller.phone ORDER BY seller.full_name SEPARATOR ', ')
@@ -264,7 +266,7 @@ exports.getBuyerOrders = async (req, res) => {
           SELECT tracking_event.created_at
           FROM order_tracking_events tracking_event
           WHERE tracking_event.order_id = o.id
-            AND tracking_event.status NOT IN ('pending', 'cancelled')
+            AND tracking_event.status NOT IN ('order_placed', 'pending', 'cancelled')
           ORDER BY tracking_event.created_at DESC, tracking_event.id DESC
           LIMIT 1
         ) AS seller_updated_at,
@@ -362,7 +364,7 @@ exports.cancelBuyerOrder = async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ message: 'Order not found.' });
     }
-    if (!['pending', 'processing', 'shipped'].includes(orders[0].order_status)) {
+    if (!['order_placed', 'pending', 'processing', 'shipped'].includes(orders[0].order_status)) {
       await connection.rollback();
       return res.status(409).json({ message: 'This order can no longer be cancelled.' });
     }
@@ -381,7 +383,9 @@ exports.cancelBuyerOrder = async (req, res) => {
     const [suspensionRows] = await connection.execute(
       `SELECT DATE_ADD(created_at, INTERVAL 7 DAY) AS suspended_until
        FROM order_tracking_events
-       WHERE order_id = ? AND status = 'cancelled'
+       WHERE order_id = ?
+         AND status = 'cancelled'
+         AND description = 'Cancelled by buyer; one-week ordering suspension'
        ORDER BY id DESC
        LIMIT 1`,
       [orderId]
@@ -435,7 +439,7 @@ exports.updateBuyerDeliveryPreference = async (req, res) => {
   }
 };
 
-// Update order status in orders table ('pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled')
+// Update order status in orders table ('order_placed', 'pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled')
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
@@ -452,7 +456,7 @@ exports.updateOrderStatus = async (req, res) => {
     return res.status(400).json({ message: 'Provide a shipment status or carrier details to update.' });
   }
 
-  const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled'];
+  const validStatuses = ['order_placed', 'pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled'];
   if (hasStatus && !validStatuses.includes(newStatus)) {
     return res.status(400).json({ message: 'Invalid order status value.' });
   }
@@ -462,6 +466,7 @@ exports.updateOrderStatus = async (req, res) => {
   const carrierName = hasCarrierName ? body.carrier_name.trim() : null;
 
   const allowedTransitions = {
+    order_placed: ['pending', 'cancelled'],
     pending: ['processing', 'cancelled'],
     processing: ['shipped', 'cancelled'],
     shipped: ['delivered'],
@@ -539,7 +544,8 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const descriptions = {
-      pending: 'Order confirmed',
+      order_placed: 'Order Placed',
+      pending: 'Order Confirmed',
       processing: 'Packed at Illam Estate',
       shipped: 'Dispatched from Ilam',
       delivered: 'Delivered to the buyer',
@@ -685,7 +691,9 @@ exports.getOrderTracking = async (req, res) => {
     `;
     const [items] = await db.execute(itemQuery, sellerId ? [orderId, sellerId] : [orderId]);
     const [events] = await db.execute(
-      `SELECT status, description, created_at
+      `SELECT status,
+              CASE WHEN status = 'pending' THEN 'Order Confirmed' ELSE description END AS description,
+              created_at
        FROM order_tracking_events
        WHERE order_id = ?
        ORDER BY created_at ASC, id ASC`,
@@ -693,7 +701,8 @@ exports.getOrderTracking = async (req, res) => {
     );
 
     const trackingDescriptions = {
-      pending: 'Order confirmed',
+      order_placed: 'Order Placed',
+      pending: 'Order Confirmed',
       processing: 'Packed at Illam Estate',
       shipped: 'Dispatched from Ilam',
       delivered: 'Delivered to the buyer',

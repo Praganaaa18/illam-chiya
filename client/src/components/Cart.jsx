@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { getAuthToken } from '../utils/authStorage';
 import Navbar from './Navbar';
 import './Cart.css';
+
+const getStock = (item) => {
+  const stock = Number(item.stock_quantity);
+  return Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 99;
+};
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -12,7 +18,7 @@ const Cart = () => {
 
   // 1. Auth & Load Cart Guard
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
 
     if (!token || userRole !== 'buyer') {
@@ -21,10 +27,18 @@ const Cart = () => {
     }
 
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(savedCart);
-    setSelectedIds(savedCart.map((item) => String(item.id)));
+    const normalizedCart = savedCart.map((item) => {
+      const stock = getStock(item);
+      const quantity = stock === 0
+        ? 0
+        : Math.min(stock, Math.max(1, Number(item.quantity) || 1));
+      return { ...item, quantity };
+    });
+    localStorage.setItem('cart', JSON.stringify(normalizedCart));
+    setCartItems(normalizedCart);
+    setSelectedIds(normalizedCart.map((item) => String(item.id)));
     setQuantityDrafts(Object.fromEntries(
-      savedCart.map((item) => [item.id, String(item.quantity)])
+      normalizedCart.map((item) => [item.id, String(item.quantity)])
     ));
   }, [navigate]);
 
@@ -32,11 +46,6 @@ const Cart = () => {
   const updateLocalStorage = (updatedItems) => {
     setCartItems(updatedItems);
     localStorage.setItem('cart', JSON.stringify(updatedItems));
-  };
-
-  const getStock = (item) => {
-    const stock = Number(item.stock_quantity);
-    return Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 99;
   };
 
   // Quantity handlers
@@ -85,13 +94,14 @@ const Cart = () => {
       return;
     }
     if (quantity > stock) {
-      setQuantityErrors((errors) => ({ ...errors, [id]: `Maximum available stock is ${stock}.` }));
-      return;
+      setQuantityErrors((errors) => ({ ...errors, [id]: `Quantity capped at available stock (${stock}).` }));
     }
 
-    setQuantityErrors((errors) => ({ ...errors, [id]: '' }));
+    const cappedQuantity = Math.min(quantity, stock);
+    setQuantityDrafts((drafts) => ({ ...drafts, [id]: String(cappedQuantity) }));
+    if (quantity <= stock) setQuantityErrors((errors) => ({ ...errors, [id]: '' }));
     const updated = cartItems.map((cartItem) =>
-      cartItem.id === id ? { ...cartItem, quantity } : cartItem
+      cartItem.id === id ? { ...cartItem, quantity: cappedQuantity } : cartItem
     );
     updateLocalStorage(updated);
   };
@@ -103,9 +113,9 @@ const Cart = () => {
     const rawValue = quantityDrafts[id];
     const parsed = Number(rawValue);
     const stock = getStock(item);
-    let normalized = 1;
+    let normalized = stock === 0 ? 0 : 1;
 
-    if (rawValue !== '' && Number.isInteger(parsed) && parsed > 0) {
+    if (stock > 0 && rawValue !== '' && Number.isInteger(parsed) && parsed > 0) {
       normalized = Math.min(parsed, stock);
     }
 
@@ -143,6 +153,8 @@ const Cart = () => {
   };
 
   const selectedItems = cartItems.filter((item) => selectedIds.includes(String(item.id)));
+  const canCheckout = selectedItems.length > 0 &&
+    selectedItems.every((item) => getStock(item) > 0 && item.quantity <= getStock(item));
   const allItemsSelected = cartItems.length > 0 &&
     cartItems.every((item) => selectedIds.includes(String(item.id)));
 
@@ -227,6 +239,7 @@ const Cart = () => {
                       onBlur={() => handleQuantityBlur(item.id)}
                       aria-label={`Quantity for ${item.name}`}
                       aria-invalid={Boolean(quantityErrors[item.id])}
+                      disabled={getStock(item) === 0}
                     />
                     <button
                       type="button"
@@ -278,7 +291,7 @@ const Cart = () => {
                 navigate('/confirm-order');
               }}
               className="checkout-btn"
-              disabled={selectedItems.length === 0}
+              disabled={!canCheckout}
             >
               Proceed to Checkout
             </button>

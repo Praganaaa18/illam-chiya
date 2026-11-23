@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { getAuthToken } from '../utils/authStorage';
+import { getRemainingStock } from '../utils/stock';
 import Navbar from './Navbar';
 import './ProductPage.css';
 
@@ -27,7 +29,7 @@ const ProductPage = () => {
   const closeButtonRef = useRef(null);
   const [cartCount, setCartCount] = useState(() => {
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    return savedCart.reduce((total, item) => total + item.quantity, 0);
+    return savedCart.length;
   });
 
   useEffect(() => {
@@ -96,27 +98,31 @@ const ProductPage = () => {
       .sort((a, b) => Number(b.category_id === product.category_id) - Number(a.category_id === product.category_id))
       .slice(0, 2)
     : [];
-  const stock = product ? Math.max(0, Number(product.stock_quantity) || 0) : 0;
+  const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+  const stock = product ? Math.max(0, Math.floor(Number(product.stock_quantity) || 0)) : 0;
+  const availableToAdd = product ? getRemainingStock(product, cartItems) : 0;
+  const parsedQuantity = Number(quantity);
   const isQuantityValid = quantity !== '' &&
-    Number.isInteger(Number(quantity)) &&
-    Number(quantity) >= 1 &&
-    Number(quantity) <= stock;
+    Number.isInteger(parsedQuantity) &&
+    parsedQuantity >= 1 &&
+    parsedQuantity <= availableToAdd;
 
   const handleAdd = (destination = '/cart') => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
     if (!token || userRole !== 'buyer') {
       navigate('/login');
       return;
     }
 
-    const stock = Math.max(0, Number(product.stock_quantity) || 0);
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const stock = Math.max(0, Math.floor(Number(product.stock_quantity) || 0));
+    const remainingStock = getRemainingStock(product, cart);
     const parsedQuantity = Number(quantity);
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > stock) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > remainingStock) {
       return;
     }
 
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItem = cart.find((item) => String(item.id) === String(product.id));
     const existingQuantity = existingItem ? Number(existingItem.quantity) || 0 : 0;
     if (existingQuantity + parsedQuantity > stock) {
@@ -136,7 +142,7 @@ const ProductPage = () => {
         quantity: parsedQuantity,
       }]));
     }
-    setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
+    setCartCount(cart.length);
     navigate(destination);
   };
 
@@ -197,35 +203,49 @@ const ProductPage = () => {
                 <ul>
                   <li>Category: {product.category || 'Tea'}</li>
                   <li>Per pack: {product.pack_size || '100 g'}</li>
-                  <li>Availability: {Number(product.stock_quantity) > 0 ? 'In stock' : 'Out of stock'}</li>
+                  <li>Availability: {stock > 0 ? 'In stock' : 'Out of stock'}</li>
+                  <li>Available Stock: {availableToAdd}</li>
                 </ul>
               </div>
 
               <label className="quantity-label" htmlFor="product-quantity">Quantity</label>
               <div className="quantity-selector">
-                <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity(String(Math.max(1, (Number(quantity) || 1) - 1)))}>−</button>
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQuantity(String(Math.max(1, (Number(quantity) || 1) - 1)))}
+                  disabled={availableToAdd === 0 || parsedQuantity <= 1}
+                >
+                  −
+                </button>
                 <input
                   id="product-quantity"
                   type="number"
                   min="1"
-                  max={Number(product.stock_quantity)}
+                  max={availableToAdd}
                   step="1"
-                  value={quantity}
+                  value={availableToAdd === 0 ? '0' : quantity}
                   aria-label="Product quantity"
+                  disabled={availableToAdd === 0}
                   onChange={(event) => {
                     const value = event.target.value;
-                    if (value === '' || /^\d+$/.test(value)) setQuantity(value);
+                    if (value === '') setQuantity('');
+                    else if (/^\d+$/.test(value)) {
+                      setQuantity(String(Math.min(Number(value), availableToAdd)));
+                    }
                   }}
                   onBlur={() => {
                     const parsed = Number(quantity);
-                    setQuantity(String(quantity === '' ? 1 : Math.min(Number(product.stock_quantity), Math.max(1, parsed))));
+                    setQuantity(String(availableToAdd === 0
+                      ? 0
+                      : Math.min(availableToAdd, Math.max(1, Number.isFinite(parsed) ? parsed : 1))));
                   }}
                 />
                 <button
                   type="button"
                   aria-label="Increase quantity"
-                  onClick={() => setQuantity(String(Math.min(Number(product.stock_quantity), (Number(quantity) || 1) + 1)))}
-                  disabled={Number(quantity) >= Number(product.stock_quantity)}
+                  onClick={() => setQuantity(String(Math.min(availableToAdd, (Number(quantity) || 0) + 1)))}
+                  disabled={availableToAdd === 0 || parsedQuantity >= availableToAdd}
                 >
                   +
                 </button>

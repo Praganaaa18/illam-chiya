@@ -210,6 +210,7 @@
 }
 
 .qty-controls button:disabled {
+  background: transparent;
   cursor: not-allowed;
   opacity: 0.45;
 }
@@ -239,6 +240,10 @@
 
 .qty-controls button:hover {
   background: #dfe6dc;
+}
+
+.qty-controls button:disabled:hover {
+  background: transparent;
 }
 
 .cart-item-total {

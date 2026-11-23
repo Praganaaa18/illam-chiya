@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import Icon from './Icon';
+import { clearAuthToken, getAuthToken } from '../utils/authStorage';
 import './Navbar.css';
 import NotificationBell from './Notificationbell';
 
@@ -21,7 +22,7 @@ const Navbar = ({
   const profileMenuRef = useRef(null);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
 
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const userName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'User';
   const userInitial = userName.trim().charAt(0).toUpperCase();
 
@@ -48,6 +49,7 @@ const Navbar = ({
   }, [isSearchOpen, isSuggestionsOpen]);
 
   const handleLogout = () => {
+    clearAuthToken();
     ['token', 'userId', 'userRole', 'userName', 'userEmail', 'userPhone', 'userAddress']
       .forEach((key) => localStorage.removeItem(key));
     setIsProfileOpen(false);

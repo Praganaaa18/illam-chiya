@@ -307,3 +307,28 @@ test('opens the order identified by a notification link', async () => {
     `${placedDate.toLocaleDateString(undefined, dateOptions)} – ${estimatedDate.toLocaleDateString(undefined, dateOptions)}`
   )).toBeInTheDocument();
 });
+
+test('shows Order Placed before Order Confirmed for a newly placed order', async () => {
+  const placedOrder = { ...order, status: 'order_placed' };
+  global.fetch.mockImplementation((url) => Promise.resolve({
+    ok: true,
+    json: async () => (url.endsWith('/api/orders/mine')
+      ? [placedOrder]
+      : { notifications: [], unreadCount: 0 }),
+  }));
+
+  render(
+    <MemoryRouter initialEntries={['/order-tracking']}>
+      <Routes>
+        <Route path="/order-tracking" element={<OrderTracking />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await screen.findByRole('heading', { name: 'Order Tracking: #ILLAM-12' });
+  const placedStep = screen.getByText('Order Placed', { selector: '.ot-step-label' }).parentElement;
+  expect(placedStep.querySelector('.ot-step-circle')).toHaveClass('current');
+  expect(screen.getByText('Order Confirmed', { selector: '.ot-step-label' }).parentElement).toHaveTextContent('Upcoming');
+  expect(screen.getByText('Order Placed', { selector: '.ot-status-text' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cancel Order' })).toBeEnabled();
+});

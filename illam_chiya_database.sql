@@ -61,7 +61,7 @@ CREATE TABLE orders (
     total_amount DECIMAL(10, 2) NOT NULL,
     shipping_address TEXT NOT NULL,
     payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
-    order_status ENUM('pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled') DEFAULT 'pending',
+    order_status ENUM('order_placed', 'pending', 'processing', 'shipped', 'delivered', 'cash_received', 'cancelled') DEFAULT 'order_placed',
     carrier_name VARCHAR(120) NULL,
     tracking_number VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

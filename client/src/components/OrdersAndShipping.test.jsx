@@ -81,6 +81,35 @@ test('selecting a driver generates and saves an order-specific tracking number',
   ));
 });
 
+test('shows a newly placed order as the first shipment milestone', async () => {
+  const placedOrder = { ...order, status: 'order_placed' };
+  const placedTracking = {
+    ...tracking,
+    status: 'order_placed',
+    events: [{
+      status: 'order_placed',
+      description: 'Order Placed',
+      created_at: order.created_at,
+    }],
+  };
+  axios.get.mockImplementation((url) => {
+    if (url.endsWith('/api/orders')) return Promise.resolve({ data: [placedOrder] });
+    if (url.endsWith('/api/sellers/drivers')) {
+      return Promise.resolve({ data: { drivers: ['Ram Shah', 'Ram Shahi', 'Raja Bahadur'] } });
+    }
+    return Promise.resolve({ data: placedTracking });
+  });
+
+  render(<OrdersAndShipping sellerId="5" />);
+
+  expect(await screen.findByText('Order Placed')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'View tracking for order 22' }));
+  expect(await screen.findByText('Order Placed', { selector: 'strong' })).toBeInTheDocument();
+  const statusSelect = await screen.findByLabelText('Update shipment status');
+  expect(statusSelect).toHaveValue('order_placed');
+  expect(screen.getByRole('option', { name: 'Order Confirmed' })).toBeInTheDocument();
+});
+
 test('shows only the available drivers in the carrier dropdown', async () => {
   render(<OrdersAndShipping sellerId="5" />);
 

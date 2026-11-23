@@ -185,6 +185,7 @@
   white-space: nowrap;
 }
 
+.shipping-status.order_placed,
 .shipping-status.pending,
 .shipping-status.processing {
   background: #f8e4c4;

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
 import Navbar from './Navbar';
 import Icon from './Icon';
+import { getAuthToken } from '../utils/authStorage';
 import './Home.css';
 
 const PRODUCTS_PER_PAGE = 5;
@@ -61,8 +62,7 @@ const Home = () => {
       .catch((error) => console.error('Error connecting to backend:', error));
 
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const totalItems = savedCart.reduce((acc, item) => acc + item.quantity, 0);
-    setCartCount(totalItems);
+    setCartCount(savedCart.length);
   }, []);
 
   // --- Subtitle: Search Input Handler ---
@@ -86,7 +86,7 @@ const Home = () => {
 
   // --- Subtitle: Add to Cart Action Handler ---
   const handleAddToCart = (product, requestedQuantity = 1) => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
 
     if (!token || userRole !== 'buyer') {
@@ -115,8 +115,7 @@ const Home = () => {
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
 
-    const updatedCount = existingCart.reduce((acc, item) => acc + item.quantity, 0);
-    setCartCount(updatedCount);
+    setCartCount(existingCart.length);
     navigate('/cart');
   };
 
