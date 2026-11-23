@@ -138,14 +138,27 @@
   align-items: center;
 }
 
+.input-with-icon input {
+  padding-right: 2.2rem;
+}
+
 .eye-btn {
   position: absolute;
   right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
   background: none;
   border: none;
   cursor: pointer;
   opacity: 0.6;
-  font-size: 0.8rem;
+  color: #2b4c38;
+}
+
+.eye-btn:hover,
+.eye-btn:focus-visible {
+  opacity: 1;
 }
 
 .submit-btn {

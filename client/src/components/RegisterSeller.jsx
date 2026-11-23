@@ -6,6 +6,7 @@ import {
   isValidPhoneNumber,
   normalizePhoneNumber,
 } from '../utils/validation';
+import Icon from './Icon';
 import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
 import './RegisterSeller.css';
 
@@ -296,9 +297,11 @@ const RegisterSeller = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  👁
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>
@@ -317,9 +320,11 @@ const RegisterSeller = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  aria-pressed={showConfirmPassword}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  👁
+                  <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>

@@ -185,6 +185,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     totalProducts: 0,
     pendingOrders: 0,
     lowStockCount: 0,
+    lowStockProducts: [],
     recentOrders: [],
   });
   const [loading, setLoading] = useState(true);
@@ -209,6 +210,11 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
         const orders = Array.isArray(ordersResponse.data) ? ordersResponse.data : [];
         const inventory = inventoryResponse.data || {};
+        const lowStockProducts = (Array.isArray(inventory.items) ? inventory.items : [])
+          .filter((item) => {
+            const stock = Number(item.current_stock);
+            return Number.isFinite(stock) && stock <= 10;
+          });
         const activeProducts = products.filter((product) =>
           product.is_active === true || product.is_active === 1 || product.is_active === '1',
         ).length;
@@ -223,9 +229,6 @@ const OverviewSection = ({ sellerName, sellerId }) => {
             totalProducts: products.length,
             pendingOrders,
             lowStockCount: Number(inventory.metrics?.lowStockCount) || 0,
-            recentOrders: orders,
-          });
-        }
       } catch (error) {
         console.error('Unable to load seller dashboard overview:', error);
       } finally {
@@ -263,6 +266,19 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         <h2>Welcome back, {sellerName || 'Seller'}!</h2>
         <p>Here is an overview of your tea estate sales and active catalog.</p>
       </div>
+
+      {!loading && overview.lowStockProducts.length > 0 && (
+        <div className="low-stock-alert" role="alert">
+          <strong>Low Stock Alert</strong>
+          <ul>
+            {overview.lowStockProducts.map((product) => (
+              <li key={product.id}>
+                {product.name}: {product.current_stock} {Number(product.current_stock) === 1 ? 'unit' : 'units'} remaining
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading ? (
         <p className="metric-subtext">Loading dashboard overview...</p>

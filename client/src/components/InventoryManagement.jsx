@@ -156,7 +156,7 @@ const InventoryManagement = ({ sellerId }) => {
 
         <div className="inv-kpi-card">
           <div className="kpi-content">
-            <span className="kpi-title">Delivered Stock Revenue</span>
+            <span className="kpi-title"> Stock Revenue</span>
             <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
           </div>
           <div className="kpi-icon-box forest"><Icon name="wallet" /></div>

@@ -42,3 +42,26 @@ test('blocks seller registration with a non-nine-digit PAN', async () => {
   expect(await screen.findByText('Enter a valid 9-digit PAN / VAT number.')).toBeInTheDocument();
   expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test.each([
+  ['buyer', RegisterBuyer, 'Show password', 'Hide password'],
+  ['seller', RegisterSeller, 'Show password', 'Hide password'],
+])('%s registration toggles password visibility', (role, RegistrationPage, showLabel, hideLabel) => {
+  render(
+    <MemoryRouter>
+      <RegistrationPage />
+    </MemoryRouter>
+  );
+
+  const passwordInput = screen.getAllByPlaceholderText(
+    role === 'buyer' ? '••••••••••••' : '••••••••'
+  )[0];
+  fireEvent.change(passwordInput, { target: { value: 'secret123' } });
+
+  fireEvent.click(screen.getByRole('button', { name: showLabel }));
+  expect(passwordInput).toHaveAttribute('type', 'text');
+  expect(screen.getByRole('button', { name: hideLabel })).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(screen.getByRole('button', { name: hideLabel }));
+  expect(passwordInput).toHaveAttribute('type', 'password');
+});
