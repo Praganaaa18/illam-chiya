@@ -1,12 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { isValidEmail } from '../utils/validation';
+import Icon from './Icon';
 import './Login.css';
 
 const Login = () => {
   const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   // Field validation errors & general submission errors
@@ -203,7 +205,7 @@ const Login = () => {
             <div className={`input-wrapper ${validationErrors.password ? 'input-error' : ''}`}>
               <input
                 ref={passwordInputRef}
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -211,17 +213,15 @@ const Login = () => {
                 }}
                 placeholder="••••••••••••"
               />
-              <svg
-                className="input-icon"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#7a8b7b"
-                strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+              <button
+                type="button"
+                className="password-visibility-btn"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
+              </button>
             </div>
             {validationErrors.password && <span className="field-error-message">{validationErrors.password}</span>}
           </div>

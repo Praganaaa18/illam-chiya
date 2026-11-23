@@ -221,6 +221,25 @@
   font-size: 0.9rem;
 }
 
+.low-stock-alert {
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  border: 1px solid #e8b65b;
+  border-left: 4px solid #c47a12;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #73440b;
+}
+
+.low-stock-alert ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.low-stock-alert li + li {
+  margin-top: 4px;
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
