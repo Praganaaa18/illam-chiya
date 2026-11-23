@@ -60,17 +60,38 @@ const renderHome = () => render(
   </MemoryRouter>
 );
 
-test('keeps the Products heading stable without a category browsing panel', async () => {
+test('shows the Products heading and category filter', async () => {
   renderHome();
 
   expect(await screen.findByRole('heading', { name: 'Products' })).toBeInTheDocument();
   expect(await screen.findByRole('heading', { name: 'First Flush' })).toBeInTheDocument();
   expect(screen.queryByText('Browse by category')).not.toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Filter products by category' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Product pagination' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Go to page 1' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'View All Teas' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Green Sencha' })).toBeInTheDocument();
+});
+
+test('filters products while typing and changing the category filter', async () => {
+  renderHome();
+
+  await screen.findByRole('heading', { name: 'First Flush' });
+  const categoryFilter = screen.getByRole('combobox', { name: 'Filter products by category' });
+  fireEvent.change(categoryFilter, {
+    target: { value: 'Green' },
+  });
+
+  expect(screen.getByRole('heading', { name: 'Green Sencha' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'First Flush' })).not.toBeInTheDocument();
+
+  fireEvent.change(categoryFilter, {
+    target: { value: 'Orthodox Tea' },
+  });
+
+  expect(screen.getByRole('heading', { name: 'First Flush' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Green Sencha' })).not.toBeInTheDocument();
 });
 
 test('shows products under matching category search suggestions', async () => {
