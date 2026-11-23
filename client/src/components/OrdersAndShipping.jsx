@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
 import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './OrdersAndShipping.css';
 
 const API_ORIGIN = 'http://localhost:5000';
+const AVAILABLE_DRIVERS = ['Ram Shah', 'Ram Shahi', 'Raja Bahadur'];
+const ADD_NEW_DRIVER_VALUE = '__add_new_driver__';
+const DRIVER_NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
+const generateTrackingNumber = (orderId) => `IC-ORD-${String(orderId).padStart(6, '0')}`;
 const STATUS_LABELS = {
   pending: 'Order Confirmed',
   processing: 'Packing',
@@ -39,6 +42,13 @@ const OrdersAndShipping = ({ sellerId }) => {
   const [statusDraft, setStatusDraft] = useState('');
   const [carrierNameDraft, setCarrierNameDraft] = useState('');
   const [trackingNumberDraft, setTrackingNumberDraft] = useState('');
+  const [availableDrivers, setAvailableDrivers] = useState(AVAILABLE_DRIVERS);
+  const [driversLoading, setDriversLoading] = useState(true);
+  const [driversError, setDriversError] = useState('');
+  const [isAddingNewDriver, setIsAddingNewDriver] = useState(false);
+  const [newDriverName, setNewDriverName] = useState('');
+  const [newDriverNameError, setNewDriverNameError] = useState('');
+  const [isSavingDriver, setIsSavingDriver] = useState(false);
   const [loading, setLoading] = useState(true);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,6 +65,32 @@ const OrdersAndShipping = ({ sellerId }) => {
 
   const activeSellerId = sellerId || localStorage.getItem('userId');
   const token = localStorage.getItem('token');
+
+  const fetchDrivers = useCallback(async () => {
+    if (!token) {
+      setDriversLoading(false);
+      setDriversError('Please sign in again to view available drivers.');
+      return;
+    }
+
+    setDriversLoading(true);
+    setDriversError('');
+    try {
+      const response = await axios.get(`${API_ORIGIN}/api/sellers/drivers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!Array.isArray(response.data.drivers) ||
+          response.data.drivers.some((driver) => typeof driver !== 'string')) {
+        throw new Error('The server returned an invalid driver list.');
+      }
+      setAvailableDrivers([...new Set([...AVAILABLE_DRIVERS, ...response.data.drivers])]);
+    } catch (requestError) {
+      console.error('Error fetching seller drivers:', requestError);
+      setDriversError(getErrorMessage(requestError, 'Unable to load available drivers.'));
+    } finally {
+      setDriversLoading(false);
+    }
+  }, [token]);
 
   const fetchOrders = useCallback(async () => {
     if (!activeSellerId || !token) {
@@ -130,8 +166,66 @@ const OrdersAndShipping = ({ sellerId }) => {
   }, [fetchOrders]);
 
   useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
+
+  useEffect(() => {
     fetchTracking(selectedOrderId);
   }, [fetchTracking, selectedOrderId]);
+
+  const getNewDriverNameError = (value) => {
+    const name = value.trim();
+    if (!name) return '';
+    if (name.length > 120) return 'Driver name must be 120 characters or fewer.';
+    if (!DRIVER_NAME_PATTERN.test(name)) {
+      return 'Use letters, spaces, periods, apostrophes, or hyphens only.';
+    }
+    if (availableDrivers.some((driver) => driver.toLowerCase() === name.toLowerCase())) {
+      return 'This driver is already available. Select it from the list.';
+    }
+    return '';
+  };
+
+  const handleAddDriver = async () => {
+    const name = newDriverName.trim();
+    if (!name) {
+      setNewDriverNameError('Enter a driver name.');
+      return;
+    }
+    const validationError = getNewDriverNameError(name);
+    if (validationError) {
+      setNewDriverNameError(validationError);
+      return;
+    }
+
+    setShipmentFormError('');
+    setNewDriverNameError('');
+    setIsSavingDriver(true);
+    try {
+      const response = await axios.post(
+        `${API_ORIGIN}/api/sellers/drivers`,
+        { name },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const addedDriver = response.data.driver?.name;
+      if (typeof addedDriver !== 'string' || !addedDriver.trim()) {
+        throw new Error('The server returned an invalid driver record.');
+      }
+
+      setAvailableDrivers((current) => [...current, addedDriver]);
+      setCarrierNameDraft(addedDriver);
+      setTrackingNumberDraft(generateTrackingNumber(selectedOrderId));
+      setIsAddingNewDriver(false);
+      setNewDriverName('');
+      setNewDriverNameError('');
+      setNotice('Driver added. Update the shipment to assign this driver to the order.');
+    } catch (requestError) {
+      console.error('Error adding seller driver:', requestError);
+      setNewDriverNameError(getErrorMessage(requestError, 'Unable to add this driver.'));
+    } finally {
+      setIsSavingDriver(false);
+    }
+  };
 
   useEffect(() => {
     if (!isShipmentDetailsOpen) return undefined;
@@ -201,10 +295,6 @@ const OrdersAndShipping = ({ sellerId }) => {
       setShipmentFormError('Enter both a carrier name and tracking number, or leave both blank.');
       return;
     }
-    if (trackingNumberDraft.trim() && !isValidPhoneNumber(trackingNumberDraft)) {
-      setShipmentFormError('Enter a valid Nepal mobile number for the tracking number (10 digits).');
-      return;
-    }
 
     setShipmentFormError('');
     setBusy(true);
@@ -215,7 +305,6 @@ const OrdersAndShipping = ({ sellerId }) => {
         {
           status: statusDraft,
           carrier_name: carrierNameDraft.trim(),
-          tracking_number: normalizePhoneNumber(trackingNumberDraft),
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -263,6 +352,12 @@ const OrdersAndShipping = ({ sellerId }) => {
       </nav>
 
       {notice && <div className="shipping-notice" role="status">{notice}</div>}
+      {driversError && (
+        <div className="shipping-error" role="alert">
+          <span>{driversError}</span>
+          <button type="button" onClick={fetchDrivers} disabled={driversLoading}>Try again</button>
+        </div>
+      )}
       {error && (
         <div className="shipping-error" role="alert">
           <span>{error}</span>
@@ -420,32 +515,91 @@ const OrdersAndShipping = ({ sellerId }) => {
               </div>
               <div className="shipping-carrier-fields">
                 <label htmlFor="shipping-carrier-name">Carrier name</label>
-                <input
+                <select
                   id="shipping-carrier-name"
-                  type="text"
-                  value={carrierNameDraft}
+                  value={isAddingNewDriver ? ADD_NEW_DRIVER_VALUE : carrierNameDraft}
                   onChange={(event) => {
-                    setCarrierNameDraft(event.target.value);
+                    if (event.target.value === ADD_NEW_DRIVER_VALUE) {
+                      setIsAddingNewDriver(true);
+                      setNewDriverName('');
+                      setNewDriverNameError('');
+                    } else {
+                      setIsAddingNewDriver(false);
+                      setCarrierNameDraft(event.target.value);
+                      setTrackingNumberDraft(
+                        event.target.value ? generateTrackingNumber(selectedOrder.id) : ''
+                      );
+                    }
                     setShipmentFormError('');
                   }}
-                  maxLength={120}
-                  autoComplete="organization"
-                  disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
+                  disabled={busy || trackingLoading || driversLoading || selectedOrder.status === 'cancelled'}
                   required={statusDraft === 'shipped'}
-                />
-                <label htmlFor="shipping-tracking-number">Tracking number</label>
+                >
+                  <option value="">Select a driver</option>
+                  {carrierNameDraft && !availableDrivers.includes(carrierNameDraft) && (
+                    <option value={carrierNameDraft}>{carrierNameDraft} (current)</option>
+                  )}
+                  {availableDrivers.map((driver) => (
+                    <option key={driver} value={driver}>{driver}</option>
+                  ))}
+                  <option value={ADD_NEW_DRIVER_VALUE}>Add New Driver...</option>
+                </select>
+                {isAddingNewDriver && (
+                  <div className="shipping-add-driver">
+                    <label htmlFor="shipping-new-driver-name">New driver name</label>
+                    <input
+                      id="shipping-new-driver-name"
+                      type="text"
+                      value={newDriverName}
+                      onChange={(event) => {
+                        setNewDriverName(event.target.value);
+                        setNewDriverNameError(getNewDriverNameError(event.target.value));
+                        setShipmentFormError('');
+                      }}
+                      maxLength={120}
+                      pattern="[A-Za-z][A-Za-z .'-]*"
+                      title="Use letters, spaces, periods, apostrophes, or hyphens only."
+                      autoComplete="name"
+                      required
+                      aria-invalid={Boolean(newDriverNameError)}
+                      aria-describedby={newDriverNameError ? 'shipping-new-driver-error' : undefined}
+                      disabled={isSavingDriver}
+                    />
+                    {newDriverNameError && (
+                      <span id="shipping-new-driver-error" className="shipping-field-error" role="alert">
+                        {newDriverNameError}
+                      </span>
+                    )}
+                    <div className="shipping-add-driver-actions">
+                      <button
+                        type="button"
+                        onClick={handleAddDriver}
+                        disabled={isSavingDriver || Boolean(newDriverNameError)}
+                      >
+                        {isSavingDriver ? 'Adding...' : 'Add Driver'}
+                      </button>
+                      <button
+                        type="button"
+                        className="shipping-add-driver-cancel"
+                        onClick={() => {
+                          setIsAddingNewDriver(false);
+                          setNewDriverName('');
+                          setNewDriverNameError('');
+                          setShipmentFormError('');
+                        }}
+                        disabled={isSavingDriver}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <label htmlFor="shipping-tracking-number">Tracking number (generated)</label>
                 <input
                   id="shipping-tracking-number"
-                  type="tel"
+                  type="text"
                   value={trackingNumberDraft}
-                  placeholder="e.g. 9801234567"
-                  onChange={(event) => {
-                    setTrackingNumberDraft(event.target.value);
-                    setShipmentFormError('');
-                  }}
-                  maxLength={16}
-                  title="Enter a valid Nepal mobile number (10 digits), optionally prefixed by +977."
-                  autoComplete="off"
+                  readOnly
                   disabled={busy || trackingLoading || selectedOrder.status === 'cancelled'}
                   required={statusDraft === 'shipped'}
                 />

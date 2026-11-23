@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import API from '../services/api';
 import InventoryManagement from './InventoryManagement';
 
@@ -34,4 +34,14 @@ test('shows an inventory alert listing products with 10 or fewer available units
   expect(alert).toHaveTextContent('Low Stock Alert');
   expect(alert).toHaveTextContent('Low Tea: 10 units available');
   expect(alert).not.toHaveTextContent('Healthy Tea');
+});
+
+test('dismisses the low stock alert without removing inventory data', async () => {
+  render(<InventoryManagement sellerId="5" />);
+
+  const alert = await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss low stock alert' }));
+
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.getByText('Low Tea')).toBeInTheDocument();
 });

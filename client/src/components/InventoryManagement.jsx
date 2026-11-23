@@ -18,6 +18,7 @@ const InventoryManagement = ({ sellerId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
   const [isRestocking, setIsRestocking] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -167,24 +168,35 @@ const InventoryManagement = ({ sellerId }) => {
         </div>
       </div>
 
-      <section
-        className={`inv-stock-alert${lowStockItems.length ? ' has-low-stock' : ''}`}
-        role={lowStockItems.length ? 'alert' : 'status'}
-        aria-live="polite"
-      >
-        <strong>Low Stock Alert</strong>
-        {lowStockItems.length ? (
-          <ul>
-            {lowStockItems.map((item) => (
-              <li key={item.id}>
-                {item.name}: {item.available_stock} {Number(item.available_stock) === 1 ? 'unit' : 'units'} available
-              </li>
-            ))}
-          </ul>
-        ) : (
+      {lowStockItems.length > 0 ? (
+        !isLowStockAlertDismissed && (
+          <section className="inv-stock-alert has-low-stock" role="alert" aria-live="polite">
+            <div className="inv-stock-alert-heading">
+              <strong>Low Stock Alert</strong>
+              <button
+                type="button"
+                className="inv-stock-alert-dismiss"
+                aria-label="Dismiss low stock alert"
+                onClick={() => setIsLowStockAlertDismissed(true)}
+              >
+                ×
+              </button>
+            </div>
+            <ul>
+              {lowStockItems.map((item) => (
+                <li key={item.id}>
+                  {item.name}: {item.available_stock} {Number(item.available_stock) === 1 ? 'unit' : 'units'} available
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      ) : (
+        <section className="inv-stock-alert" role="status" aria-live="polite">
+          <strong>Low Stock Alert</strong>
           <p>No products have 10 or fewer available units.</p>
-        )}
-      </section>
+        </section>
+      )}
 
       <div className="inv-main-card">
         <div className="inv-toolbar">

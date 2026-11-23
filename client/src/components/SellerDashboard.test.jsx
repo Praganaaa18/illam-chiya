@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import axios from 'axios';
 import SellerDashboard from './SellerDashboard';
@@ -59,4 +59,8 @@ test('shows a seller dashboard alert for products with 10 or fewer units only', 
   expect(alert).toHaveTextContent('Reserved Low Tea: 9 units remaining');
   expect(alert).not.toHaveTextContent('Healthy Tea');
   expect(alert).not.toHaveTextContent('Reserved Healthy Tea');
+  expect(screen.queryByText('✅ Verified Seller')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss low stock alert' }));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
