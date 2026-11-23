@@ -33,7 +33,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-test('shows seller-based delivery estimate, original tracking navigation, and back arrow', async () => {
+test('shows a 10-day delivery estimate from order placement and tracking details', async () => {
   render(
     <MemoryRouter initialEntries={['/order-tracking']}>
       <Routes>
@@ -45,14 +45,13 @@ test('shows seller-based delivery estimate, original tracking navigation, and ba
 
   await screen.findByRole('heading', { name: 'Order Tracking: #ILLAM-12' });
 
-  const earliest = new Date(order.seller_updated_at);
-  const latest = new Date(order.seller_updated_at);
-  earliest.setDate(earliest.getDate() + 5);
-  latest.setDate(latest.getDate() + 10);
+  const estimatedDate = new Date(order.created_at);
+  estimatedDate.setDate(estimatedDate.getDate() + 10);
   const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-  const estimate = `${earliest.toLocaleDateString(undefined, dateOptions)} – ${latest.toLocaleDateString(undefined, dateOptions)}`;
+  const estimate = `${new Date(order.created_at).toLocaleDateString(undefined, dateOptions)} – ${estimatedDate.toLocaleDateString(undefined, dateOptions)}`;
 
   expect(screen.getByText(estimate)).toBeInTheDocument();
+  expect(screen.getByText('Delivery takes 10 days after shipment confirmation from seller.')).toBeInTheDocument();
   expect(screen.getByText('Ilam Express')).toBeInTheDocument();
   expect(screen.getByText('9801234567')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Track Package' })).toBeInTheDocument();
@@ -68,6 +67,7 @@ test('opens the order identified by a notification link', async () => {
     ...order,
     id: 13,
     status: 'pending',
+    created_at: '2026-02-01T12:00:00.000Z',
     carrier_name: null,
     tracking_number: null,
     items_summary: 'Green Tea (x1)',
@@ -89,4 +89,11 @@ test('opens the order identified by a notification link', async () => {
 
   await screen.findByRole('heading', { name: 'Order Tracking: #ILLAM-13' });
   expect(screen.getAllByText('Green Tea (x1)')).toHaveLength(2);
+  const placedDate = new Date(secondOrder.created_at);
+  const estimatedDate = new Date(secondOrder.created_at);
+  estimatedDate.setDate(estimatedDate.getDate() + 10);
+  const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  expect(screen.getByText(
+    `${placedDate.toLocaleDateString(undefined, dateOptions)} – ${estimatedDate.toLocaleDateString(undefined, dateOptions)}`
+  )).toBeInTheDocument();
 });

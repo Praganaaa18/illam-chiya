@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios';
 import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
+import { formatDeliveryDateRange } from '../utils/delivery';
 import './OrdersAndShipping.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -31,6 +32,15 @@ const formatDate = (value) => {
   if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+};
+
+const getShipmentDeliveryDate = (order, events) => {
+  if (order.status === 'cancelled') return 'Cancelled';
+  if (order.status === 'delivered') {
+    const deliveryEvent = [...(events || [])].reverse().find((event) => event.status === 'delivered');
+    return deliveryEvent ? `Delivered ${formatDate(deliveryEvent.created_at)}` : 'Delivered';
+  }
+  return formatDeliveryDateRange(order.created_at);
 };
 
 const OrdersAndShipping = ({ sellerId }) => {
@@ -468,7 +478,14 @@ const OrdersAndShipping = ({ sellerId }) => {
             <div className="shipping-customer">
               <strong>{selectedOrder.buyer_name || 'Buyer'}</strong>
               <span>{selectedOrder.phone || 'Phone not provided'}</span>
-              <span>{selectedOrder.delivery_address || 'Delivery address not provided'}</span>
+              <span>
+                <strong>Delivery address:</strong>{' '}
+                {selectedOrder.delivery_address || 'Delivery address not provided'}
+              </span>
+              <span>
+                <strong>Delivery date range:</strong>{' '}
+                {getShipmentDeliveryDate(selectedOrder, selectedTracking?.events)}
+              </span>
               <span>Placed {formatDate(selectedOrder.created_at)}</span>
             </div>
 
@@ -560,7 +577,6 @@ const OrdersAndShipping = ({ sellerId }) => {
                       pattern="[A-Za-z][A-Za-z .'-]*"
                       title="Use letters, spaces, periods, apostrophes, or hyphens only."
                       autoComplete="name"
-                      required
                       aria-invalid={Boolean(newDriverNameError)}
                       aria-describedby={newDriverNameError ? 'shipping-new-driver-error' : undefined}
                       disabled={isSavingDriver}
@@ -574,7 +590,7 @@ const OrdersAndShipping = ({ sellerId }) => {
                       <button
                         type="button"
                         onClick={handleAddDriver}
-                        disabled={isSavingDriver || Boolean(newDriverNameError)}
+                        disabled={isSavingDriver || !newDriverName.trim() || Boolean(newDriverNameError)}
                       >
                         {isSavingDriver ? 'Adding...' : 'Add Driver'}
                       </button>

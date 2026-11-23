@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
+import { getDistrictFromAddress, NEPAL_DISTRICTS } from '../utils/nepalDistricts';
 import './ConfirmOrder.css';
 
 const ConfirmOrder = () => {
@@ -20,7 +21,8 @@ const ConfirmOrder = () => {
     fullName: '',
     phone: '',
     address: '',
-    city: 'Kathmandu',
+    city: '',
+    landmark: '',
     notes: ''
   });
 
@@ -58,6 +60,7 @@ const ConfirmOrder = () => {
       fullName: fallbackName,
       phone: fallbackPhone,
       address: fallbackAddress,
+      city: getDistrictFromAddress(fallbackAddress),
     }));
 
     fetch('http://localhost:5000/api/auth/me', {
@@ -72,6 +75,7 @@ const ConfirmOrder = () => {
           fullName: data.full_name || current.fullName,
           phone: data.phone || current.phone,
           address: profileAddress || current.address,
+          city: getDistrictFromAddress(profileAddress) || current.city,
         }));
         localStorage.setItem('userName', data.full_name || '');
         localStorage.setItem('userPhone', data.phone || '');
@@ -89,7 +93,12 @@ const ConfirmOrder = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setShippingDetails({ ...shippingDetails, [name]: value });
+    const district = name === 'address' ? getDistrictFromAddress(value) : '';
+    setShippingDetails((current) => ({
+      ...current,
+      [name]: value,
+      ...(district ? { city: district } : {}),
+    }));
     if (errors[name]) {
       setErrors({ ...errors, [name]: '' });
     }
@@ -105,6 +114,7 @@ const ConfirmOrder = () => {
     }
     if (!shippingDetails.address.trim()) newErrors.address = 'Delivery address is required';
     if (!shippingDetails.city.trim()) newErrors.city = 'City is required';
+    if (!shippingDetails.landmark.trim()) newErrors.landmark = 'Nearby landmark is required.';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -126,6 +136,7 @@ const ConfirmOrder = () => {
         pack_size: item.pack_size || '100 g',
       })),
       shipping_address: `${shippingDetails.address}, ${shippingDetails.city}`,
+      landmark: shippingDetails.landmark.trim(),
       phone: normalizePhoneNumber(shippingDetails.phone),
       recipient_name: shippingDetails.fullName,
       payment_method: 'COD',
@@ -205,7 +216,7 @@ const ConfirmOrder = () => {
 
       <div className="checkout-grid">
         {/* Shipping & Payment Form */}
-        <form onSubmit={handlePlaceOrder} className="checkout-form">
+        <form onSubmit={handlePlaceOrder} className="checkout-form" noValidate>
           {submitError && <p className="error-text" role="alert">{submitError}</p>}
           {/* Shipping Details */}
           <div className="form-section">
@@ -241,15 +252,19 @@ const ConfirmOrder = () => {
               </div>
 
               <div className="form-group">
-                <label>City *</label>
-                <input
-                  type="text"
+                <label htmlFor="checkout-city">City / District *</label>
+                <select
+                  id="checkout-city"
                   name="city"
-                  placeholder="e.g. Kathmandu / Ilam"
                   value={shippingDetails.city}
                   onChange={handleInputChange}
                   className={errors.city ? 'input-err' : ''}
-                />
+                >
+                  <option value="">Select a district</option>
+                  {NEPAL_DISTRICTS.map((district) => (
+                    <option key={district} value={district}>{district}</option>
+                  ))}
+                </select>
                 {errors.city && <span className="error-text">{errors.city}</span>}
               </div>
             </div>
@@ -265,6 +280,22 @@ const ConfirmOrder = () => {
                 className={errors.address ? 'input-err' : ''}
               />
               {errors.address && <span className="error-text">{errors.address}</span>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="checkout-landmark">Nearby Landmark *</label>
+              <input
+                id="checkout-landmark"
+                type="text"
+                name="landmark"
+                placeholder="e.g. Near the community temple"
+                value={shippingDetails.landmark}
+                onChange={handleInputChange}
+                maxLength={150}
+                required
+                className={errors.landmark ? 'input-err' : ''}
+              />
+              {errors.landmark && <span className="error-text">{errors.landmark}</span>}
             </div>
 
             <div className="form-group">
