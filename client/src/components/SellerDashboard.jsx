@@ -32,7 +32,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
-    isVerified: false,
     sellerId: localStorage.getItem('userId') || null,
   });
 
@@ -86,7 +85,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       setSellerInfo({
         businessName: sellerName,
         email: res.data.email || '',
-        isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
         sellerId: res.data.id || null,
       });
       if (sellerName) localStorage.setItem('userName', sellerName);
@@ -156,9 +154,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
 
           <div className="topbar-right">
             <NotificationBell role="seller" />
-            <span className="verification-pill">
-              {sellerInfo.isVerified ? '✅ Verified Seller' : '⏳ Pending Verification'}
-            </span>
             <div className="user-profile-chip">
               <div className="avatar-circle">{sellerInfo.businessName.charAt(0)}</div>
               <span className="profile-name">{sellerInfo.businessName}</span>
@@ -189,6 +184,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     recentOrders: [],
   });
   const [loading, setLoading] = useState(true);
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortConfig, handleSort] = useTableSort('id');
@@ -271,9 +267,19 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         <p>Here is an overview of your tea estate sales and active catalog.</p>
       </div>
 
-      {!loading && overview.lowStockProducts.length > 0 && (
+      {!loading && !isLowStockAlertDismissed && overview.lowStockProducts.length > 0 && (
         <div className="low-stock-alert" role="alert">
-          <strong>Low Stock Alert</strong>
+          <div className="low-stock-alert-heading">
+            <strong>Low Stock Alert</strong>
+            <button
+              type="button"
+              className="low-stock-alert-dismiss"
+              aria-label="Dismiss low stock alert"
+              onClick={() => setIsLowStockAlertDismissed(true)}
+            >
+              ×
+            </button>
+          </div>
           <ul>
             {overview.lowStockProducts.map((product) => (
               <li key={product.id}>

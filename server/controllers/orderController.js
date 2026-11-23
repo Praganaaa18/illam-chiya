@@ -2,6 +2,10 @@
 // SUBTITLE 1: ORDER DATABASE CONTROLLERS
 // =========================================================================
 const db = require('../config/db');
+const DEFAULT_DRIVERS = require('../utils/drivers');
+
+const generateTrackingNumber = (orderId) =>
+  `IC-ORD-${String(Number(orderId)).padStart(6, '0')}`;
 const {
   isValidPhoneNumber,
   normalizePhoneNumber,
@@ -280,13 +284,12 @@ exports.updateOrderStatus = async (req, res) => {
   const requestedStatus = body.status !== undefined ? body.status : body.order_status;
   const newStatus = hasStatus ? String(requestedStatus).toLowerCase() : null;
   const hasCarrierName = Object.prototype.hasOwnProperty.call(body, 'carrier_name');
-  const hasTrackingNumber = Object.prototype.hasOwnProperty.call(body, 'tracking_number');
 
   if (req.user.role !== 'seller') {
     return res.status(403).json({ message: 'Seller access is required.' });
   }
 
-  if (!hasStatus && !hasCarrierName && !hasTrackingNumber) {
+  if (!hasStatus && !hasCarrierName) {
     return res.status(400).json({ message: 'Provide a shipment status or carrier details to update.' });
   }
 
@@ -297,16 +300,7 @@ exports.updateOrderStatus = async (req, res) => {
   if (hasCarrierName && (typeof body.carrier_name !== 'string' || body.carrier_name.trim().length > 120)) {
     return res.status(400).json({ message: 'Carrier name must be 120 characters or fewer.' });
   }
-  if (hasTrackingNumber && (
-    typeof body.tracking_number !== 'string' ||
-    (body.tracking_number.trim() && !isValidPhoneNumber(body.tracking_number))
-  )) {
-    return res.status(400).json({
-      message: 'Enter a valid Nepal mobile number for the tracking number (10 digits).',
-    });
-  }
   const carrierName = hasCarrierName ? body.carrier_name.trim() : null;
-  const trackingNumber = hasTrackingNumber ? normalizePhoneNumber(body.tracking_number) : null;
 
   const allowedTransitions = {
     pending: ['processing', 'cancelled'],
@@ -322,7 +316,7 @@ exports.updateOrderStatus = async (req, res) => {
     await connection.beginTransaction();
 
     const [orders] = await connection.execute(
-      `SELECT o.buyer_id, o.order_status, o.carrier_name, o.tracking_number
+      `SELECT o.id, o.buyer_id, o.order_status, o.carrier_name, o.tracking_number
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
        WHERE o.id = ? AND oi.seller_id = ?
@@ -340,9 +334,27 @@ exports.updateOrderStatus = async (req, res) => {
     const currentCarrierName = orders[0].carrier_name || '';
     const currentTrackingNumber = orders[0].tracking_number || '';
     const nextCarrierName = hasCarrierName ? carrierName : currentCarrierName;
-    const nextTrackingNumber = hasTrackingNumber ? trackingNumber : currentTrackingNumber;
+    if (hasCarrierName && nextCarrierName &&
+        !DEFAULT_DRIVERS.includes(nextCarrierName) &&
+        nextCarrierName !== currentCarrierName) {
+      const [drivers] = await connection.execute(
+        'SELECT id FROM seller_drivers WHERE seller_id = ? AND driver_name = ?',
+        [req.user.id, nextCarrierName]
+      );
+      if (drivers.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'Select an available driver.' });
+      }
+    }
+    let nextTrackingNumber = currentTrackingNumber;
+    if (hasCarrierName) {
+      if (!nextCarrierName) nextTrackingNumber = '';
+      else if (nextCarrierName !== currentCarrierName || !currentTrackingNumber) {
+        nextTrackingNumber = generateTrackingNumber(orders[0].id);
+      }
+    }
 
-    if (!statusChanged && !hasCarrierName && !hasTrackingNumber) {
+    if (!statusChanged && !hasCarrierName) {
       await connection.commit();
       return res.status(200).json({ message: 'Shipment status is unchanged.', status: previousStatus });
     }
@@ -411,9 +423,9 @@ exports.updateOrderStatus = async (req, res) => {
       updates.push('carrier_name = ?');
       updateValues.push(carrierName || null);
     }
-    if (hasTrackingNumber) {
+    if (hasCarrierName) {
       updates.push('tracking_number = ?');
-      updateValues.push(trackingNumber || null);
+      updateValues.push(nextTrackingNumber || null);
     }
     await connection.execute(
       `UPDATE orders SET ${updates.join(', ')} WHERE id = ?`,

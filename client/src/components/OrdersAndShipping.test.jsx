@@ -5,6 +5,7 @@ import OrdersAndShipping from './OrdersAndShipping';
 
 jest.mock('axios', () => ({
   get: jest.fn(),
+  post: jest.fn(),
   patch: jest.fn(),
 }));
 
@@ -30,11 +31,14 @@ const tracking = {
 beforeEach(() => {
   localStorage.setItem('token', 'seller-token');
   localStorage.setItem('userId', '5');
-  axios.get.mockImplementation((url) => (
-    url.endsWith('/api/orders')
-      ? Promise.resolve({ data: [order] })
-      : Promise.resolve({ data: tracking })
-  ));
+  axios.get.mockImplementation((url) => {
+    if (url.endsWith('/api/orders')) return Promise.resolve({ data: [order] });
+    if (url.endsWith('/api/sellers/drivers')) {
+      return Promise.resolve({ data: { drivers: ['Ram Shah', 'Ram Shahi', 'Raja Bahadur'] } });
+    }
+    return Promise.resolve({ data: tracking });
+  });
+  axios.post.mockResolvedValue({ data: { driver: { id: 8, name: 'New Driver' } } });
   axios.patch.mockResolvedValue({ data: { status: 'processing' } });
 });
 
@@ -43,43 +47,89 @@ afterEach(() => {
   localStorage.clear();
 });
 
-test('saves carrier name and tracking number from shipment details', async () => {
+test('selecting a driver generates and saves an order-specific tracking number', async () => {
   render(<OrdersAndShipping sellerId="5" />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
   const carrierName = await screen.findByLabelText('Carrier name');
   await waitFor(() => expect(carrierName).toBeEnabled());
 
-  fireEvent.change(carrierName, { target: { value: 'Ilam Express' } });
-  fireEvent.change(screen.getByLabelText('Tracking number'), { target: { value: '+977 9801234567' } });
+  fireEvent.change(carrierName, { target: { value: 'Ram Shah' } });
+  expect(screen.getByLabelText('Tracking number (generated)')).toHaveValue('IC-ORD-000022');
   fireEvent.click(screen.getByRole('button', { name: 'Update Shipment' }));
 
   await waitFor(() => expect(axios.patch).toHaveBeenCalledWith(
     'http://localhost:5000/api/orders/22/status',
     {
       status: 'processing',
-      carrier_name: 'Ilam Express',
-      tracking_number: '9801234567',
+      carrier_name: 'Ram Shah',
     },
     expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
   ));
 });
 
-test('rejects invalid tracking numbers before saving shipment details', async () => {
+test('shows only the available drivers in the carrier dropdown', async () => {
   render(<OrdersAndShipping sellerId="5" />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
   const carrierName = await screen.findByLabelText('Carrier name');
   await waitFor(() => expect(carrierName).toBeEnabled());
 
-  fireEvent.change(carrierName, { target: { value: 'Ilam Express' } });
-  fireEvent.change(screen.getByLabelText('Tracking number'), { target: { value: '980123456' } });
+  expect(Array.from(carrierName.options).map((option) => option.value)).toEqual([
+    '',
+    'Ram Shah',
+    'Ram Shahi',
+    'Raja Bahadur',
+    '__add_new_driver__',
+  ]);
+});
+
+test('adds a new driver to the roster and selects it for the order', async () => {
+  render(<OrdersAndShipping sellerId="5" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
+  const carrierName = await screen.findByLabelText('Carrier name');
+  await waitFor(() => expect(carrierName).toBeEnabled());
+
+  fireEvent.change(carrierName, { target: { value: '__add_new_driver__' } });
+  fireEvent.change(await screen.findByLabelText('New driver name'), {
+    target: { value: 'New Driver' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Driver' }));
+
+  await waitFor(() => expect(axios.post).toHaveBeenCalledWith(
+    'http://localhost:5000/api/sellers/drivers',
+    { name: 'New Driver' },
+    expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
+  ));
+  await waitFor(() => expect(carrierName).toHaveValue('New Driver'));
+  expect(screen.getByLabelText('Tracking number (generated)')).toHaveValue('IC-ORD-000022');
+
   fireEvent.click(screen.getByRole('button', { name: 'Update Shipment' }));
+  await waitFor(() => expect(axios.patch).toHaveBeenCalledWith(
+    'http://localhost:5000/api/orders/22/status',
+    { status: 'processing', carrier_name: 'New Driver' },
+    expect.objectContaining({ headers: { Authorization: 'Bearer seller-token' } })
+  ));
+});
+
+test('validates new driver names before saving them', async () => {
+  render(<OrdersAndShipping sellerId="5" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'View tracking for order 22' }));
+  const carrierName = await screen.findByLabelText('Carrier name');
+  await waitFor(() => expect(carrierName).toBeEnabled());
+  fireEvent.change(carrierName, { target: { value: '__add_new_driver__' } });
+
+  fireEvent.change(await screen.findByLabelText('New driver name'), {
+    target: { value: 'Driver #1' },
+  });
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Enter a valid Nepal mobile number for the tracking number (10 digits).'
+    'Use letters, spaces, periods, apostrophes, or hyphens only.'
   );
-  expect(axios.patch).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Add Driver' })).toBeDisabled();
+  expect(axios.post).not.toHaveBeenCalled();
 });
 
 test('opens shipment details beside the table and closes with Escape or X', async () => {
