@@ -3,8 +3,16 @@ import { useNavigate, Link } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
-import { getDistrictFromAddress, NEPAL_DISTRICTS } from '../utils/nepalDistricts';
+import {
+  getCanonicalDistrict,
+  getDistrictFromAddress,
+  NEPAL_DISTRICTS,
+} from '../utils/nepalDistricts';
 import './ConfirmOrder.css';
+
+const DELIVERY_ADDRESS_PATTERN = /^[a-zA-Z0-9\s,.-]*$/;
+const DELIVERY_ADDRESS_CHARACTER_ERROR =
+  'Special characters (like @, #, $, %) are not allowed in Delivery Address.';
 
 const ConfirmOrder = () => {
   const navigate = useNavigate();
@@ -99,8 +107,17 @@ const ConfirmOrder = () => {
       [name]: value,
       ...(district ? { city: district } : {}),
     }));
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
+    if (name === 'address') {
+      setErrors((current) => ({
+        ...current,
+        address: value && !DELIVERY_ADDRESS_PATTERN.test(value)
+          ? DELIVERY_ADDRESS_CHARACTER_ERROR
+          : district
+            ? 'Do not include the district in the delivery address. Select it in City / District.'
+            : '',
+      }));
+    } else if (errors[name]) {
+      setErrors((current) => ({ ...current, [name]: '' }));
     }
   };
 
@@ -112,8 +129,18 @@ const ConfirmOrder = () => {
     } else if (!isValidPhoneNumber(shippingDetails.phone)) {
       newErrors.phone = 'Enter a valid Nepal mobile number (10 digits).';
     }
-    if (!shippingDetails.address.trim()) newErrors.address = 'Delivery address is required';
-    if (!shippingDetails.city.trim()) newErrors.city = 'City is required';
+    if (!shippingDetails.address.trim()) {
+      newErrors.address = 'Delivery address is required';
+    } else if (!DELIVERY_ADDRESS_PATTERN.test(shippingDetails.address)) {
+      newErrors.address = DELIVERY_ADDRESS_CHARACTER_ERROR;
+    } else if (getDistrictFromAddress(shippingDetails.address)) {
+      newErrors.address = 'Do not include the district in the delivery address. Select it in City / District.';
+    }
+    if (!shippingDetails.city.trim()) {
+      newErrors.city = 'City / District is required';
+    } else if (!getCanonicalDistrict(shippingDetails.city)) {
+      newErrors.city = 'Select a valid Nepal district from the suggestions.';
+    }
     if (!shippingDetails.landmark.trim()) newErrors.landmark = 'Nearby landmark is required.';
 
     setErrors(newErrors);
@@ -135,7 +162,7 @@ const ConfirmOrder = () => {
         price: item.price,
         pack_size: item.pack_size || '100 g',
       })),
-      shipping_address: `${shippingDetails.address}, ${shippingDetails.city}`,
+      shipping_address: `${shippingDetails.address.trim()}, ${getCanonicalDistrict(shippingDetails.city)}`,
       landmark: shippingDetails.landmark.trim(),
       phone: normalizePhoneNumber(shippingDetails.phone),
       recipient_name: shippingDetails.fullName,
@@ -253,18 +280,22 @@ const ConfirmOrder = () => {
 
               <div className="form-group">
                 <label htmlFor="checkout-city">City / District *</label>
-                <select
+                <input
                   id="checkout-city"
+                  type="text"
                   name="city"
+                  list="checkout-district-options"
                   value={shippingDetails.city}
                   onChange={handleInputChange}
+                  autoComplete="off"
                   className={errors.city ? 'input-err' : ''}
-                >
-                  <option value="">Select a district</option>
+                  placeholder="Type or select a district"
+                />
+                <datalist id="checkout-district-options">
                   {NEPAL_DISTRICTS.map((district) => (
                     <option key={district} value={district}>{district}</option>
                   ))}
-                </select>
+                </datalist>
                 {errors.city && <span className="error-text">{errors.city}</span>}
               </div>
             </div>

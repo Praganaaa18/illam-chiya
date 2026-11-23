@@ -65,3 +65,40 @@ test('updates the district when the delivery address changes', async () => {
 
   expect(screen.getByLabelText('City / District *')).toHaveValue('Ilam');
 });
+
+test('allows editing the district field and rejects an address that repeats a district', async () => {
+  render(
+    <MemoryRouter>
+      <ConfirmOrder />
+    </MemoryRouter>
+  );
+
+  const districtInput = await screen.findByLabelText('City / District *');
+  fireEvent.change(districtInput, { target: { value: 'Baitadi' } });
+  expect(districtInput).toHaveValue('Baitadi');
+
+  fireEvent.change(districtInput, { target: { value: 'Not a district' } });
+  fireEvent.click(screen.getByRole('button', { name: /Confirm Order/ }));
+  expect(await screen.findByText(
+    'Do not include the district in the delivery address. Select it in City / District.'
+  )).toBeInTheDocument();
+  expect(screen.getByText('Select a valid Nepal district from the suggestions.')).toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test('rejects special characters in the delivery address', async () => {
+  render(
+    <MemoryRouter>
+      <ConfirmOrder />
+    </MemoryRouter>
+  );
+
+  const addressInput = await screen.findByPlaceholderText('Street name, house no., landmark');
+  fireEvent.change(addressInput, { target: { value: 'Sanothimi @ 3' } });
+  fireEvent.click(screen.getByRole('button', { name: /Confirm Order/ }));
+
+  expect(await screen.findByText(
+    'Special characters (like @, #, $, %) are not allowed in Delivery Address.'
+  )).toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});

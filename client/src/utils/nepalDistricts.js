@@ -94,3 +94,10 @@ export const getDistrictFromAddress = (address) => {
 
   return matches[0]?.district || '';
 };
+
+export const getCanonicalDistrict = (value) => {
+  if (typeof value !== 'string') return '';
+  return NEPAL_DISTRICTS.find(
+    (district) => district.toLowerCase() === value.trim().toLowerCase()
+  ) || '';
+};
