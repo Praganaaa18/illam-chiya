@@ -111,6 +111,10 @@ const InventoryManagement = ({ sellerId }) => {
   }), [filteredItems, sortConfig]);
   const pageCount = Math.max(1, Math.ceil(sortedItems.length / pageSize));
   const pagedItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const lowStockItems = items.filter((item) => {
+    const availableStock = Number(item.available_stock);
+    return Number.isFinite(availableStock) && availableStock <= 10;
+  });
 
   useEffect(() => setCurrentPage(1), [searchTerm, statusFilter, categoryFilter, pageSize]);
   useEffect(() => {
@@ -162,6 +166,25 @@ const InventoryManagement = ({ sellerId }) => {
           <div className="kpi-icon-box forest"><Icon name="wallet" /></div>
         </div>
       </div>
+
+      <section
+        className={`inv-stock-alert${lowStockItems.length ? ' has-low-stock' : ''}`}
+        role={lowStockItems.length ? 'alert' : 'status'}
+        aria-live="polite"
+      >
+        <strong>Low Stock Alert</strong>
+        {lowStockItems.length ? (
+          <ul>
+            {lowStockItems.map((item) => (
+              <li key={item.id}>
+                {item.name}: {item.available_stock} {Number(item.available_stock) === 1 ? 'unit' : 'units'} available
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No products have 10 or fewer available units.</p>
+        )}
+      </section>
 
       <div className="inv-main-card">
         <div className="inv-toolbar">
