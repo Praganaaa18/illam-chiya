@@ -197,7 +197,25 @@
 @media (max-width: 640px) {
   .notification-panel {
     position: fixed;
-    top: 76px;
+    top: max(76px, env(safe-area-inset-top));
     right: 12px;
+    max-height: calc(100dvh - 96px);
+  }
+}
+
+@media (max-width: 380px) {
+  .notification-panel {
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+
+  .notification-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .notification-mark-all {
+    white-space: normal;
   }
 }

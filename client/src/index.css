@@ -21,11 +21,28 @@
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100vh;
   background: var(--illam-paper);
   color: var(--illam-ink);
   font-family: var(--illam-font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
 }
 
 button,

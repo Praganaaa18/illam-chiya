@@ -182,6 +182,7 @@
 
 .inv-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -444,5 +445,26 @@
 
   .inv-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .inv-kpi-card {
+    padding: 14px 16px;
+  }
+
+  .inv-modal-overlay {
+    padding: 12px;
+  }
+
+  .inv-modal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 400px;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 18px;
+  }
+
+  .inv-modal-actions {
+    flex-wrap: wrap;
   }
 }

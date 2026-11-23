@@ -53,6 +53,23 @@ test('selects the valid district found in the buyer registered address', async (
   expect(await screen.findByLabelText('City / District *')).toHaveValue('Bhaktapur');
 });
 
+test('preserves the valid cart when saved checkout items are malformed', async () => {
+  const savedCart = [{ id: 1, price: 100, quantity: 1 }];
+  localStorage.setItem('checkoutItems', '{invalid json');
+
+  render(
+    <MemoryRouter>
+      <ConfirmOrder />
+    </MemoryRouter>
+  );
+
+  expect(await screen.findAllByText(
+    'Your saved cart could not be read. Please add your items again.'
+  )).toHaveLength(2);
+  expect(JSON.parse(localStorage.getItem('cart'))).toEqual(savedCart);
+  expect(localStorage.getItem('checkoutItems')).toBeNull();
+});
+
 test('updates the district when the delivery address changes', async () => {
   render(
     <MemoryRouter>

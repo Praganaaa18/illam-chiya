@@ -891,4 +891,32 @@
   .pm-category-select {
     flex-basis: 100%;
   }
+
+  .pm-card-footer {
+    gap: 10px;
+  }
+
+  .pm-pagination {
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pm-modal-overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .pm-modal {
+    max-height: none;
+    margin: 4px 0;
+  }
+
+  .pm-modal-footer {
+    flex-wrap: wrap;
+  }
+
+  .pm-category-add-row {
+    align-items: stretch;
+  }
 }
