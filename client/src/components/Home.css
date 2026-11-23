@@ -303,9 +303,19 @@ body {
    PRODUCT GRID SECTION
    ========================================== */
 .products-section {
-  max-width: 1060px;
+  width: 100%;
+  max-width: 1500px;
+  box-sizing: border-box;
   margin: 0 auto;
-  padding: 3.5rem 2rem;
+  padding: 2.5rem clamp(1.25rem, 3.2vw, 3rem) 3.5rem;
+}
+
+.products-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .section-title {
@@ -315,18 +325,49 @@ body {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.35rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
 }
 
 .products-section .section-title {
-  margin: 0 0 1.5rem;
+  margin: 0;
   text-align: left;
   color: var(--illam-forest-800);
   font-family: var(--illam-font-display);
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0;
+}
+
+.category-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--illam-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.category-filter label {
+  white-space: nowrap;
+}
+
+.category-filter input {
+  min-width: 190px;
+  min-height: 42px;
+  padding: 0.55rem 2.3rem 0.55rem 0.85rem;
+  border: 1px solid var(--illam-border);
+  border-radius: 999px;
+  background: var(--illam-surface);
+  color: var(--illam-forest-950);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.category-filter input:hover,
+.category-filter input:focus {
+  border-color: #b7c5b5;
 }
 
 .product-pagination {
@@ -394,19 +435,41 @@ body {
   color: #68786d;
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1200px) {
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 600px) {
   .product-grid {
     grid-template-columns: 1fr;
   }
 
   .products-section {
-    padding: 3rem 1.25rem;
+    padding: 2rem 1rem 3rem;
+  }
+
+  .products-heading-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .category-filter {
+    justify-content: space-between;
+  }
+
+  .category-filter input {
+    flex: 1;
+    min-width: 0;
+    max-width: 260px;
   }
 
   .product-pagination {
