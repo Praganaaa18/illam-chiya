@@ -212,7 +212,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         const inventory = inventoryResponse.data || {};
         const lowStockProducts = (Array.isArray(inventory.items) ? inventory.items : [])
           .filter((item) => {
-            const stock = Number(item.current_stock);
+            const stock = Number(item.available_stock ?? item.current_stock);
             return Number.isFinite(stock) && stock <= 10;
           });
         const activeProducts = products.filter((product) =>
@@ -229,6 +229,10 @@ const OverviewSection = ({ sellerName, sellerId }) => {
             totalProducts: products.length,
             pendingOrders,
             lowStockCount: Number(inventory.metrics?.lowStockCount) || 0,
+            lowStockProducts,
+            recentOrders: orders,
+          });
+        }
       } catch (error) {
         console.error('Unable to load seller dashboard overview:', error);
       } finally {
@@ -273,7 +277,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
           <ul>
             {overview.lowStockProducts.map((product) => (
               <li key={product.id}>
-                {product.name}: {product.current_stock} {Number(product.current_stock) === 1 ? 'unit' : 'units'} remaining
+                {product.name}: {product.available_stock ?? product.current_stock} {Number(product.available_stock ?? product.current_stock) === 1 ? 'unit' : 'units'} remaining
               </li>
             ))}
           </ul>

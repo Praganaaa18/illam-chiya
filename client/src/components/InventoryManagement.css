@@ -58,6 +58,29 @@
 .kpi-icon-box.gold { background-color: #f3e2c7; }
 .kpi-icon-box.forest { background-color: #d5e4d9; }
 
+.inv-stock-alert {
+  padding: 14px 18px;
+  border: 1px solid #c4e3ce;
+  border-radius: 8px;
+  background: #eaf5ee;
+  color: #20583a;
+}
+
+.inv-stock-alert.has-low-stock {
+  border-color: #e4c47f;
+  background: #fff7e6;
+  color: #704b0b;
+}
+
+.inv-stock-alert ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.inv-stock-alert p {
+  margin: 6px 0 0;
+}
+
 /* Main Table Card */
 .inv-main-card {
   background-color: var(--illam-surface);
