@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API from '../services/api';
 import Icon from './Icon';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './InventoryManagement.css';
 
 const InventoryManagement = ({ sellerId }) => {
@@ -17,7 +18,11 @@ const InventoryManagement = ({ sellerId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
   const [isRestocking, setIsRestocking] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortConfig, handleSort] = useTableSort('name');
   const [restockModal, setRestockModal] = useState({ open: false, product: null, amount: 10 });
   const activeSellerId = sellerId || localStorage.getItem('userId');
 
@@ -93,6 +98,29 @@ const InventoryManagement = ({ sellerId }) => {
     const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
     return matchesSearch && matchesStatus && matchesCategory;
   });
+  const sortedItems = useMemo(() => sortRows(filteredItems, sortConfig, (item, key) => {
+    const values = {
+      name: item.name,
+      current_stock: item.current_stock,
+      reserved_stock: item.reserved_stock,
+      available_stock: item.available_stock,
+      unit_price: item.unit_price,
+      stock_value: item.stock_value,
+      status: item.status,
+    };
+    return values[key] ?? '';
+  }), [filteredItems, sortConfig]);
+  const pageCount = Math.max(1, Math.ceil(sortedItems.length / pageSize));
+  const pagedItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const lowStockItems = items.filter((item) => {
+    const availableStock = Number(item.available_stock);
+    return Number.isFinite(availableStock) && availableStock <= 10;
+  });
+
+  useEffect(() => setCurrentPage(1), [searchTerm, statusFilter, categoryFilter, pageSize]);
+  useEffect(() => {
+    if (currentPage > pageCount) setCurrentPage(pageCount);
+  }, [currentPage, pageCount]);
 
   if (loading) return <div className="inv-loading" role="status">Loading inventory data...</div>;
 
@@ -133,12 +161,42 @@ const InventoryManagement = ({ sellerId }) => {
 
         <div className="inv-kpi-card">
           <div className="kpi-content">
-            <span className="kpi-title">Delivered Stock Revenue</span>
+            <span className="kpi-title"> Stock Revenue</span>
             <h3 className="kpi-value">Rs. {Number(metrics.deliveredRevenue).toLocaleString()}</h3>
           </div>
           <div className="kpi-icon-box forest"><Icon name="wallet" /></div>
         </div>
       </div>
+
+      {lowStockItems.length > 0 ? (
+        !isLowStockAlertDismissed && (
+          <section className="inv-stock-alert has-low-stock" role="alert" aria-live="polite">
+            <div className="inv-stock-alert-heading">
+              <strong>Low Stock Alert</strong>
+              <button
+                type="button"
+                className="inv-stock-alert-dismiss"
+                aria-label="Dismiss low stock alert"
+                onClick={() => setIsLowStockAlertDismissed(true)}
+              >
+                ×
+              </button>
+            </div>
+            <ul>
+              {lowStockItems.map((item) => (
+                <li key={item.id}>
+                  {item.name}: {item.available_stock} {Number(item.available_stock) === 1 ? 'unit' : 'units'} available
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      ) : (
+        <section className="inv-stock-alert" role="status" aria-live="polite">
+          <strong>Low Stock Alert</strong>
+          <p>No products have 10 or fewer available units.</p>
+        </section>
+      )}
 
       <div className="inv-main-card">
         <div className="inv-toolbar">
@@ -182,13 +240,13 @@ const InventoryManagement = ({ sellerId }) => {
           <table className="inv-table">
             <thead>
               <tr>
-                <th>Product Name</th>
-                <th>Current<br />Stock</th>
-                <th>Reserved Stock<br />from Orders</th>
-                <th>Available<br />Stock</th>
-                <th>Unit<br />Price</th>
-                <th>Stock<br />Value</th>
-                <th>Status</th>
+                <SortHeader label="Product Name" column="name" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label={<>Current<br />Stock</>} column="current_stock" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label={<>Reserved Stock<br />from Orders</>} column="reserved_stock" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label={<>Available<br />Stock</>} column="available_stock" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label={<>Unit<br />Price</>} column="unit_price" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label={<>Stock<br />Value</>} column="stock_value" sortConfig={sortConfig} onSort={handleSort} />
+                <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
                 <th>Actions</th>
               </tr>
             </thead>
@@ -200,7 +258,7 @@ const InventoryManagement = ({ sellerId }) => {
                   <td colSpan="8" className="inv-empty">No matching tea inventory found.</td>
                 </tr>
               ) : (
-                filteredItems.map(item => (
+                pagedItems.map(item => (
                   <tr key={item.id}>
                     <td>
                       <div className="inv-product-cell">
@@ -242,6 +300,15 @@ const InventoryManagement = ({ sellerId }) => {
             </tbody>
           </table>
         </div>
+        <TablePagination
+          page={currentPage}
+          pageCount={pageCount}
+          total={sortedItems.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="inventory items"
+        />
       </div>
 
       {restockModal.open && (

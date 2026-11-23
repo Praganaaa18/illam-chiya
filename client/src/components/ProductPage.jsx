@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { getAuthToken } from '../utils/authStorage';
+import { getRemainingStock } from '../utils/stock';
 import Navbar from './Navbar';
 import './ProductPage.css';
 
@@ -20,13 +22,14 @@ const ProductPage = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('1');
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const imageButtonRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [cartCount, setCartCount] = useState(() => {
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    return savedCart.reduce((total, item) => total + item.quantity, 0);
+    return savedCart.length;
   });
 
   useEffect(() => {
@@ -68,6 +71,7 @@ const ProductPage = () => {
 
   useEffect(() => {
     setQuantity(1);
+    setIsDescriptionExpanded(false);
   }, [productId]);
 
   useEffect(() => {
@@ -94,9 +98,17 @@ const ProductPage = () => {
       .sort((a, b) => Number(b.category_id === product.category_id) - Number(a.category_id === product.category_id))
       .slice(0, 2)
     : [];
+  const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+  const stock = product ? Math.max(0, Math.floor(Number(product.stock_quantity) || 0)) : 0;
+  const availableToAdd = product ? getRemainingStock(product, cartItems) : 0;
+  const parsedQuantity = Number(quantity);
+  const isQuantityValid = quantity !== '' &&
+    Number.isInteger(parsedQuantity) &&
+    parsedQuantity >= 1 &&
+    parsedQuantity <= availableToAdd;
 
   const handleAdd = (destination = '/cart') => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
     if (!token || userRole !== 'buyer') {
       navigate('/login');
@@ -104,15 +116,33 @@ const ProductPage = () => {
     }
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const stock = Math.max(0, Math.floor(Number(product.stock_quantity) || 0));
+    const remainingStock = getRemainingStock(product, cart);
+    const parsedQuantity = Number(quantity);
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > remainingStock) {
+      return;
+    }
+
     const existingItem = cart.find((item) => String(item.id) === String(product.id));
+    const existingQuantity = existingItem ? Number(existingItem.quantity) || 0 : 0;
+    if (existingQuantity + parsedQuantity > stock) {
+      return;
+    }
     if (existingItem) {
-      existingItem.quantity += quantity;
+      existingItem.quantity += parsedQuantity;
       existingItem.pack_size = product.pack_size || '100 g';
     } else {
-      cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity });
+      cart.push({ ...product, pack_size: product.pack_size || '100 g', quantity: parsedQuantity });
     }
     localStorage.setItem('cart', JSON.stringify(cart));
-    setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
+    if (destination === '/confirm-order') {
+      localStorage.setItem('checkoutItems', JSON.stringify([{
+        ...product,
+        pack_size: product.pack_size || '100 g',
+        quantity: parsedQuantity,
+      }]));
+    }
+    setCartCount(cart.length);
     navigate(destination);
   };
 
@@ -171,23 +201,51 @@ const ProductPage = () => {
               <div className="details-block">
                 <h3>Product Details</h3>
                 <ul>
-                  <li>Origin: {product.elevation || 'Ilam, Nepal'}</li>
-                  <li>Type: {product.process_type || 'Orthodox tea'}</li>
                   <li>Category: {product.category || 'Tea'}</li>
                   <li>Per pack: {product.pack_size || '100 g'}</li>
-                  <li>Availability: {Number(product.stock_quantity) > 0 ? 'In stock' : 'Out of stock'}</li>
+                  <li>Availability: {stock > 0 ? 'In stock' : 'Out of stock'}</li>
+                  <li>Available Stock: {availableToAdd}</li>
                 </ul>
               </div>
 
               <label className="quantity-label" htmlFor="product-quantity">Quantity</label>
               <div className="quantity-selector">
-                <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
-                <span id="product-quantity" aria-live="polite">{quantity}</span>
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQuantity(String(Math.max(1, (Number(quantity) || 1) - 1)))}
+                  disabled={availableToAdd === 0 || parsedQuantity <= 1}
+                >
+                  −
+                </button>
+                <input
+                  id="product-quantity"
+                  type="number"
+                  min="1"
+                  max={availableToAdd}
+                  step="1"
+                  value={availableToAdd === 0 ? '0' : quantity}
+                  aria-label="Product quantity"
+                  disabled={availableToAdd === 0}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (value === '') setQuantity('');
+                    else if (/^\d+$/.test(value)) {
+                      setQuantity(String(Math.min(Number(value), availableToAdd)));
+                    }
+                  }}
+                  onBlur={() => {
+                    const parsed = Number(quantity);
+                    setQuantity(String(availableToAdd === 0
+                      ? 0
+                      : Math.min(availableToAdd, Math.max(1, Number.isFinite(parsed) ? parsed : 1))));
+                  }}
+                />
                 <button
                   type="button"
                   aria-label="Increase quantity"
-                  onClick={() => setQuantity((q) => Math.min(Number(product.stock_quantity), q + 1))}
-                  disabled={quantity >= Number(product.stock_quantity)}
+                  onClick={() => setQuantity(String(Math.min(availableToAdd, (Number(quantity) || 0) + 1)))}
+                  disabled={availableToAdd === 0 || parsedQuantity >= availableToAdd}
                 >
                   +
                 </button>
@@ -196,10 +254,10 @@ const ProductPage = () => {
 
             <div className="purchase-panel">
               <div className="action-buttons">
-                <button type="button" className="btn-primary" onClick={() => handleAdd()} disabled={Number(product.stock_quantity) <= 0}>
+                <button type="button" className="btn-primary" onClick={() => handleAdd()} disabled={!isQuantityValid}>
                   Add to Cart
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => handleAdd('/confirm-order')} disabled={Number(product.stock_quantity) <= 0}>
+                <button type="button" className="btn-secondary" onClick={() => handleAdd('/confirm-order')} disabled={!isQuantityValid}>
                   Buy Now
                 </button>
               </div>
@@ -220,7 +278,23 @@ const ProductPage = () => {
 
           <section className="product-description">
             <h2>Product Description</h2>
-            <p>{product.description || 'Carefully grown and crafted tea from the Ilam hills of Nepal.'}</p>
+            <button
+              type="button"
+              className="description-expand-toggle"
+              aria-expanded={isDescriptionExpanded}
+              aria-controls="product-description-copy"
+              onClick={() => setIsDescriptionExpanded((expanded) => !expanded)}
+            >
+              <span
+                id="product-description-copy"
+                className={`description-copy ${isDescriptionExpanded ? 'expanded' : ''}`}
+              >
+                {product.description || 'Carefully grown and crafted tea from the Ilam hills of Nepal.'}
+              </span>
+              <span className="description-action">
+                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+              </span>
+            </button>
           </section>
 
           <section className="recommendations-section">

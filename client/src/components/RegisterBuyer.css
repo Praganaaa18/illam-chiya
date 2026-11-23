@@ -138,14 +138,27 @@
   align-items: center;
 }
 
+.input-with-icon input {
+  padding-right: 2.2rem;
+}
+
 .eye-btn {
   position: absolute;
   right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
   background: none;
   border: none;
   cursor: pointer;
   opacity: 0.6;
-  font-size: 0.8rem;
+  color: #2b4c38;
+}
+
+.eye-btn:hover,
+.eye-btn:focus-visible {
+  opacity: 1;
 }
 
 .submit-btn {
@@ -187,4 +200,23 @@
   font-size: 0.78rem;
   margin-bottom: 0.6rem;
   text-align: center;
+}
+
+@media (max-width: 520px) {
+  .buyer-page {
+    min-height: 100svh;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .buyer-card {
+    max-height: none;
+    padding: 1.25rem 1rem;
+  }
+
+  .buyer-page .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import ProductManagement from './ProductManagement';
 import InventoryManagement from './InventoryManagement';
@@ -6,8 +6,21 @@ import OrdersAndShipping from './OrdersAndShipping';
 import BillingsAndPayouts from './BillingsandPayouts';
 import SellerSidebar from './SellerSidebar';
 import NotificationBell from './Notificationbell';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './SellerDashboard.css';
 import axios from 'axios';
+import { isSellerSessionError } from '../utils/sellerSession';
+import { clearAuthToken, getAuthToken } from '../utils/authStorage';
+
+const AUTH_STORAGE_KEYS = [
+  'token',
+  'userId',
+  'userRole',
+  'userName',
+  'userEmail',
+  'userPhone',
+  'userAddress',
+];
 
 const SellerDashboard = ({ initialTab = 'overview' }) => {
   // =========================================================================
@@ -20,11 +33,26 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
-    isVerified: false,
+    phone: '',
     sellerId: localStorage.getItem('userId') || null,
   });
 
   const navigate = useNavigate();
+  const authRedirectStarted = useRef(false);
+
+  const handleSellerSessionError = useCallback(() => {
+    if (authRedirectStarted.current) return;
+    authRedirectStarted.current = true;
+    clearAuthToken();
+    AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    navigate('/login', {
+      replace: true,
+      state: {
+        role: 'seller',
+        message: 'Your seller session is no longer valid. Sign in again as a seller.',
+      },
+    });
+  }, [navigate]);
 
   useEffect(() => {
     const validTabs = ['overview', 'products', 'inventory', 'orders', 'billing'];
@@ -40,21 +68,16 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPhone');
-    localStorage.removeItem('userAddress');
+    clearAuthToken();
+    AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     navigate('/login');
   };
 
   const fetchSellerInfo = useCallback(async () => {
     const loggedInUserId = localStorage.getItem('userId');
-    const token = localStorage.getItem('token');
-    if (!loggedInUserId || !token) {
-      navigate('/login');
+    const token = getAuthToken();
+    if (!loggedInUserId || !token || localStorage.getItem('userRole') !== 'seller') {
+      handleSellerSessionError();
       return;
     }
 
@@ -66,15 +89,19 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       setSellerInfo({
         businessName: sellerName,
         email: res.data.email || '',
-        isVerified: res.data.is_verified === true || Number(res.data.is_verified) === 1,
+        phone: res.data.phone || '',
         sellerId: res.data.id || null,
       });
       if (sellerName) localStorage.setItem('userName', sellerName);
       if (res.data.email) localStorage.setItem('userEmail', res.data.email);
     } catch (err) {
+      if (isSellerSessionError(err)) {
+        handleSellerSessionError();
+        return;
+      }
       console.error('Error fetching seller information:', err);
     }
-  }, [navigate]);
+  }, [handleSellerSessionError]);
 
   useEffect(() => {
     fetchSellerInfo();
@@ -88,13 +115,18 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       case 'overview':
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
       case 'products':
-        return <ProductManagement sellerId={sellerInfo.sellerId} />;
+        return (
+          <ProductManagement
+            sellerId={sellerInfo.sellerId}
+            onSellerSessionError={handleSellerSessionError}
+          />
+        );
       case 'inventory':
         return <InventoryManagement sellerId={sellerInfo.sellerId} />;
       case 'orders':
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
-        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
+        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} esewaNumber={sellerInfo.phone} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }
@@ -127,9 +159,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
 
           <div className="topbar-right">
             <NotificationBell role="seller" />
-            <span className="verification-pill">
-              {sellerInfo.isVerified ? '✅ Verified Seller' : '⏳ Pending Verification'}
-            </span>
             <div className="user-profile-chip">
               <div className="avatar-circle">{sellerInfo.businessName.charAt(0)}</div>
               <span className="profile-name">{sellerInfo.businessName}</span>
@@ -156,16 +185,21 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     totalProducts: 0,
     pendingOrders: 0,
     lowStockCount: 0,
+    lowStockProducts: [],
     recentOrders: [],
   });
   const [loading, setLoading] = useState(true);
+  const [isLowStockAlertDismissed, setIsLowStockAlertDismissed] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortConfig, handleSort] = useTableSort('id');
 
   useEffect(() => {
     if (!sellerId) return;
     let isMounted = true;
 
     const loadOverview = async () => {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       try {
         const [inventoryResponse, productsResponse, ordersResponse] = await Promise.all([
@@ -177,11 +211,16 @@ const OverviewSection = ({ sellerName, sellerId }) => {
         const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
         const orders = Array.isArray(ordersResponse.data) ? ordersResponse.data : [];
         const inventory = inventoryResponse.data || {};
+        const lowStockProducts = (Array.isArray(inventory.items) ? inventory.items : [])
+          .filter((item) => {
+            const stock = Number(item.available_stock ?? item.current_stock);
+            return Number.isFinite(stock) && stock <= 10;
+          });
         const activeProducts = products.filter((product) =>
           product.is_active === true || product.is_active === 1 || product.is_active === '1',
         ).length;
         const pendingOrders = orders.filter((order) =>
-          ['pending', 'processing', 'shipped'].includes(String(order.status).toLowerCase()),
+          ['order_placed', 'pending', 'processing', 'shipped'].includes(String(order.status).toLowerCase()),
         ).length;
 
         if (isMounted) {
@@ -191,7 +230,8 @@ const OverviewSection = ({ sellerName, sellerId }) => {
             totalProducts: products.length,
             pendingOrders,
             lowStockCount: Number(inventory.metrics?.lowStockCount) || 0,
-            recentOrders: orders.slice(0, 5),
+            lowStockProducts,
+            recentOrders: orders,
           });
         }
       } catch (error) {
@@ -207,12 +247,53 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     };
   }, [sellerId]);
 
+  const sortedRecentOrders = useMemo(() => sortRows(overview.recentOrders, sortConfig, (order, key) => {
+    const values = {
+      id: order.id,
+      buyer_name: order.buyer_name,
+      items_summary: order.items_summary,
+      total_price: order.total_price,
+      status: order.status,
+    };
+    return values[key] ?? '';
+  }), [overview.recentOrders, sortConfig]);
+  const recentPageCount = Math.max(1, Math.ceil(sortedRecentOrders.length / pageSize));
+  const pagedRecentOrders = sortedRecentOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => setCurrentPage(1), [pageSize]);
+  useEffect(() => {
+    if (currentPage > recentPageCount) setCurrentPage(recentPageCount);
+  }, [currentPage, recentPageCount]);
+
   return (
     <div className="view-container">
       <div className="welcome-banner">
         <h2>Welcome back, {sellerName || 'Seller'}!</h2>
         <p>Here is an overview of your tea estate sales and active catalog.</p>
       </div>
+
+      {!loading && !isLowStockAlertDismissed && overview.lowStockProducts.length > 0 && (
+        <div className="low-stock-alert" role="alert">
+          <div className="low-stock-alert-heading">
+            <strong>Low Stock Alert</strong>
+            <button
+              type="button"
+              className="low-stock-alert-dismiss"
+              aria-label="Dismiss low stock alert"
+              onClick={() => setIsLowStockAlertDismissed(true)}
+            >
+              ×
+            </button>
+          </div>
+          <ul>
+            {overview.lowStockProducts.map((product) => (
+              <li key={product.id}>
+                {product.name}: {product.available_stock ?? product.current_stock} {Number(product.available_stock ?? product.current_stock) === 1 ? 'unit' : 'units'} remaining
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading ? (
         <p className="metric-subtext">Loading dashboard overview...</p>
@@ -251,23 +332,27 @@ const OverviewSection = ({ sellerName, sellerId }) => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Order ID</th>
-                  <th>Buyer Name</th>
-                  <th>Tea Variant</th>
-                  <th>Amount</th>
-                  <th>Status</th>
+                  <SortHeader label="Order ID" column="id" sortConfig={sortConfig} onSort={handleSort} />
+                  <SortHeader label="Buyer Name" column="buyer_name" sortConfig={sortConfig} onSort={handleSort} />
+                  <SortHeader label="Tea Variant" column="items_summary" sortConfig={sortConfig} onSort={handleSort} />
+                  <SortHeader label="Amount" column="total_price" sortConfig={sortConfig} onSort={handleSort} />
+                  <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
                 </tr>
               </thead>
               <tbody>
-                {overview.recentOrders.length ? overview.recentOrders.map((order) => (
+                {pagedRecentOrders.length ? pagedRecentOrders.map((order) => (
                   <tr key={order.id}>
                     <td>#ILLAM-{order.id}</td>
                     <td>{order.buyer_name || 'Unknown buyer'}</td>
                     <td>{order.items_summary || 'Tea order'}</td>
                     <td>NPR {Number(order.total_price || 0).toLocaleString()}</td>
                     <td>
-                      <span className={`status-badge ${String(order.status).toLowerCase() === 'delivered' ? 'completed' : 'pending'}`}>
-                        {order.status}
+                      <span className={`status-badge ${['delivered', 'cash_received'].includes(String(order.status).toLowerCase()) ? 'completed' : 'pending'}`}>
+                        {order.status === 'order_placed'
+                          ? 'Order Placed'
+                          : order.status === 'pending'
+                            ? 'Order Confirmed'
+                            : order.status}
                       </span>
                     </td>
                   </tr>
@@ -278,6 +363,15 @@ const OverviewSection = ({ sellerName, sellerId }) => {
                 )}
               </tbody>
             </table>
+            <TablePagination
+              page={currentPage}
+              pageCount={recentPageCount}
+              total={sortedRecentOrders.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="orders"
+            />
           </div>
         </>
       )}

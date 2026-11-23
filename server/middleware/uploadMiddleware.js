@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { MAX_UPLOAD_SIZE_BYTES } = require('../utils/uploadLimits');
 
 // Auto-create uploads folder if it doesn't exist
 const uploadDir = path.join(__dirname, '../uploads');
@@ -31,6 +32,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_UPLOAD_SIZE_BYTES } });
 
 module.exports = upload;

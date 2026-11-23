@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { getAuthToken } from '../utils/authStorage';
 import './Notificationbell.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -30,7 +31,7 @@ const NotificationBell = ({ role }) => {
   const requestRef = useRef(null);
 
   const loadNotifications = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token || !['buyer', 'seller'].includes(role)) {
       setNotifications([]);
       setUnreadCount(0);
@@ -101,7 +102,7 @@ const NotificationBell = ({ role }) => {
   }, [isOpen]);
 
   const markAllAsRead = async () => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) {
       setError('Please sign in again to update notifications.');
       return;
@@ -132,7 +133,7 @@ const NotificationBell = ({ role }) => {
 
     setIsOpen(false);
     if (!isRead(notification)) {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       setNotifications((current) => current.map((item) =>
         item.id === notification.id ? { ...item, is_read: true } : item
       ));

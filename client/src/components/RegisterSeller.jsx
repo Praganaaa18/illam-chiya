@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
   isValidEmail,
@@ -6,6 +6,8 @@ import {
   isValidPhoneNumber,
   normalizePhoneNumber,
 } from '../utils/validation';
+import Icon from './Icon';
+import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
 import './RegisterSeller.css';
 
 const RegisterSeller = () => {
@@ -20,6 +22,8 @@ const RegisterSeller = () => {
   });
 
   const [documentFile, setDocumentFile] = useState(null);
+  const [documentError, setDocumentError] = useState('');
+  const documentInputRef = useRef(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -51,7 +55,23 @@ const RegisterSeller = () => {
   };
 
   const handleFileChange = (e) => {
-    setDocumentFile(e.target.files[0]);
+    const file = e.target.files?.[0] || null;
+    setError('');
+    if (file && !isValidUploadSize(file.size)) {
+      setDocumentFile(null);
+      setDocumentError(UPLOAD_SIZE_ERROR);
+      e.target.value = '';
+      return;
+    }
+
+    setDocumentFile(file);
+    setDocumentError('');
+  };
+
+  const discardDocumentFile = () => {
+    setDocumentFile(null);
+    setDocumentError('');
+    if (documentInputRef.current) documentInputRef.current.value = '';
   };
 
   const handleSubmit = async (e) => {
@@ -95,7 +115,7 @@ const RegisterSeller = () => {
     }
 
     if (!documentFile) {
-      return setError('Please upload your business registration or PAN certificate.');
+      return setError(documentError || 'Please upload your business registration or PAN certificate.');
     }
 
     setLoading(true);
@@ -175,7 +195,7 @@ const RegisterSeller = () => {
             </div>
 
             <div className="form-group">
-              <label>Contact Phone</label>
+              <label>Contact Phone / eSewa Payout Number</label>
               <input
                 type="tel"
                 name="phone"
@@ -187,6 +207,7 @@ const RegisterSeller = () => {
                 required
               />
               {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
+              <small className="field-help-text">Use the mobile number registered to your eSewa account.</small>
             </div>
           </div>
 
@@ -227,13 +248,33 @@ const RegisterSeller = () => {
           </div>
 
           <div className="form-group">
-            <label>Upload PAN / Registration Certificate</label>
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              onChange={handleFileChange}
-              required
-            />
+            <label htmlFor="seller-certificate">Upload PAN / Registration Certificate</label>
+            <div className="certificate-upload-control">
+              <input
+                ref={documentInputRef}
+                id="seller-certificate"
+                type="file"
+                accept=".pdf,image/*"
+                aria-describedby="seller-certificate-size"
+                aria-invalid={Boolean(documentError)}
+                onChange={handleFileChange}
+                required
+              />
+              <button
+                type="button"
+                className="certificate-file-remove"
+                aria-label={documentFile ? 'Remove selected certificate' : 'No certificate selected to remove'}
+                title={documentFile ? 'Remove selected certificate' : 'No certificate selected to remove'}
+                disabled={!documentFile}
+                onClick={discardDocumentFile}
+              >
+                ×
+              </button>
+            </div>
+            <small id="seller-certificate-size" className="certificate-upload-hint">
+              Accepted file size: 100 KB–500 KB.
+            </small>
+            {documentError && <span className="field-error-text" role="alert">{documentError}</span>}
           </div>
 
           {/* SECTION 3: Account Security */}
@@ -257,9 +298,11 @@ const RegisterSeller = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  👁
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>
@@ -278,9 +321,11 @@ const RegisterSeller = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  aria-pressed={showConfirmPassword}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  👁
+                  <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>

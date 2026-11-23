@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import ProductCard from './ProductCard';
 import Navbar from './Navbar';
 import Icon from './Icon';
+import { getAuthToken } from '../utils/authStorage';
 import './Home.css';
 
 const PRODUCTS_PER_PAGE = 5;
@@ -61,8 +62,7 @@ const Home = () => {
       .catch((error) => console.error('Error connecting to backend:', error));
 
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const totalItems = savedCart.reduce((acc, item) => acc + item.quantity, 0);
-    setCartCount(totalItems);
+    setCartCount(savedCart.length);
   }, []);
 
   // --- Subtitle: Search Input Handler ---
@@ -86,7 +86,7 @@ const Home = () => {
 
   // --- Subtitle: Add to Cart Action Handler ---
   const handleAddToCart = (product, requestedQuantity = 1) => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
 
     if (!token || userRole !== 'buyer') {
@@ -94,8 +94,18 @@ const Home = () => {
       return;
     }
 
+    const stock = Math.max(0, Number(product.stock_quantity) || 0);
+    const quantity = Number(requestedQuantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > stock) {
+      return;
+    }
+
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItemIndex = existingCart.findIndex((item) => item.id === product.id);
+    const existingQuantity = existingItemIndex > -1 ? Number(existingCart[existingItemIndex].quantity) || 0 : 0;
+    if (existingQuantity + quantity > stock) {
+      return;
+    }
 
     if (existingItemIndex > -1) {
       existingCart[existingItemIndex].quantity += requestedQuantity;
@@ -105,16 +115,18 @@ const Home = () => {
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
 
-    const updatedCount = existingCart.reduce((acc, item) => acc + item.quantity, 0);
-    setCartCount(updatedCount);
+    setCartCount(existingCart.length);
     navigate('/cart');
   };
 
   // --- Subtitle: Filter Products by Name, Process Type, or Description ---
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+  const normalizedCategory = selectedCategory === 'all'
+    ? ''
+    : selectedCategory.trim().toLocaleLowerCase();
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === 'all' ||
-      String(product.category || '').toLocaleLowerCase() === selectedCategory.toLocaleLowerCase();
+    const matchesCategory = !normalizedCategory ||
+      String(product.category || '').toLocaleLowerCase().includes(normalizedCategory);
     const matchesSearch = !normalizedSearch || [
       product.name,
       product.category,
@@ -192,11 +204,33 @@ const Home = () => {
           PRODUCTS DISPLAY SECTION
           ========================================== */}
       <section className="products-section" ref={productsSectionRef}>
-            <h2 className="section-title">Products</h2>
+        <div className="products-heading-row">
+          <h2 className="section-title">Products</h2>
+          <div className="category-filter">
+            <label htmlFor="product-category-filter">Category</label>
+            <input
+              type="search"
+              id="product-category-filter"
+              list="product-category-options"
+              placeholder="All categories"
+              value={selectedCategory === 'all' ? '' : selectedCategory}
+              aria-label="Filter products by category"
+              onChange={(event) => {
+                setSelectedCategory(event.target.value || 'all');
+                setCurrentPage(1);
+              }}
+            />
+            <datalist id="product-category-options">
+              {categories.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
+          </div>
+        </div>
 
         <div className="product-grid">
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((product) => (
+          {paginatedProducts.length > 0 ? (
+            paginatedProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthToken } from '../utils/authStorage';
 
 const API = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -6,7 +7,7 @@ const API = axios.create({
 
 // Automatically attach JWT token to headers if present
 API.interceptors.request.use((req) => {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
   }

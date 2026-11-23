@@ -58,6 +58,64 @@
 .kpi-icon-box.gold { background-color: #f3e2c7; }
 .kpi-icon-box.forest { background-color: #d5e4d9; }
 
+.inv-stock-alert {
+  position: relative;
+  padding: 14px 18px;
+  border: 1px solid #c4e3ce;
+  border-radius: 8px;
+  background: #eaf5ee;
+  color: #20583a;
+}
+
+.inv-stock-alert.has-low-stock {
+  border-color: #e4c47f;
+  background: #fff7e6;
+  color: #704b0b;
+}
+
+.inv-stock-alert-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inv-stock-alert-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  margin: -4px -6px -4px 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.inv-stock-alert-dismiss:hover {
+  background: rgba(112, 75, 11, 0.1);
+}
+
+.inv-stock-alert-dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.inv-stock-alert ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.inv-stock-alert p {
+  margin: 6px 0 0;
+}
+
 /* Main Table Card */
 .inv-main-card {
   background-color: var(--illam-surface);
@@ -124,6 +182,7 @@
 
 .inv-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -386,5 +445,26 @@
 
   .inv-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .inv-kpi-card {
+    padding: 14px 16px;
+  }
+
+  .inv-modal-overlay {
+    padding: 12px;
+  }
+
+  .inv-modal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 400px;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 18px;
+  }
+
+  .inv-modal-actions {
+    flex-wrap: wrap;
   }
 }

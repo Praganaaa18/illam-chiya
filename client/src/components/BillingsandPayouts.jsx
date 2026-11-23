@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './BillingsandPayouts.css';
 
-const BillingsAndPayouts = ({ sellerId = 1 }) => {
+const BillingsAndPayouts = ({ sellerId = 1, esewaNumber = '' }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -10,6 +11,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
   const [proofFile, setProofFile] = useState(null);
   const [settleMessage, setSettleMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortConfig, handleSort] = useTableSort('order_id');
 
   const fetchLedgerData = useCallback(async () => {
     try {
@@ -30,31 +34,52 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
     fetchLedgerData();
   }, [fetchLedgerData]);
 
-  const isDelivered = (status) => status.toLowerCase() === 'delivered';
-  const isPending = (status) => ['pending', 'processing', 'shipped'].includes(status.toLowerCase());
+  const isCashReceived = (item) =>
+    ['paid', 'received'].includes(String(item.payment_status || '').toLowerCase());
 
   const totalCashCollected = transactions
-    .filter((item) => isDelivered(item.status))
+    .filter(isCashReceived)
     .reduce((sum, item) => sum + Number(item.total_amount), 0);
 
   const pendingCash = transactions
-    .filter((item) => isPending(item.status))
+    .filter((item) => !isCashReceived(item) && item.status !== 'cancelled')
     .reduce((sum, item) => sum + Number(item.total_amount), 0);
 
   const commissionFeeDue = transactions
-    .filter((item) => isDelivered(item.status))
+    .filter(isCashReceived)
     .reduce((sum, item) => sum + Number(item.total_amount) * Number(item.fee_rate), 0);
 
   const netSellerEarnings = totalCashCollected - commissionFeeDue;
 
   const filteredTransactions = transactions.filter((t) => {
     const formattedId = `ORD-${String(t.order_id).padStart(3, '0')}`;
-    const matchesFilter = statusFilter === 'All' || t.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesFilter = statusFilter === 'All' ||
+      (statusFilter === 'cash_received' ? isCashReceived(t) : t.status.toLowerCase() === statusFilter.toLowerCase());
     const matchesSearch =
       formattedId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.customer.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+  const sortedTransactions = useMemo(() => sortRows(filteredTransactions, sortConfig, (item, key) => {
+    const values = {
+      date: item.date,
+      order_id: item.order_id,
+      customer: item.customer,
+      address: item.address,
+      total_amount: item.total_amount,
+      fee: Number(item.total_amount) * Number(item.fee_rate),
+      net: Number(item.total_amount) * (1 - Number(item.fee_rate)),
+      status: item.status,
+    };
+    return values[key] ?? '';
+  }), [filteredTransactions, sortConfig]);
+  const financePageCount = Math.max(1, Math.ceil(sortedTransactions.length / pageSize));
+  const pagedTransactions = sortedTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => setCurrentPage(1), [statusFilter, searchTerm, pageSize]);
+  useEffect(() => {
+    if (currentPage > financePageCount) setCurrentPage(financePageCount);
+  }, [currentPage, financePageCount]);
 
   const handleSettleSubmit = async (e) => {
     e.preventDefault();
@@ -126,6 +151,17 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
         </div>
       </div>
 
+      <section className="payout-destination" aria-labelledby="payout-destination-title">
+        <div>
+          <span className="payout-destination-kicker">Payout destination</span>
+          <h3 id="payout-destination-title">Your eSewa number</h3>
+          <p>
+            This is your registered seller phone number. Use an eSewa-linked number; payouts are not processed automatically yet.
+          </p>
+        </div>
+        <strong className="payout-number">{esewaNumber || 'Add a phone number to your seller profile'}</strong>
+      </section>
+
       <div className="table-controls">
         <h3>Cash Ledger</h3>
         <div className="control-group">
@@ -138,6 +174,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
           />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
             <option value="All">All Statuses</option>
+            <option value="cash_received">Cash Received</option>
             <option value="delivered">Delivered</option>
             <option value="shipped">Shipped</option>
             <option value="processing">Processing</option>
@@ -150,19 +187,19 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
         <table className="ledger-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Address</th>
-              <th>Cash Total</th>
-              <th>Fee (5%)</th>
-              <th>Net Earnings</th>
-              <th>Status</th>
+              <SortHeader label="Date" column="date" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Order ID" column="order_id" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Customer" column="customer" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Address" column="address" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Cash Total" column="total_amount" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Fee (5%)" column="fee" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Net Earnings" column="net" sortConfig={sortConfig} onSort={handleSort} />
+              <SortHeader label="Status" column="status" sortConfig={sortConfig} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
             {filteredTransactions.length > 0 ? (
-              filteredTransactions.map((item) => {
+              pagedTransactions.map((item) => {
                 const total = Number(item.total_amount);
                 const fee = total * Number(item.fee_rate);
                 const net = total - fee;
@@ -181,7 +218,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
                     <td className="net-text">NPR {net.toLocaleString()}</td>
                     <td>
                       <span className={`status-badge ${item.status.toLowerCase()}`}>
-                        {isDelivered(item.status) ? '● Cash Received' : `⏱ ${item.status}`}
+                        {isCashReceived(item) ? '● Cash Received' : `⏱ ${item.status}`}
                       </span>
                     </td>
                   </tr>
@@ -196,6 +233,15 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
             )}
           </tbody>
         </table>
+        <TablePagination
+          page={currentPage}
+          pageCount={financePageCount}
+          total={sortedTransactions.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="transactions"
+        />
       </div>
 
       {showSettleModal && (
@@ -208,8 +254,9 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
             </p>
 
             <div className="payment-info-box">
-              <p>
-                <strong>Bank:</strong> Nabil Bank
+                <p><strong>Platform fee payment account</strong></p>
+                <p>
+                  <strong>Bank:</strong> Nabil Bank
               </p>
               <p>
                 <strong>Account Name:</strong> Ilam Chiya Platform Pvt. Ltd.
@@ -218,7 +265,7 @@ const BillingsAndPayouts = ({ sellerId = 1 }) => {
                 <strong>Account No:</strong> 0120017500291
               </p>
               <p>
-                <strong>eSewa / Khalti ID:</strong> 9801234567
+                <strong>Platform eSewa / Khalti ID:</strong> 9801234567
               </p>
             </div>
 

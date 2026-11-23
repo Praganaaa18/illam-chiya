@@ -1,0 +1,103 @@
+export const NEPAL_DISTRICTS = [
+  'Achham',
+  'Arghakhanchi',
+  'Baglung',
+  'Baitadi',
+  'Bajhang',
+  'Bajura',
+  'Banke',
+  'Bara',
+  'Bardiya',
+  'Bhaktapur',
+  'Bhojpur',
+  'Chitwan',
+  'Dadeldhura',
+  'Dailekh',
+  'Dang',
+  'Darchula',
+  'Dhading',
+  'Dhankuta',
+  'Dhanusha',
+  'Dolakha',
+  'Dolpa',
+  'Doti',
+  'Gorkha',
+  'Gulmi',
+  'Humla',
+  'Ilam',
+  'Jajarkot',
+  'Jhapa',
+  'Jumla',
+  'Kailali',
+  'Kalikot',
+  'Kanchanpur',
+  'Kapilvastu',
+  'Kaski',
+  'Kathmandu',
+  'Kavrepalanchok',
+  'Khotang',
+  'Lalitpur',
+  'Lamjung',
+  'Mahottari',
+  'Makwanpur',
+  'Manang',
+  'Morang',
+  'Mugu',
+  'Mustang',
+  'Myagdi',
+  'Nawalpur',
+  'Nuwakot',
+  'Okhaldhunga',
+  'Palpa',
+  'Panchthar',
+  'Parasi',
+  'Parbat',
+  'Parsa',
+  'Pyuthan',
+  'Ramechhap',
+  'Rasuwa',
+  'Rautahat',
+  'Rolpa',
+  'Rukum East',
+  'Rukum West',
+  'Rupandehi',
+  'Salyan',
+  'Sankhuwasabha',
+  'Saptari',
+  'Sarlahi',
+  'Sindhuli',
+  'Sindhupalchok',
+  'Siraha',
+  'Solukhumbu',
+  'Sunsari',
+  'Surkhet',
+  'Syangja',
+  'Tanahun',
+  'Taplejung',
+  'Terhathum',
+  'Udayapur',
+];
+
+export const getDistrictFromAddress = (address) => {
+  if (typeof address !== 'string' || !address.trim()) return '';
+
+  const normalizedAddress = ` ${address.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+  const matches = NEPAL_DISTRICTS
+    .map((district) => ({
+      district,
+      index: normalizedAddress.lastIndexOf(` ${district.toLowerCase()} `),
+    }))
+    .filter((match) => match.index >= 0)
+    .sort((first, second) => (
+      second.index - first.index || second.district.length - first.district.length
+    ));
+
+  return matches[0]?.district || '';
+};
+
+export const getCanonicalDistrict = (value) => {
+  if (typeof value !== 'string') return '';
+  return NEPAL_DISTRICTS.find(
+    (district) => district.toLowerCase() === value.trim().toLowerCase()
+  ) || '';
+};

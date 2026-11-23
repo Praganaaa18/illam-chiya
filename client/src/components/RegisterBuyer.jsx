@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { isValidEmail, isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
+import Icon from './Icon';
 import './RegisterBuyer.css';
 
 const RegisterBuyer = () => {
@@ -234,9 +235,11 @@ const RegisterBuyer = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  👁
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>
@@ -255,9 +258,11 @@ const RegisterBuyer = () => {
                 <button
                   type="button"
                   className="eye-btn"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  aria-pressed={showConfirmPassword}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  👁
+                  <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} size={18} />
                 </button>
               </div>
             </div>

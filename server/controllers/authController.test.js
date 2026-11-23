@@ -3,6 +3,7 @@ const test = require('node:test');
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 const authController = require('./authController');
+const emailService = require('../utils/emailService');
 
 const createResponse = () => ({
   statusCode: 200,
@@ -95,6 +96,44 @@ test('rejects malformed login emails before querying the database', async () => 
   assert.equal(response.body.message, 'Enter a valid email address.');
 });
 
+test('rejects login when no buyer or seller portal is selected', async () => {
+  const originalQuery = db.query;
+  db.query = async () => {
+    throw new Error('Database should not be queried without a valid portal.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.login({
+      body: { email: 'buyer@example.com', password: 'validpass' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Choose a valid buyer or seller portal.');
+});
+
+test('rejects admin portal login after removing the cancellation-fee review portal', async () => {
+  const originalQuery = db.query;
+  db.query = async () => {
+    throw new Error('Database should not be queried for the removed admin portal.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.login({
+      body: { email: 'admin@example.com', password: 'validpass', role: 'admin' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Choose a valid buyer or seller portal.');
+});
+
 test('stores a bcrypt hash instead of the submitted registration password', async () => {
   let insertedValues;
   const response = createResponse();
@@ -137,7 +176,7 @@ test('authenticates users with bcrypt password hashes', async () => {
     }], []];
   }, async () => {
     await authController.login({
-      body: { email: 'buyer@example.com', password: 'validpass' },
+      body: { email: 'buyer@example.com', password: 'validpass', role: 'buyer' },
     }, response);
   });
 
@@ -146,6 +185,31 @@ test('authenticates users with bcrypt password hashes', async () => {
   assert.equal(response.body.user.id, 8);
   assert.equal(queryCount, 1);
 });
+
+for (const { accountRole, requestedRole } of [
+  { accountRole: 'seller', requestedRole: 'buyer' },
+  { accountRole: 'buyer', requestedRole: 'seller' },
+]) {
+  test(`rejects ${accountRole} credentials in the ${requestedRole} portal`, async () => {
+    const response = createResponse();
+
+    await withQueryStub(async () => [[{
+      id: 12,
+      full_name: 'Tea Account',
+      email: 'account@example.com',
+      password: 'validpass',
+      role: accountRole,
+    }], []], async () => {
+      await authController.login({
+        body: { email: 'account@example.com', password: 'validpass', role: requestedRole },
+      }, response);
+    });
+
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.body.message, 'This account cannot access the selected portal.');
+    assert.equal(response.body.token, undefined);
+  });
+}
 
 test('upgrades a valid legacy plaintext password after login', async () => {
   let upgradedValues;
@@ -165,7 +229,7 @@ test('upgrades a valid legacy plaintext password after login', async () => {
     return [{ affectedRows: 1 }, []];
   }, async () => {
     await authController.login({
-      body: { email: 'legacy@example.com', password: 'validpass' },
+      body: { email: 'legacy@example.com', password: 'validpass', role: 'buyer' },
     }, response);
   });
 
@@ -173,4 +237,135 @@ test('upgrades a valid legacy plaintext password after login', async () => {
   assert.ok(upgradedValues);
   assert.equal(upgradedValues[1], 9);
   assert.equal(await bcrypt.compare('validpass', upgradedValues[0]), true);
+});
+
+test('sends a password reset email containing a time-limited reset link', async () => {
+  const originalQuery = db.query;
+  const originalSendPasswordResetEmail = emailService.sendPasswordResetEmail;
+  const originalEnvironment = {
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_SECURE: process.env.SMTP_SECURE,
+    CLIENT_URL: process.env.CLIENT_URL,
+  };
+  const resetEmail = {};
+  const queries = [];
+  process.env.SMTP_HOST = 'smtp.example.com';
+  process.env.SMTP_USER = 'mail@example.com';
+  process.env.SMTP_PASSWORD = 'test-password';
+  process.env.SMTP_PORT = '587';
+  process.env.SMTP_SECURE = 'false';
+  process.env.CLIENT_URL = 'http://localhost:3000';
+  db.query = async (query, values) => {
+    queries.push({ query, values });
+    if (query.startsWith('SELECT id, email')) {
+      return [[{ id: 8, email: 'buyer@example.com', full_name: 'Tea Buyer' }], []];
+    }
+    return [{ affectedRows: 1 }, []];
+  };
+  emailService.sendPasswordResetEmail = async (message) => Object.assign(resetEmail, message);
+  const response = createResponse();
+
+  try {
+    await authController.requestPasswordReset({
+      body: { email: ' BUYER@example.com ' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+    emailService.sendPasswordResetEmail = originalSendPasswordResetEmail;
+    Object.entries(originalEnvironment).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.match(resetEmail.resetUrl, /password-recovery\?token=[a-f0-9]{64}/);
+  assert.equal(resetEmail.to, 'buyer@example.com');
+  assert.equal(queries.length, 3);
+  assert.equal(queries[2].query.includes('DATE_ADD(NOW(), INTERVAL 1 HOUR)'), true);
+  assert.equal(queries[2].values[1].length, 64);
+});
+
+test('reports password recovery as unavailable when SMTP is not configured', async () => {
+  const originalQuery = db.query;
+  const originalSmtp = {
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+  };
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASSWORD;
+  db.query = async () => {
+    throw new Error('Database should not be queried without SMTP configuration.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.requestPasswordReset({
+      body: { email: 'buyer@example.com' },
+    }, response);
+  } finally {
+    db.query = originalQuery;
+    Object.entries(originalSmtp).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  }
+
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body.message, /not configured/);
+});
+
+test('resets the password once and invalidates outstanding reset tokens', async () => {
+  const originalGetConnection = db.getConnection;
+  const updates = [];
+  const connection = {
+    beginTransaction: async () => {},
+    execute: async (query, values) => {
+      if (query.includes('FROM password_reset_tokens')) return [[{ id: 3, user_id: 8 }]];
+      updates.push({ query, values });
+      return [{ affectedRows: 1 }];
+    },
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+  };
+  db.getConnection = async () => connection;
+  const response = createResponse();
+
+  try {
+    await authController.resetPassword({
+      body: { token: 'a'.repeat(64), password: 'newsecret' },
+    }, response);
+  } finally {
+    db.getConnection = originalGetConnection;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(await bcrypt.compare('newsecret', updates[0].values[0]), true);
+  assert.equal(updates[0].values[1], 8);
+  assert.match(updates[1].query, /SET used_at = CURRENT_TIMESTAMP/);
+});
+
+test('rejects malformed reset tokens before accessing the database', async () => {
+  const originalGetConnection = db.getConnection;
+  db.getConnection = async () => {
+    throw new Error('Database should not be queried for a malformed reset token.');
+  };
+  const response = createResponse();
+
+  try {
+    await authController.resetPassword({
+      body: { token: 'invalid', password: 'newsecret' },
+    }, response);
+  } finally {
+    db.getConnection = originalGetConnection;
+  }
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'This password reset link is invalid or expired.');
 });

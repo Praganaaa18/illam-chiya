@@ -3,7 +3,17 @@ import { useNavigate, Link } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
+import { getAuthToken } from '../utils/authStorage';
+import {
+  getCanonicalDistrict,
+  getDistrictFromAddress,
+  NEPAL_DISTRICTS,
+} from '../utils/nepalDistricts';
 import './ConfirmOrder.css';
+
+const DELIVERY_ADDRESS_PATTERN = /^[a-zA-Z0-9\s,.-]*$/;
+const DELIVERY_ADDRESS_CHARACTER_ERROR =
+  'Special characters (like @, #, $, %) are not allowed in Delivery Address.';
 
 const ConfirmOrder = () => {
   const navigate = useNavigate();
@@ -14,13 +24,15 @@ const ConfirmOrder = () => {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [submitError, setSubmitError] = useState('');
+  const [deliveryPreference, setDeliveryPreference] = useState('doorstep');
 
   // Form details state
   const [shippingDetails, setShippingDetails] = useState({
     fullName: '',
     phone: '',
     address: '',
-    city: 'Kathmandu',
+    city: '',
+    landmark: '',
     notes: ''
   });
 
@@ -28,26 +40,38 @@ const ConfirmOrder = () => {
 
   useEffect(() => {
     // Auth Check
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) {
       navigate('/login');
       return;
     }
 
-    // Load Cart Items
+    // Load only items selected from the cart
     let savedCart;
+    let checkoutItems;
     try {
       savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!Array.isArray(savedCart)) throw new Error('Saved cart is not a list.');
+      checkoutItems = JSON.parse(localStorage.getItem('checkoutItems') || '[]');
+      if (!Array.isArray(checkoutItems)) throw new Error('Saved checkout items are not a list.');
     } catch (error) {
       console.error('Unable to read saved cart:', error);
-      localStorage.removeItem('cart');
+      if (Array.isArray(savedCart) && savedCart.length > 0) {
+        localStorage.setItem('cart', JSON.stringify(savedCart));
+      } else {
+        localStorage.removeItem('cart');
+      }
+      localStorage.removeItem('checkoutItems');
       setSubmitError('Your saved cart could not be read. Please add your items again.');
       return;
     }
-    if (!Array.isArray(savedCart) || savedCart.length === 0) {
+    const selectedCartItems = checkoutItems.length > 0
+      ? checkoutItems
+      : savedCart;
+    if (selectedCartItems.length === 0) {
       navigate('/cart');
     } else {
-      setCartItems(savedCart);
+      setCartItems(selectedCartItems);
     }
 
     const fallbackName = localStorage.getItem('userName') || '';
@@ -58,6 +82,7 @@ const ConfirmOrder = () => {
       fullName: fallbackName,
       phone: fallbackPhone,
       address: fallbackAddress,
+      city: getDistrictFromAddress(fallbackAddress),
     }));
 
     fetch('http://localhost:5000/api/auth/me', {
@@ -72,6 +97,7 @@ const ConfirmOrder = () => {
           fullName: data.full_name || current.fullName,
           phone: data.phone || current.phone,
           address: profileAddress || current.address,
+          city: getDistrictFromAddress(profileAddress) || current.city,
         }));
         localStorage.setItem('userName', data.full_name || '');
         localStorage.setItem('userPhone', data.phone || '');
@@ -89,9 +115,23 @@ const ConfirmOrder = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setShippingDetails({ ...shippingDetails, [name]: value });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
+    const district = name === 'address' ? getDistrictFromAddress(value) : '';
+    setShippingDetails((current) => ({
+      ...current,
+      [name]: value,
+      ...(district ? { city: district } : {}),
+    }));
+    if (name === 'address') {
+      setErrors((current) => ({
+        ...current,
+        address: value && !DELIVERY_ADDRESS_PATTERN.test(value)
+          ? DELIVERY_ADDRESS_CHARACTER_ERROR
+          : district
+            ? 'Do not include the district in the delivery address. Select it in City / District.'
+            : '',
+      }));
+    } else if (errors[name]) {
+      setErrors((current) => ({ ...current, [name]: '' }));
     }
   };
 
@@ -103,8 +143,19 @@ const ConfirmOrder = () => {
     } else if (!isValidPhoneNumber(shippingDetails.phone)) {
       newErrors.phone = 'Enter a valid Nepal mobile number (10 digits).';
     }
-    if (!shippingDetails.address.trim()) newErrors.address = 'Delivery address is required';
-    if (!shippingDetails.city.trim()) newErrors.city = 'City is required';
+    if (!shippingDetails.address.trim()) {
+      newErrors.address = 'Delivery address is required';
+    } else if (!DELIVERY_ADDRESS_PATTERN.test(shippingDetails.address)) {
+      newErrors.address = DELIVERY_ADDRESS_CHARACTER_ERROR;
+    } else if (getDistrictFromAddress(shippingDetails.address)) {
+      newErrors.address = 'Do not include the district in the delivery address. Select it in City / District.';
+    }
+    if (!shippingDetails.city.trim()) {
+      newErrors.city = 'City / District is required';
+    } else if (!getCanonicalDistrict(shippingDetails.city)) {
+      newErrors.city = 'Select a valid Nepal district from the suggestions.';
+    }
+    if (!shippingDetails.landmark.trim()) newErrors.landmark = 'Nearby landmark is required.';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -117,7 +168,7 @@ const ConfirmOrder = () => {
     setLoading(true);
     setSubmitError('');
 
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const orderPayload = {
       items: cartItems.map(item => ({
         product_id: item.id,
@@ -125,10 +176,12 @@ const ConfirmOrder = () => {
         price: item.price,
         pack_size: item.pack_size || '100 g',
       })),
-      shipping_address: `${shippingDetails.address}, ${shippingDetails.city}`,
+      shipping_address: `${shippingDetails.address.trim()}, ${getCanonicalDistrict(shippingDetails.city)}`,
+      landmark: shippingDetails.landmark.trim(),
       phone: normalizePhoneNumber(shippingDetails.phone),
       recipient_name: shippingDetails.fullName,
       payment_method: 'COD',
+      delivery_preference: deliveryPreference,
       total_amount: grandTotal,
       notes: shippingDetails.notes
     };
@@ -205,7 +258,7 @@ const ConfirmOrder = () => {
 
       <div className="checkout-grid">
         {/* Shipping & Payment Form */}
-        <form onSubmit={handlePlaceOrder} className="checkout-form">
+        <form onSubmit={handlePlaceOrder} className="checkout-form" noValidate>
           {submitError && <p className="error-text" role="alert">{submitError}</p>}
           {/* Shipping Details */}
           <div className="form-section">
@@ -241,15 +294,23 @@ const ConfirmOrder = () => {
               </div>
 
               <div className="form-group">
-                <label>City *</label>
+                <label htmlFor="checkout-city">City / District *</label>
                 <input
+                  id="checkout-city"
                   type="text"
                   name="city"
-                  placeholder="e.g. Kathmandu / Ilam"
+                  list="checkout-district-options"
                   value={shippingDetails.city}
                   onChange={handleInputChange}
+                  autoComplete="off"
                   className={errors.city ? 'input-err' : ''}
+                  placeholder="Type or select a district"
                 />
+                <datalist id="checkout-district-options">
+                  {NEPAL_DISTRICTS.map((district) => (
+                    <option key={district} value={district}>{district}</option>
+                  ))}
+                </datalist>
                 {errors.city && <span className="error-text">{errors.city}</span>}
               </div>
             </div>
@@ -268,6 +329,22 @@ const ConfirmOrder = () => {
             </div>
 
             <div className="form-group">
+              <label htmlFor="checkout-landmark">Nearby Landmark *</label>
+              <input
+                id="checkout-landmark"
+                type="text"
+                name="landmark"
+                placeholder="e.g. Near the community temple"
+                value={shippingDetails.landmark}
+                onChange={handleInputChange}
+                maxLength={150}
+                required
+                className={errors.landmark ? 'input-err' : ''}
+              />
+              {errors.landmark && <span className="error-text">{errors.landmark}</span>}
+            </div>
+
+            <div className="form-group">
               <label>Special Delivery Instructions (Optional)</label>
               <textarea
                 name="notes"
@@ -279,9 +356,25 @@ const ConfirmOrder = () => {
             </div>
           </div>
 
+          <div className="form-section">
+            <h2>2. Delivery Preference</h2>
+            <div className="form-group">
+              <label htmlFor="delivery-preference">Delivery Preference</label>
+              <select
+                id="delivery-preference"
+                name="deliveryPreference"
+                value={deliveryPreference}
+                onChange={(event) => setDeliveryPreference(event.target.value)}
+              >
+                <option value="doorstep">Leave at Doorstep</option>
+                <option value="hand-to-me">Hand it to me</option>
+              </select>
+            </div>
+          </div>
+
           {/* Locked Payment Method */}
           <div className="form-section">
-            <h2>2. Payment Method</h2>
+            <h2>3. Payment Method</h2>
             <div className="payment-options">
               <div className="payment-card selected">
                 <div className="payment-info">

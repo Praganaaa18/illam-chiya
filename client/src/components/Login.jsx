@@ -1,17 +1,21 @@
 import React, { useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { isValidEmail } from '../utils/validation';
+import { saveAuthToken } from '../utils/authStorage';
+import Icon from './Icon';
 import './Login.css';
 
 const Login = () => {
-  const [role, setRole] = useState('buyer'); // 'buyer' or 'seller'
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const [role, setRole] = useState(() => (location.state?.role === 'seller' ? 'seller' : 'buyer'));
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberedEmail') || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('rememberedEmail')));
 
   // Field validation errors & general submission errors
   const [validationErrors, setValidationErrors] = useState({});
-  const [error, setError] = useState('');
+  const [error, setError] = useState(location.state?.message || '');
   const [loading, setLoading] = useState(false);
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
@@ -56,13 +60,17 @@ const Login = () => {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (rememberMe) localStorage.setItem('rememberedEmail', normalizedEmail);
+    else localStorage.removeItem('rememberedEmail');
+
     setLoading(true);
 
     try {
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password, role, rememberMe }),
+        body: JSON.stringify({ email: normalizedEmail, password, role }),
       });
 
       const data = await response.json();
@@ -72,10 +80,10 @@ const Login = () => {
       }
       const accountRole = data.user?.role;
       if (!['buyer', 'seller'].includes(accountRole)) {
-        throw new Error('This account does not have a buyer or seller portal.');
+        throw new Error('This account does not have a supported portal.');
       }
 
-      localStorage.setItem('token', data.token);
+      saveAuthToken(data.token, rememberMe);
       localStorage.setItem('userRole', accountRole);
       localStorage.setItem('userId', data.user?.id);
       localStorage.setItem('userName', data.user?.name || data.user?.email || 'User');
@@ -133,10 +141,11 @@ const Login = () => {
         </div>
 
         <div className="role-selector">
-          <span>I am a: </span>
+          <span className="role-selector-label">I am a:</span>
           <button
             type="button"
             className={`role-btn ${role === 'buyer' ? 'active' : ''}`}
+            aria-pressed={role === 'buyer'}
             onClick={() => {
               setRole('buyer');
               setValidationErrors({});
@@ -148,6 +157,7 @@ const Login = () => {
           <button
             type="button"
             className={`role-btn ${role === 'seller' ? 'active' : ''}`}
+            aria-pressed={role === 'seller'}
             onClick={() => {
               setRole('seller');
               setValidationErrors({});
@@ -171,11 +181,13 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label>Email Address</label>
+            <label htmlFor="login-email">Email Address</label>
             <div className={`input-wrapper ${validationErrors.email ? 'input-error' : ''}`}>
               <input
+                id="login-email"
                 ref={emailInputRef}
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -199,11 +211,13 @@ const Login = () => {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <div className={`input-wrapper ${validationErrors.password ? 'input-error' : ''}`}>
               <input
+                id="login-password"
                 ref={passwordInputRef}
-                type="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -211,29 +225,34 @@ const Login = () => {
                 }}
                 placeholder="••••••••••••"
               />
-              <svg
-                className="input-icon"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#7a8b7b"
-                strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+              <button
+                type="button"
+                className="password-visibility-btn"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
+              </button>
             </div>
             {validationErrors.password && <span className="field-error-message">{validationErrors.password}</span>}
           </div>
 
           <div className="form-options">
             <label className="remember-me">
-              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => {
+                  setRememberMe(event.target.checked);
+                  if (!event.target.checked) localStorage.removeItem('rememberedEmail');
+                }}
+              />
               <span>Remember me</span>
             </label>
-            <a href="#forgot" className="forgot-link">
+            <Link to="/password-recovery" className="forgot-link">
               Forgot Password?
-            </a>
+            </Link>
           </div>
 
           <button type="submit" className="login-btn" disabled={loading}>
