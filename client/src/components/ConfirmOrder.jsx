@@ -45,20 +45,35 @@ const ConfirmOrder = () => {
       return;
     }
 
-    // Load Cart Items
+    // Load only items selected from the cart
     let savedCart;
+    let checkoutItems;
     try {
       savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+      checkoutItems = JSON.parse(localStorage.getItem('checkoutItems') || '[]');
     } catch (error) {
       console.error('Unable to read saved cart:', error);
-      localStorage.removeItem('cart');
+      const remainingCart = JSON.parse(localStorage.getItem('cart') || '[]')
+        .filter((cartItem) =>
+          !cartItems.some((checkoutItem) => String(checkoutItem.id) === String(cartItem.id))
+        );
+      if (remainingCart.length > 0) {
+        localStorage.setItem('cart', JSON.stringify(remainingCart));
+      } else {
+        localStorage.removeItem('cart');
+      }
+      localStorage.removeItem('checkoutItems');
+      localStorage.removeItem('checkoutItems');
       setSubmitError('Your saved cart could not be read. Please add your items again.');
       return;
     }
-    if (!Array.isArray(savedCart) || savedCart.length === 0) {
+    const selectedCartItems = Array.isArray(checkoutItems) && checkoutItems.length > 0
+      ? checkoutItems
+      : savedCart;
+    if (!Array.isArray(selectedCartItems) || selectedCartItems.length === 0) {
       navigate('/cart');
     } else {
-      setCartItems(savedCart);
+      setCartItems(selectedCartItems);
     }
 
     const fallbackName = localStorage.getItem('userName') || '';

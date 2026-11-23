@@ -77,6 +77,11 @@
   border-radius: 999px;
 }
 
+.checkout-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .cart-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 350px;
@@ -91,6 +96,34 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.cart-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 0 2px 2px;
+  color: #355746;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-select-all input,
+.cart-item-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2d5a43;
+  cursor: pointer;
+}
+
+.cart-item-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  cursor: pointer;
 }
 
 .cart-item-card {

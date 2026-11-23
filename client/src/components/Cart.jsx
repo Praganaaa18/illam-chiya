@@ -7,6 +7,7 @@ const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [quantityDrafts, setQuantityDrafts] = useState({});
   const [quantityErrors, setQuantityErrors] = useState({});
+  const [selectedIds, setSelectedIds] = useState([]);
   const navigate = useNavigate();
 
   // 1. Auth & Load Cart Guard
@@ -21,6 +22,7 @@ const Cart = () => {
 
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     setCartItems(savedCart);
+    setSelectedIds(savedCart.map((item) => String(item.id)));
     setQuantityDrafts(Object.fromEntries(
       savedCart.map((item) => [item.id, String(item.quantity)])
     ));
@@ -120,12 +122,33 @@ const Cart = () => {
 
   const handleRemoveItem = (id) => {
     const updated = cartItems.filter((item) => item.id !== id);
+    setSelectedIds((selected) => selected.filter((selectedId) => selectedId !== String(id)));
     updateLocalStorage(updated);
   };
 
+  const toggleSelectedItem = (id) => {
+    const itemId = String(id);
+    setSelectedIds((selected) =>
+      selected.includes(itemId)
+        ? selected.filter((selectedId) => selectedId !== itemId)
+        : [...selected, itemId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((selected) => {
+      const allSelected = cartItems.every((item) => selected.includes(String(item.id)));
+      return allSelected ? [] : cartItems.map((item) => String(item.id));
+    });
+  };
+
+  const selectedItems = cartItems.filter((item) => selectedIds.includes(String(item.id)));
+  const allItemsSelected = cartItems.length > 0 &&
+    cartItems.every((item) => selectedIds.includes(String(item.id)));
+
   // Totals
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryCharge = cartItems.length > 0 ? 120 : 0;
+  const subtotal = selectedItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const deliveryCharge = selectedItems.length > 0 ? 120 : 0;
   const grandTotal = subtotal + deliveryCharge;
 
   return (
@@ -149,8 +172,25 @@ const Cart = () => {
       ) : (
         <div className="cart-grid">
           <div className="cart-items-list">
+            <label className="cart-select-all">
+              <input
+                type="checkbox"
+                checked={allItemsSelected}
+                onChange={toggleSelectAll}
+                aria-label="Select all cart items"
+              />
+              <span>{allItemsSelected ? 'Deselect all' : 'Select all items'}</span>
+            </label>
             {cartItems.map((item) => (
               <div key={item.id} className="cart-item-card">
+                <label className="cart-item-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(String(item.id))}
+                    onChange={() => toggleSelectedItem(item.id)}
+                    aria-label={`Select ${item.name} for order`}
+                  />
+                </label>
                 <img
                   src={
                     item.image_url && /^https?:\/\//i.test(item.image_url)
@@ -233,8 +273,12 @@ const Cart = () => {
             </div>
 
             <button
-              onClick={() => navigate('/confirm-order')}
+              onClick={() => {
+                localStorage.setItem('checkoutItems', JSON.stringify(selectedItems));
+                navigate('/confirm-order');
+              }}
               className="checkout-btn"
+              disabled={selectedItems.length === 0}
             >
               Proceed to Checkout
             </button>
