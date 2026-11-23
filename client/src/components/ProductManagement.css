@@ -548,6 +548,10 @@
   font-size: 11px;
 }
 
+.pm-pack-size-error {
+  color: #a33030;
+}
+
 .pm-category-feedback {
   margin: 0;
   font-size: 12px;

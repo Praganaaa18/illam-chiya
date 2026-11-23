@@ -9,6 +9,11 @@ import './ProductManagement.css';
 const API_ORIGIN = 'http://localhost:5000';
 const PAGE_SIZE = 10;
 const PACK_SIZE_OPTIONS = ['50 g', '100 g', '250 g', '500 g', '1 kg'];
+const PACK_SIZE_ERROR = 'Enter a size from 1 to 99999 g, or a size such as 1 kg.';
+const normalizePackSize = (value) => {
+  const match = value.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
+  return match ? `${Number(match[1])} ${match[2].toLowerCase()}` : '';
+};
 const INITIAL_FORM = {
   name: '',
   description: '',
@@ -49,6 +54,7 @@ const ProductManagement = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isCustomPackSize, setIsCustomPackSize] = useState(false);
+  const [customPackSizeError, setCustomPackSizeError] = useState('');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isCategoryBusy, setIsCategoryBusy] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -189,15 +195,46 @@ const ProductManagement = ({
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
+    if (name === 'pack_size') setCustomPackSizeError('');
   };
 
   const handlePackSizeChange = (event) => {
     const value = event.target.value;
     setIsCustomPackSize(value === 'custom');
+    setCustomPackSizeError('');
     setFormData((current) => ({
       ...current,
       pack_size: value === 'custom' ? '' : value,
     }));
+  };
+
+  const handleCustomPackSizeKeyDown = (event) => {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    const enteredValue = formData.pack_size.trim();
+    const valueWithUnit = /^\d+$/.test(enteredValue) ? `${enteredValue} g` : enteredValue;
+    const packSize = normalizePackSize(valueWithUnit);
+    if (!packSize) {
+      setCustomPackSizeError(PACK_SIZE_ERROR);
+      return;
+    }
+
+    setFormData((current) => ({ ...current, pack_size: packSize }));
+    setIsCustomPackSize(false);
+    setCustomPackSizeError('');
+    setNotice(null);
+  };
+
+  const validateCustomPackSize = () => {
+    const packSize = normalizePackSize(formData.pack_size);
+    if (!packSize) {
+      setCustomPackSizeError(PACK_SIZE_ERROR);
+      return '';
+    }
+
+    setCustomPackSizeError('');
+    return packSize;
   };
 
   const discardSelectedFile = useCallback(() => {
@@ -227,6 +264,7 @@ const ProductManagement = ({
     setNewCategoryName('');
     setEditingProductId(null);
     setIsCustomPackSize(false);
+    setCustomPackSizeError('');
     setFormData({ ...INITIAL_FORM, category_id: String(categories[0]?.id || '') });
     discardSelectedFile();
     setIsModalOpen(true);
@@ -243,6 +281,7 @@ const ProductManagement = ({
     setEditingProductId(product.id);
     const packSize = product.pack_size || '100 g';
     setIsCustomPackSize(!PACK_SIZE_OPTIONS.includes(packSize));
+    setCustomPackSizeError('');
     setFormData({
       name: product.name || '',
       description: product.description || '',
@@ -265,6 +304,7 @@ const ProductManagement = ({
     setIsAddingCategory(false);
     setIsCategoryDropdownOpen(false);
     setIsCustomPackSize(false);
+    setCustomPackSizeError('');
     discardSelectedFile();
     setEditingProductId(null);
   }, [discardSelectedFile]);
@@ -313,12 +353,15 @@ const ProductManagement = ({
     const price = Number(formData.price);
     const stock = Number(formData.stock_quantity);
     const categoryId = Number(formData.category_id);
-    const packSizeMatch = formData.pack_size.trim().match(/^([1-9]\d{0,4})\s*(g|kg)$/i);
-    if (!packSizeMatch) {
-      setNotice({ type: 'error', message: 'Enter a pack size such as 100 g or 1 kg.' });
+    const packSize = normalizePackSize(formData.pack_size);
+    if (!packSize) {
+      if (isCustomPackSize) {
+        validateCustomPackSize();
+      } else {
+        setNotice({ type: 'error', message: PACK_SIZE_ERROR });
+      }
       return;
     }
-    const packSize = `${Number(packSizeMatch[1])} ${packSizeMatch[2].toLowerCase()}`;
     if (!Number.isFinite(price) || price < 0 || !Number.isInteger(stock) || stock < 0) {
       setNotice({ type: 'error', message: 'Enter a valid non-negative price and whole-number stock quantity.' });
       return;
@@ -828,7 +871,12 @@ const ProductManagement = ({
                     disabled={isSaving}
                     required
                   >
-                    {PACK_SIZE_OPTIONS.map((packSize) => (
+                    {[
+                      ...PACK_SIZE_OPTIONS,
+                      ...(formData.pack_size && !PACK_SIZE_OPTIONS.includes(formData.pack_size) && !isCustomPackSize
+                        ? [formData.pack_size]
+                        : []),
+                    ].map((packSize) => (
                       <option key={packSize} value={packSize}>{packSize}</option>
                     ))}
                     <option value="custom">Custom size…</option>
@@ -843,9 +891,20 @@ const ProductManagement = ({
                       maxLength="20"
                       disabled={isSaving}
                       onChange={handleChange}
+                      onKeyDown={handleCustomPackSizeKeyDown}
+                      onBlur={() => {
+                        if (formData.pack_size.trim()) validateCustomPackSize();
+                      }}
+                      aria-invalid={Boolean(customPackSizeError)}
+                      aria-describedby={customPackSizeError ? 'pm-pack-size-error' : undefined}
                       name="pack_size"
                       required
                     />
+                  )}
+                  {isCustomPackSize && customPackSizeError && (
+                    <small id="pm-pack-size-error" className="pm-pack-size-hint pm-pack-size-error" role="alert">
+                      {customPackSizeError}
+                    </small>
                   )}
                   <small className="pm-pack-size-hint">Displayed on the product catalog</small>
                 </div>
