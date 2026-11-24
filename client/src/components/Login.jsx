@@ -1,16 +1,17 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router';
 import { isValidEmail } from '../utils/validation';
+import { saveAuthToken } from '../utils/authStorage';
 import Icon from './Icon';
 import './Login.css';
 
 const Login = () => {
   const location = useLocation();
   const [role, setRole] = useState(() => (location.state?.role === 'seller' ? 'seller' : 'buyer'));
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberedEmail') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('rememberedEmail')));
 
   // Field validation errors & general submission errors
   const [validationErrors, setValidationErrors] = useState({});
@@ -59,13 +60,17 @@ const Login = () => {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (rememberMe) localStorage.setItem('rememberedEmail', normalizedEmail);
+    else localStorage.removeItem('rememberedEmail');
+
     setLoading(true);
 
     try {
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password, role, rememberMe }),
+        body: JSON.stringify({ email: normalizedEmail, password, role }),
       });
 
       const data = await response.json();
@@ -78,7 +83,7 @@ const Login = () => {
         throw new Error('This account does not have a supported portal.');
       }
 
-      localStorage.setItem('token', data.token);
+      saveAuthToken(data.token, rememberMe);
       localStorage.setItem('userRole', accountRole);
       localStorage.setItem('userId', data.user?.id);
       localStorage.setItem('userName', data.user?.name || data.user?.email || 'User');
@@ -136,10 +141,11 @@ const Login = () => {
         </div>
 
         <div className="role-selector">
-          <span>I am a: </span>
+          <span className="role-selector-label">I am a:</span>
           <button
             type="button"
             className={`role-btn ${role === 'buyer' ? 'active' : ''}`}
+            aria-pressed={role === 'buyer'}
             onClick={() => {
               setRole('buyer');
               setValidationErrors({});
@@ -151,6 +157,7 @@ const Login = () => {
           <button
             type="button"
             className={`role-btn ${role === 'seller' ? 'active' : ''}`}
+            aria-pressed={role === 'seller'}
             onClick={() => {
               setRole('seller');
               setValidationErrors({});
@@ -174,11 +181,13 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label>Email Address</label>
+            <label htmlFor="login-email">Email Address</label>
             <div className={`input-wrapper ${validationErrors.email ? 'input-error' : ''}`}>
               <input
+                id="login-email"
                 ref={emailInputRef}
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -202,11 +211,13 @@ const Login = () => {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <div className={`input-wrapper ${validationErrors.password ? 'input-error' : ''}`}>
               <input
+                id="login-password"
                 ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -229,12 +240,19 @@ const Login = () => {
 
           <div className="form-options">
             <label className="remember-me">
-              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => {
+                  setRememberMe(event.target.checked);
+                  if (!event.target.checked) localStorage.removeItem('rememberedEmail');
+                }}
+              />
               <span>Remember me</span>
             </label>
-            <a href="#forgot" className="forgot-link">
+            <Link to="/password-recovery" className="forgot-link">
               Forgot Password?
-            </a>
+            </Link>
           </div>
 
           <button type="submit" className="login-btn" disabled={loading}>

@@ -1,6 +1,8 @@
 // ProductCard.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { getAuthToken } from '../utils/authStorage';
+import { getRemainingStock } from '../utils/stock';
 import Icon from './Icon';
 import './ProductCard.css';
 
@@ -8,22 +10,32 @@ const ProductCard = ({ product, onAddToCart }) => {
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState('1');
   const packSize = product.pack_size || '100 g';
-  const stock = Math.max(0, Number(product.stock_quantity) || 0);
+  const stock = Math.max(0, Math.floor(Number(product.stock_quantity) || 0));
+  const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+  const availableToAdd = getRemainingStock(product, cartItems);
   const isLowStock = stock > 0 && stock <= 10;
   const isOutOfStock = stock === 0;
   const parsedQuantity = Number(quantity);
   const isQuantityValid = quantity !== '' &&
     Number.isInteger(parsedQuantity) &&
     parsedQuantity >= 1 &&
-    parsedQuantity <= stock;
+    parsedQuantity <= availableToAdd;
   const imageUrl = product.image_url
     ? /^https?:\/\//i.test(product.image_url)
       ? product.image_url
       : `http://localhost:5000/${product.image_url.replace(/^\/+/, '')}`
     : 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400';
 
+  useEffect(() => {
+    setQuantity((current) => {
+      if (availableToAdd === 0) return '0';
+      if (current === '') return current;
+      return String(Math.min(availableToAdd, Math.max(1, Number(current) || 1)));
+    });
+  }, [availableToAdd]);
+
   const handleAddToCartClick = () => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
 
     // 1. Check if user is logged in as a buyer
@@ -42,7 +54,7 @@ const ProductCard = ({ product, onAddToCart }) => {
   const handleQuantityChange = (event) => {
     const value = event.target.value;
     if (value === '' || /^\d+$/.test(value)) {
-      setQuantity(value);
+      setQuantity(value === '' ? '' : String(Math.min(Number(value), availableToAdd)));
     }
   };
 
@@ -51,8 +63,10 @@ const ProductCard = ({ product, onAddToCart }) => {
       setQuantity('1');
       return;
     }
-    const normalized = Math.min(stock, Math.max(1, parsedQuantity));
-    setQuantity(String(Number.isFinite(normalized) ? normalized : 1));
+    const normalized = availableToAdd === 0
+      ? 0
+      : Math.min(availableToAdd, Math.max(1, Number.isFinite(parsedQuantity) ? parsedQuantity : 1));
+    setQuantity(String(normalized));
   };
 
   return (
@@ -98,27 +112,27 @@ const ProductCard = ({ product, onAddToCart }) => {
             type="button"
             onClick={() => setQuantity(String(Math.max(1, (parsedQuantity || 1) - 1)))}
             aria-label="Decrease quantity"
-            disabled={isOutOfStock || parsedQuantity <= 1}
+            disabled={availableToAdd === 0 || parsedQuantity <= 1}
           >
             −
           </button>
           <input
             type="number"
             min="1"
-            max={stock}
+            max={availableToAdd}
             step="1"
-            value={quantity}
+            value={availableToAdd === 0 ? '0' : quantity}
             onChange={handleQuantityChange}
             onBlur={normalizeQuantity}
             aria-label="Product quantity"
-            aria-invalid={!isQuantityValid}
-            disabled={isOutOfStock}
+            aria-invalid={availableToAdd > 0 && !isQuantityValid}
+            disabled={availableToAdd === 0}
           />
           <button
             type="button"
-            onClick={() => setQuantity(String(Math.min(stock || 99, (parsedQuantity || 1) + 1)))}
+            onClick={() => setQuantity(String(Math.min(availableToAdd, (parsedQuantity || 0) + 1)))}
             aria-label="Increase quantity"
-            disabled={isOutOfStock || parsedQuantity >= stock}
+            disabled={availableToAdd === 0 || parsedQuantity >= availableToAdd}
           >
             +
           </button>

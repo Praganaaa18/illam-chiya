@@ -4,7 +4,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { unlink } = require('fs/promises');
-const { register, login, getProfile } = require('../controllers/authController');
+const {
+  register,
+  login,
+  requestPasswordReset,
+  resetPassword,
+  getProfile,
+} = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 const {
   MAX_UPLOAD_SIZE_BYTES,
@@ -63,6 +69,8 @@ const uploadSellerDocument = (req, res, next) => {
 // 'document' matches the key name sent from RegisterSeller.jsx FormData
 router.post('/register', uploadSellerDocument, register);
 router.post('/login', login);
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password', resetPassword);
 router.get('/me', authMiddleware, getProfile);
 
 module.exports = router;

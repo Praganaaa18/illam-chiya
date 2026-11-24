@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/validation';
+import { getAuthToken } from '../utils/authStorage';
 import {
   getCanonicalDistrict,
   getDistrictFromAddress,
@@ -39,7 +40,7 @@ const ConfirmOrder = () => {
 
   useEffect(() => {
     // Auth Check
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) {
       navigate('/login');
       return;
@@ -167,7 +168,7 @@ const ConfirmOrder = () => {
     setLoading(true);
     setSubmitError('');
 
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const orderPayload = {
       items: cartItems.map(item => ({
         product_id: item.id,

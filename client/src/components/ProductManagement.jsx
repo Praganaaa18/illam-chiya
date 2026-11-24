@@ -4,6 +4,7 @@ import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import { isValidUploadSize, UPLOAD_SIZE_ERROR } from '../utils/uploadLimits';
 import { isSellerSessionError } from '../utils/sellerSession';
+import { getAuthToken } from '../utils/authStorage';
 import './ProductManagement.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -35,7 +36,7 @@ const getErrorMessage = (error, fallback) =>
   error.response?.data?.error || error.response?.data?.message || error.message || fallback;
 
 const getAuthConfig = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+  headers: { Authorization: `Bearer ${getAuthToken() || ''}` },
 });
 
 const ProductManagement = ({
@@ -559,6 +560,12 @@ const ProductManagement = ({
   const selectedCategory = categories.find(
     (category) => String(category.id) === String(formData.category_id)
   );
+  const noticeMessage = notice && (
+    <div className={`pm-notice ${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>
+      <span>{notice.message}</span>
+      <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button>
+    </div>
+  );
 
   return (
     <div className="pm-container">
@@ -569,12 +576,7 @@ const ProductManagement = ({
         </button>
       </div>
 
-      {notice && (
-        <div className={`pm-notice ${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>
-          <span>{notice.message}</span>
-          <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button>
-        </div>
-      )}
+      {!isModalOpen && noticeMessage}
 
       <section className="pm-card" aria-labelledby="pm-products-heading">
         <div className="pm-card-toolbar">
@@ -733,6 +735,7 @@ const ProductManagement = ({
               <button type="button" className="pm-modal-close" aria-label="Close dialog" disabled={isSaving} onClick={closeModal}>×</button>
             </div>
             <form onSubmit={handleSubmit} className="pm-modal-form">
+              {isModalOpen && noticeMessage}
               <div className="pm-form-group">
                 <label htmlFor="pm-product-name">Product Name *</label>
                 <input ref={productNameRef} id="pm-product-name" type="text" name="name" placeholder="e.g., First Flush Orthodox Tea" value={formData.name} onChange={handleChange} required maxLength="150" />

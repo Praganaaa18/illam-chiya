@@ -193,7 +193,7 @@ const updateProduct = async (req, res) => {
              FROM order_items oi
              JOIN orders o ON o.id = oi.order_id
              WHERE oi.product_id = ?
-               AND o.order_status IN ('pending', 'processing', 'shipped')`,
+               AND o.order_status IN ('order_placed', 'pending', 'processing', 'shipped')`,
             [id]
         );
         if (parsedStock < Number(reservedRows[0].reserved_quantity || 0)) {

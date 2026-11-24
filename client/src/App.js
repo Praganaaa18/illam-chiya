@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router';
 
 import Home from './components/Home';
 import Login from './components/Login';
+import PasswordRecovery from './components/PasswordRecovery';
 import RegisterBuyer from './components/RegisterBuyer';
 import RegisterSeller from './components/RegisterSeller';
 import SellerDashboard from './components/SellerDashboard';
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/products/:productId" element={<ProductPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/password-recovery" element={<PasswordRecovery />} />
         <Route path="/register-buyer" element={<RegisterBuyer />} />
         <Route path="/register-seller" element={<RegisterSeller />} />
         

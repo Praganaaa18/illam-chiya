@@ -123,6 +123,13 @@
   font-weight: 600;
 }
 
+.password-mismatch-error {
+  color: #c53030;
+  font-size: 0.7rem;
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
 .form-row {
   display: flex;
   gap: 10px;

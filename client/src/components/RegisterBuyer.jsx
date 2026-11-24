@@ -23,6 +23,9 @@ const RegisterBuyer = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const passwordsMismatch = Boolean(
+    formData.confirmPassword && formData.password !== formData.confirmPassword
+  );
 
   // Validation rules
   const nameRegex = /^[a-zA-Z\s]*$/;
@@ -220,6 +223,11 @@ const RegisterBuyer = () => {
           </div>
 
           {/* Row 2: Create Password & Confirm Password */}
+          {passwordsMismatch && (
+            <div className="password-mismatch-error" role="alert">
+              Passwords do not match.
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label>Create Password</label>
@@ -253,6 +261,7 @@ const RegisterBuyer = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="••••••••••••"
+                  aria-invalid={passwordsMismatch}
                   required
                 />
                 <button

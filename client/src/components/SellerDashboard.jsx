@@ -10,6 +10,7 @@ import TablePagination, { SortHeader, sortRows, useTableSort } from './TableCont
 import './SellerDashboard.css';
 import axios from 'axios';
 import { isSellerSessionError } from '../utils/sellerSession';
+import { clearAuthToken, getAuthToken } from '../utils/authStorage';
 
 const AUTH_STORAGE_KEYS = [
   'token',
@@ -32,7 +33,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const [sellerInfo, setSellerInfo] = useState({
     businessName: '',
     email: '',
-    phone: '',
     sellerId: localStorage.getItem('userId') || null,
   });
 
@@ -42,6 +42,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   const handleSellerSessionError = useCallback(() => {
     if (authRedirectStarted.current) return;
     authRedirectStarted.current = true;
+    clearAuthToken();
     AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     navigate('/login', {
       replace: true,
@@ -66,13 +67,14 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
   };
 
   const handleLogout = () => {
+    clearAuthToken();
     AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     navigate('/login');
   };
 
   const fetchSellerInfo = useCallback(async () => {
     const loggedInUserId = localStorage.getItem('userId');
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!loggedInUserId || !token || localStorage.getItem('userRole') !== 'seller') {
       handleSellerSessionError();
       return;
@@ -86,7 +88,6 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       setSellerInfo({
         businessName: sellerName,
         email: res.data.email || '',
-        phone: res.data.phone || '',
         sellerId: res.data.id || null,
       });
       if (sellerName) localStorage.setItem('userName', sellerName);
@@ -123,7 +124,7 @@ const SellerDashboard = ({ initialTab = 'overview' }) => {
       case 'orders':
         return <OrdersAndShipping sellerId={sellerInfo.sellerId} />;
       case 'billing':
-        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} esewaNumber={sellerInfo.phone} />;
+        return <BillingsAndPayouts sellerId={sellerInfo.sellerId} />;
       default:
         return <OverviewSection sellerName={sellerInfo.businessName} sellerId={sellerInfo.sellerId} />;
     }
@@ -196,7 +197,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
     let isMounted = true;
 
     const loadOverview = async () => {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       try {
         const [inventoryResponse, productsResponse, ordersResponse] = await Promise.all([
@@ -217,7 +218,7 @@ const OverviewSection = ({ sellerName, sellerId }) => {
           product.is_active === true || product.is_active === 1 || product.is_active === '1',
         ).length;
         const pendingOrders = orders.filter((order) =>
-          ['pending', 'processing', 'shipped'].includes(String(order.status).toLowerCase()),
+          ['order_placed', 'pending', 'processing', 'shipped'].includes(String(order.status).toLowerCase()),
         ).length;
 
         if (isMounted) {
@@ -345,7 +346,11 @@ const OverviewSection = ({ sellerName, sellerId }) => {
                     <td>NPR {Number(order.total_price || 0).toLocaleString()}</td>
                     <td>
                       <span className={`status-badge ${['delivered', 'cash_received'].includes(String(order.status).toLowerCase()) ? 'completed' : 'pending'}`}>
-                        {order.status}
+                        {order.status === 'order_placed'
+                          ? 'Order Placed'
+                          : order.status === 'pending'
+                            ? 'Order Confirmed'
+                            : order.status}
                       </span>
                     </td>
                   </tr>

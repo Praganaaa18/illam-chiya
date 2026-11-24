@@ -31,6 +31,10 @@ const RegisterSeller = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const passwordsMismatch = Boolean(
+    formData.confirmPassword &&
+    formData.password.trim() !== formData.confirmPassword.trim()
+  );
 
   // Validation rules
   const phoneCharactersRegex = /^[0-9+()\s-]*$/;
@@ -180,10 +184,11 @@ const RegisterSeller = () => {
             {fieldErrors.businessName && <span className="field-error-text">{fieldErrors.businessName}</span>}
           </div>
 
-          <div className="form-row">
+          <div className="form-row seller-contact-row">
             <div className="form-group">
-              <label>Email Address</label>
+              <label htmlFor="seller-email">Email Address</label>
               <input
+                id="seller-email"
                 type="email"
                 name="email"
                 placeholder="seller@example.com"
@@ -195,8 +200,9 @@ const RegisterSeller = () => {
             </div>
 
             <div className="form-group">
-              <label>Contact Phone / eSewa Payout Number</label>
+              <label htmlFor="seller-phone">Contact Number</label>
               <input
+                id="seller-phone"
                 type="tel"
                 name="phone"
                 placeholder="98XXXXXXXX"
@@ -207,7 +213,6 @@ const RegisterSeller = () => {
                 required
               />
               {fieldErrors.phone && <span className="field-error-text">{fieldErrors.phone}</span>}
-              <small className="field-help-text">Use the mobile number registered to your eSewa account.</small>
             </div>
           </div>
 
@@ -283,6 +288,11 @@ const RegisterSeller = () => {
             <p className="section-subtitle">Password to log in to your seller account.</p>
           </div>
 
+          {passwordsMismatch && (
+            <div className="password-mismatch-error" role="alert">
+              Passwords do not match.
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label>Create Password</label>
@@ -316,6 +326,7 @@ const RegisterSeller = () => {
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                  aria-invalid={passwordsMismatch}
                   required
                 />
                 <button

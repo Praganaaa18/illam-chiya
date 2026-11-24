@@ -124,6 +124,9 @@ Copy `server/.env.example` to `server/.env`, then set the values for your local 
 | `DB_PASSWORD` | MySQL password | Set your local password |
 | `DB_NAME` | Database name | `illam_chiya_db` |
 | `JWT_SECRET` | Secret used to sign login tokens | Set a long, unique random value |
+| `CLIENT_URL` | Frontend URL used in password reset links | `http://localhost:3000` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | SMTP server settings for password recovery | Provider-specific |
+| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | SMTP credentials and sender address | Provider-specific; keep credentials private |
 
 Keep `.env` private and never commit real credentials. Start the API:
 
@@ -136,6 +139,8 @@ The server checks the database connection, applies pending migrations, then list
 ```bash
 npm run migrate
 ```
+
+Password recovery requires valid SMTP settings. The reset link expires after one hour and can only be used once.
 
 ### 3. Start the frontend
 

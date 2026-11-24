@@ -34,7 +34,7 @@ const getInventory = async (req, res) => {
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       WHERE oi.seller_id = ?
-        AND o.order_status IN ('pending', 'processing', 'shipped')
+        AND o.order_status IN ('order_placed', 'pending', 'processing', 'shipped')
       GROUP BY oi.product_id
     `, [sellerId]);
 

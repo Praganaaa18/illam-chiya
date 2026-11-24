@@ -74,6 +74,25 @@ test('shows the Products heading and category filter', async () => {
   expect(screen.getByRole('heading', { name: 'Green Sencha' })).toBeInTheDocument();
 });
 
+test('cart badge counts products rather than their quantities', async () => {
+  localStorage.setItem('token', 'buyer-token');
+  localStorage.setItem('userRole', 'buyer');
+  localStorage.setItem('cart', JSON.stringify([{ ...products[0], quantity: 3 }]));
+
+  renderHome();
+
+  await screen.findByRole('heading', { name: 'First Flush' });
+  expect(screen.getByText('1', { selector: '.cart-badge' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole('button', { name: /add to cart/i })[0]);
+  expect(JSON.parse(localStorage.getItem('cart'))[0].quantity).toBe(4);
+  expect(screen.getByText('1', { selector: '.cart-badge' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole('button', { name: /add to cart/i })[1]);
+  expect(JSON.parse(localStorage.getItem('cart'))).toHaveLength(2);
+  expect(screen.getByText('2', { selector: '.cart-badge' })).toBeInTheDocument();
+});
+
 test('filters products while typing and changing the category filter', async () => {
   renderHome();
 

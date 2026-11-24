@@ -39,3 +39,19 @@ test('allows choosing specific cart items and updates checkout totals', () => {
   expect(screen.getAllByText('Rs. 0').length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: 'Proceed to Checkout' })).toBeDisabled();
 });
+
+test('caps cart quantity at available stock and disables increase at the limit', () => {
+  render(
+    <MemoryRouter>
+      <Cart />
+    </MemoryRouter>
+  );
+
+  const quantityInput = screen.getByRole('spinbutton', { name: 'Quantity for Milk Tea' });
+  fireEvent.change(quantityInput, { target: { value: '12' } });
+
+  expect(quantityInput).toHaveValue(10);
+  expect(screen.getByRole('button', { name: 'Increase quantity for Milk Tea' })).toBeDisabled();
+  expect(screen.getByRole('alert')).toHaveTextContent('Quantity capped at available stock (10).');
+  expect(JSON.parse(localStorage.getItem('cart'))[0].quantity).toBe(10);
+});

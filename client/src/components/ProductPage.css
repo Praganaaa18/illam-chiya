@@ -305,6 +305,8 @@
 .quantity-selector {
   display: inline-flex;
   align-items: center;
+  width: 112px;
+  height: 32px;
   background-color: #ffffff;
   border: 1px solid #d5d4cc;
   border-radius: 4px;
@@ -312,22 +314,37 @@
 }
 
 .quantity-selector button {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 100%;
   background: none;
   border: none;
-  padding: 6px 12px;
+  padding: 0;
   font-size: 1rem;
   cursor: pointer;
   color: var(--text-dark);
 }
 
-.quantity-selector button:hover {
+.quantity-selector button:not(:disabled):hover {
   background-color: #f0efe9;
 }
 
+.quantity-selector button:disabled {
+  color: #9a9c96;
+  background-color: #f1f1ee;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .quantity-selector input {
-  width: 52px;
-  height: 34px;
-  padding: 0 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 54px;
+  height: 100%;
+  padding: 0 4px;
   border: 0;
   border-left: 1px solid #e1dfd5;
   border-right: 1px solid #e1dfd5;

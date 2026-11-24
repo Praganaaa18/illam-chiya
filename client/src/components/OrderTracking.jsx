@@ -3,22 +3,25 @@ import { useNavigate, useSearchParams } from 'react-router';
 import Navbar from './Navbar';
 import Icon from './Icon';
 import { formatDeliveryDateRange } from '../utils/delivery';
+import { getAuthToken } from '../utils/authStorage';
 import './OrderTracking.css';
 
 const ORDER_STEPS = [
-  { status: 'pending', title: 'Order Placed' },
-  { status: 'processing', title: 'Confirmed by Seller' },
+  { status: 'order_placed', title: 'Order Placed' },
+  { status: 'pending', title: 'Order Confirmed' },
+  { status: 'processing', title: 'Packing' },
   { status: 'shipped', title: 'Processed for Shipment' },
   { status: 'out_for_delivery', title: 'Out for Delivery' },
   { status: 'delivered', title: 'Delivered' },
   { status: 'cash_received', title: 'Package Received' },
 ];
 const ORDER_STEP_INDEX = {
-  pending: 0,
-  processing: 1,
-  shipped: 2,
-  delivered: 4,
-  cash_received: 5,
+  order_placed: 0,
+  pending: 1,
+  processing: 2,
+  shipped: 3,
+  delivered: 5,
+  cash_received: 6,
 };
 
 const formatDate = (date) => (
@@ -50,14 +53,14 @@ const OrderTracking = () => {
   const [actionNotice, setActionNotice] = useState('');
   const [cartCount] = useState(() => {
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    return savedCart.reduce((total, item) => total + item.quantity, 0);
+    return savedCart.length;
   });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedOrderId = searchParams.get('orderId');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const userRole = localStorage.getItem('userRole');
 
     if (!token || userRole !== 'buyer') {
@@ -113,8 +116,14 @@ const OrderTracking = () => {
     ? 'Hand it to me'
     : 'Leave at Doorstep';
   const selectedOrderPreference = selectedOrder?.delivery_preference || 'doorstep';
-  const canCancelOrder = ['pending', 'processing', 'shipped'].includes(selectedOrder?.status);
+  const canCancelOrder = ['order_placed', 'pending', 'processing', 'shipped'].includes(selectedOrder?.status);
   const buyerSuspendedUntil = selectedOrder?.buyer_suspended_until;
+  const selectedStatusLabel = selectedOrder
+    ? ORDER_STEPS.find((step) => step.status === selectedOrder.status)?.title ||
+      (selectedOrder.status === 'cancelled'
+        ? 'Cancelled'
+        : selectedOrder.status.replace(/_/g, ' '))
+    : '';
 
   useEffect(() => {
     if (!selectedOrderId) return;
@@ -133,7 +142,7 @@ const OrderTracking = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${getAuthToken()}`,
         },
         body: JSON.stringify({ delivery_preference: deliveryPreferenceDraft }),
       });
@@ -163,7 +172,7 @@ const OrderTracking = () => {
     try {
       const response = await fetch(`http://localhost:5000/api/orders/${selectedOrder.id}/cancel`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Unable to cancel this order.');
@@ -277,7 +286,7 @@ const OrderTracking = () => {
                   <div className="ot-meta-row">
                     <span className="ot-meta-label">Current Status:</span>
                     <span className="ot-meta-value ot-status-text">
-                      {selectedOrder.status === 'cash_received' ? 'Package Received' : selectedOrder.status.replace(/_/g, ' ')}
+                      {selectedStatusLabel}
                     </span>
                   </div>
                   <div className="ot-meta-row">
@@ -441,6 +450,13 @@ const OrderTracking = () => {
                     ×
                   </button>
                   <h2 id="ot-support-title">Contact Support</h2>
+                  {selectedOrder.seller_brand_names ? (
+                    <p>
+                      <strong>Seller&apos;s Brand Name:</strong> {selectedOrder.seller_brand_names}
+                    </p>
+                  ) : (
+                    <p role="status">Seller&apos;s brand name is unavailable.</p>
+                  )}
                   <p>Call this number:</p>
                   {sellerContactNumbers.length > 0 ? (
                     <div className="ot-support-numbers">

@@ -3,6 +3,7 @@ import axios from 'axios';
 import Icon from './Icon';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import { formatDeliveryDateRange } from '../utils/delivery';
+import { getAuthToken } from '../utils/authStorage';
 import './OrdersAndShipping.css';
 
 const API_ORIGIN = 'http://localhost:5000';
@@ -11,6 +12,7 @@ const ADD_NEW_DRIVER_VALUE = '__add_new_driver__';
 const DRIVER_NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
 const generateTrackingNumber = (orderId) => `IC-ORD-${String(orderId).padStart(6, '0')}`;
 const STATUS_LABELS = {
+  order_placed: 'Order Placed',
   pending: 'Order Confirmed',
   processing: 'Packing',
   shipped: 'Dispatched',
@@ -19,6 +21,7 @@ const STATUS_LABELS = {
   cancelled: 'Cancelled',
 };
 const STATUS_TRANSITIONS = {
+  order_placed: ['pending', 'cancelled'],
   pending: ['processing', 'cancelled'],
   processing: ['shipped', 'cancelled'],
   shipped: ['delivered'],
@@ -76,7 +79,7 @@ const OrdersAndShipping = ({ sellerId }) => {
   const closeDetailsButtonRef = useRef(null);
 
   const activeSellerId = sellerId || localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
 
   const fetchDrivers = useCallback(async () => {
     if (!token) {
@@ -158,7 +161,7 @@ const OrdersAndShipping = ({ sellerId }) => {
       });
       if (requestId === trackingRequest.current) {
         setTracking(response.data);
-        setStatusDraft(response.data.status || 'pending');
+        setStatusDraft(response.data.status || 'order_placed');
         setCarrierNameDraft(response.data.carrier_name || '');
         setTrackingNumberDraft(response.data.tracking_number || '');
       }
@@ -260,7 +263,7 @@ const OrdersAndShipping = ({ sellerId }) => {
   const filteredOrders = useMemo(() => {
     if (activeFilter === 'all') return orders;
     if (activeFilter === 'pending') {
-      return orders.filter((order) => ['pending', 'processing', 'shipped', 'delivered'].includes(order.status));
+      return orders.filter((order) => ['order_placed', 'pending', 'processing', 'shipped', 'delivered'].includes(order.status));
     }
     if (activeFilter === 'cash_received') return orders.filter((order) => order.status === 'cash_received');
     return orders.filter((order) => order.status === activeFilter);
@@ -333,7 +336,7 @@ const OrdersAndShipping = ({ sellerId }) => {
     } catch (requestError) {
       console.error('Error updating shipment status:', requestError);
       setNotice(getErrorMessage(requestError, 'Could not update shipment. Please try again.'));
-      setStatusDraft(selectedOrder.status || 'pending');
+      setStatusDraft(selectedOrder.status || 'order_placed');
     } finally {
       setBusy(false);
     }
@@ -354,7 +357,7 @@ const OrdersAndShipping = ({ sellerId }) => {
       <nav className="shipping-filters" aria-label="Filter orders">
         {[
           { id: 'all', label: 'All Orders', count: orders.length },
-          { id: 'pending', label: 'In Progress', count: orders.filter((order) => ['pending', 'processing', 'shipped', 'delivered'].includes(order.status)).length },
+          { id: 'pending', label: 'In Progress', count: orders.filter((order) => ['order_placed', 'pending', 'processing', 'shipped', 'delivered'].includes(order.status)).length },
           { id: 'delivered', label: 'Delivered', count: orders.filter((order) => order.status === 'delivered').length },
           { id: 'cash_received', label: 'Cash Received', count: orders.filter((order) => order.status === 'cash_received').length },
         ].map((filter) => (
@@ -423,8 +426,8 @@ const OrdersAndShipping = ({ sellerId }) => {
                         <td className="shipping-items" title={order.items_summary}>{order.items_summary || 'Order items'}</td>
                         <td className="shipping-total">NPR {Number(order.total_price || 0).toLocaleString()}</td>
                         <td>
-                          <span className={`shipping-status ${order.status || 'pending'}`}>
-                            {STATUS_LABELS[order.status] || order.status || 'Pending'}
+                          <span className={`shipping-status ${order.status || 'order_placed'}`}>
+                            {STATUS_LABELS[order.status] || order.status || 'Order Placed'}
                           </span>
                         </td>
                         <td>
@@ -478,8 +481,8 @@ const OrdersAndShipping = ({ sellerId }) => {
             </div>
             <div className="shipping-detail-heading">
               <h3>Order #IC-{selectedOrder.id}</h3>
-              <span className={`shipping-status ${selectedOrder.status || 'pending'}`}>
-                {STATUS_LABELS[selectedOrder.status] || selectedOrder.status || 'Pending'}
+              <span className={`shipping-status ${selectedOrder.status || 'order_placed'}`}>
+                {STATUS_LABELS[selectedOrder.status] || selectedOrder.status || 'Order Placed'}
               </span>
             </div>
 
@@ -538,7 +541,7 @@ const OrdersAndShipping = ({ sellerId }) => {
               <div className="shipping-update-controls">
                 <select
                   id="shipping-status"
-                  value={statusDraft || selectedOrder.status || 'pending'}
+                  value={statusDraft || selectedOrder.status || 'order_placed'}
                   onChange={(event) => {
                     setStatusDraft(event.target.value);
                     setShipmentFormError('');

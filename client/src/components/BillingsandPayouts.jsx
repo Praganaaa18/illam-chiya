@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TablePagination, { SortHeader, sortRows, useTableSort } from './TableControls';
 import './BillingsandPayouts.css';
 
-const BillingsAndPayouts = ({ sellerId = 1, esewaNumber = '' }) => {
+const BillingsAndPayouts = ({ sellerId = 1 }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -150,17 +150,6 @@ const BillingsAndPayouts = ({ sellerId = 1, esewaNumber = '' }) => {
           <span className="card-hint">Your net revenue</span>
         </div>
       </div>
-
-      <section className="payout-destination" aria-labelledby="payout-destination-title">
-        <div>
-          <span className="payout-destination-kicker">Payout destination</span>
-          <h3 id="payout-destination-title">Your eSewa number</h3>
-          <p>
-            This is your registered seller phone number. Use an eSewa-linked number; payouts are not processed automatically yet.
-          </p>
-        </div>
-        <strong className="payout-number">{esewaNumber || 'Add a phone number to your seller profile'}</strong>
-      </section>
 
       <div className="table-controls">
         <h3>Cash Ledger</h3>

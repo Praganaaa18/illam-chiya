@@ -13,6 +13,7 @@ const order = {
   payment_status: 'pending',
   delivery_preference: 'hand-to-me',
   seller_contact_numbers: '9812345678',
+  seller_brand_names: 'Ilam Tea Estate',
   subtotal: '25',
   total_price: '145',
   delivery_address: 'Kathmandu',
@@ -68,6 +69,8 @@ test('shows a 10-day delivery estimate from order placement and tracking details
   expect(screen.getByRole('button', { name: 'Cancel Order' })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: 'Contact Support' }));
   expect(screen.getByRole('dialog', { name: 'Contact Support' })).toBeInTheDocument();
+  expect(screen.getByText('Seller\'s Brand Name:')).toBeInTheDocument();
+  expect(screen.getByText('Ilam Tea Estate')).toBeInTheDocument();
   expect(screen.getByText('Call this number:')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '9812345678' })).toHaveAttribute('href', 'tel:9812345678');
   fireEvent.click(screen.getByRole('button', { name: 'Close contact support' }));
@@ -306,4 +309,29 @@ test('opens the order identified by a notification link', async () => {
   expect(screen.getByText(
     `${placedDate.toLocaleDateString(undefined, dateOptions)} – ${estimatedDate.toLocaleDateString(undefined, dateOptions)}`
   )).toBeInTheDocument();
+});
+
+test('shows Order Placed before Order Confirmed for a newly placed order', async () => {
+  const placedOrder = { ...order, status: 'order_placed' };
+  global.fetch.mockImplementation((url) => Promise.resolve({
+    ok: true,
+    json: async () => (url.endsWith('/api/orders/mine')
+      ? [placedOrder]
+      : { notifications: [], unreadCount: 0 }),
+  }));
+
+  render(
+    <MemoryRouter initialEntries={['/order-tracking']}>
+      <Routes>
+        <Route path="/order-tracking" element={<OrderTracking />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await screen.findByRole('heading', { name: 'Order Tracking: #ILLAM-12' });
+  const placedStep = screen.getByText('Order Placed', { selector: '.ot-step-label' }).parentElement;
+  expect(placedStep.querySelector('.ot-step-circle')).toHaveClass('current');
+  expect(screen.getByText('Order Confirmed', { selector: '.ot-step-label' }).parentElement).toHaveTextContent('Upcoming');
+  expect(screen.getByText('Order Placed', { selector: '.ot-status-text' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cancel Order' })).toBeEnabled();
 });
